@@ -420,6 +420,10 @@ tr:hover td { background:#fafcfa; }
       <span class="sb-ic">👥</span>الأعضاء
       <span class="sb-badge" id="b-members">0</span>
     </div>
+    <div class="sb-item" data-page="applications" onclick="showPage('applications')">
+      <span class="sb-ic">📥</span>طلبات العضوية
+      <span class="sb-badge" id="b-applications">0</span>
+    </div>
     <div class="sb-item" data-page="advisors" onclick="showPage('advisors')">
       <span class="sb-ic">🎓</span>المستشارون
     </div>
@@ -538,6 +542,40 @@ tr:hover td { background:#fafcfa; }
           <table>
             <thead><tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="members-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ MEMBERSHIP APPLICATIONS (§6) ══════════ -->
+    <div class="page" id="page-applications">
+      <div class="card">
+        <div class="card-head">
+          <h3>📥 طلبات العضوية</h3>
+          <div class="card-head-right">
+            <select class="filter-select" id="applications-status-filter" onchange="loadApplications()">
+              <option value="">كل الحالات</option>
+              <option value="PendingTriage">قيد الفرز</option>
+              <option value="AssignedToCommittee">معيّنة للجنة</option>
+              <option value="InterviewRequested">مقابلة مطلوبة</option>
+              <option value="Accepted">مقبولة</option>
+              <option value="Rejected">مرفوضة</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>الاسم</th>
+              <th>التواصل</th>
+              <th>الجامعة / التخصص</th>
+              <th>الاهتمامات</th>
+              <th>اللجنة المعيّنة</th>
+              <th>الحالة</th>
+              <th>تاريخ الطلب</th>
+              <th>إجراءات</th>
+            </tr></thead>
+            <tbody id="applications-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -965,6 +1003,45 @@ tr:hover td { background:#fafcfa; }
     <div class="modal-footer">
       <button class="btn btn-ol" onclick="closeModal('project')">إلغاء</button>
       <button class="btn btn-g" onclick="saveProject()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBERSHIP APPLICATION REVIEW MODAL -->
+<div class="overlay" id="ov-application">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <h3>📥 مراجعة طلب عضوية</h3>
+      <button class="modal-close" onclick="closeModal('application')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="app-edit-id"/>
+      <div id="app-detail" style="background:var(--gl);border-radius:var(--rs);padding:1rem;margin-bottom:1rem;font-size:.85rem;line-height:1.7"></div>
+
+      <!-- PendingTriage: presidency assigns to a committee -->
+      <div id="app-action-triage" style="display:none">
+        <div class="fg"><label>أسند الطلب إلى لجنة <span class="required">*</span></label>
+          <select id="app-assign-committee"><option value="">— اختر —</option></select>
+        </div>
+        <button class="btn btn-g" onclick="appAssignCommittee()">📤 إرسال لرئيس اللجنة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" onclick="appReject()">❌ رفض الطلب</button>
+      </div>
+
+      <!-- AssignedToCommittee / InterviewRequested: head decides -->
+      <div id="app-action-decide" style="display:none">
+        <div class="fg"><label>ملاحظات (اختياري)</label><textarea id="app-decision-note"></textarea></div>
+        <button class="btn btn-g" onclick="appAccept()">✅ قبول وإضافة كعضو</button>
+        <button class="btn btn-y" style="margin-top:.4rem" onclick="appRequestInterview()">💬 طلب مقابلة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" onclick="appReject()">❌ رفض</button>
+      </div>
+
+      <!-- Accepted / Rejected: read-only -->
+      <div id="app-action-final" style="display:none;text-align:center;color:var(--tm);font-size:.85rem;padding:1rem">
+        تم اتخاذ القرار. لمراجعة العضو الجديد أو لإعادة الفحص، استخدم تبويب الأعضاء.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" onclick="closeModal('application')">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1465,6 +1542,7 @@ const PAGE_TITLES = {
   emails:          '💌 الإيميلات والشكر',
   certificates:    '🏅 الشهادات',
   opportunities:   '🎯 الفرص التطوعية',
+  applications:    '📥 طلبات العضوية',
 };
 
 function showPage(page) {
@@ -1486,6 +1564,7 @@ function showPage(page) {
   const loaders = {
     dashboard:        loadDashboard,
     members:          loadMembers,
+    applications:     loadApplications,
     advisors:         loadAdvisors,
     committees:       loadCommittees,
     projects:         loadProjects,
@@ -1973,6 +2052,179 @@ function toggleParticipantFields() {
   const type = gv('par-type');
   document.getElementById('par-member-section').style.display   = type === 'Member' ? '' : 'none';
   document.getElementById('par-volunteer-section').style.display = type === 'Volunteer' ? '' : 'none';
+}
+
+// ══════════════════════════════════════════
+// MEMBERSHIP APPLICATIONS (§6)
+// ══════════════════════════════════════════
+const APP_STATUS_AR = {
+  PendingTriage:       'قيد الفرز',
+  AssignedToCommittee: 'معيّنة للجنة',
+  InterviewRequested:  'مقابلة مطلوبة',
+  Accepted:            'مقبولة',
+  Rejected:            'مرفوضة',
+};
+const APP_STATUS_COLOR = {
+  PendingTriage:       't-y',
+  AssignedToCommittee: 't-b',
+  InterviewRequested:  't-o',
+  Accepted:            't-g',
+  Rejected:            't-r',
+};
+let _activeApplication = null;
+
+async function loadApplications() {
+  // Ensure committees are loaded — needed for the triage dropdown and
+  // for resolving committee_id → name in the row + detail rendering.
+  if (!DB.committees.length) {
+    const c = await api('getCommittees', {});
+    DB.committees = (c && c.success ? c.data : []) || [];
+  }
+  const params = {};
+  const st = gv('applications-status-filter'); if (st) params.status = st;
+  const data = await api('applications.list', params);
+  if (!data || !data.success) return;
+  const items = data.data || [];
+  const tbody = document.getElementById('applications-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد طلبات</td></tr>';
+  } else {
+    tbody.innerHTML = items.map(a => renderApplicationRow(a)).join('');
+  }
+  // Sidebar badge: count of items still needing a decision (everything pre-final).
+  const pending = items.filter(a => a.status !== 'Accepted' && a.status !== 'Rejected').length;
+  const badge = document.getElementById('b-applications');
+  if (badge) badge.textContent = pending;
+  // Cache for the modal lookups.
+  DB._applications = items;
+}
+
+function renderApplicationRow(a) {
+  const contact = [a.email, a.phone].filter(Boolean).join(' · ') || '—';
+  const uniMajor = [a.university, a.major].filter(Boolean).join(' / ') || '—';
+  const interests = (a.interests && a.interests.length)
+    ? a.interests.map(id => {
+        const c = DB.committees.find(cc => cc.committee_id === id);
+        return c ? c.committee_name : id;
+      }).join('، ')
+    : '<span style="color:var(--tm)">—</span>';
+  const assigned = a.assigned_committee_name
+    ? esc(a.assigned_committee_name)
+    : '<span style="color:var(--tm)">—</span>';
+  const statusLabel = APP_STATUS_AR[a.status] || a.status;
+  const isFinal = a.status === 'Accepted' || a.status === 'Rejected';
+  return `<tr>
+    <td>
+      <div style="font-weight:700">${esc(a.preferred_name || a.full_name)}</div>
+      ${a.preferred_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(a.full_name)}</div>` : ''}
+    </td>
+    <td style="font-size:.78rem;direction:ltr;text-align:right">${esc(contact)}</td>
+    <td style="font-size:.78rem">${esc(uniMajor)}</td>
+    <td style="font-size:.78rem;max-width:160px">${interests}</td>
+    <td>${assigned}</td>
+    <td>${tag(statusLabel, APP_STATUS_COLOR[a.status] || 't-gr')}</td>
+    <td>${fmtDate(a.created_at)}</td>
+    <td>
+      <button class="btn-icon" title="${isFinal ? 'عرض' : 'مراجعة'}" onclick="openApplicationReview('${esc(a.application_id)}')">${isFinal ? '👁️' : '✏️'}</button>
+    </td>
+  </tr>`;
+}
+
+function openApplicationReview(applicationId) {
+  const a = (DB._applications || []).find(x => x.application_id === applicationId);
+  if (!a) return;
+  _activeApplication = a;
+  sv('app-edit-id', a.application_id);
+  sv('app-decision-note', a.decision_reason || '');
+
+  // Detail panel — read-only summary the reviewer needs to make a decision.
+  const interests = (a.interests && a.interests.length)
+    ? a.interests.map(id => {
+        const c = DB.committees.find(cc => cc.committee_id === id);
+        return c ? c.committee_name : id;
+      }).join('، ')
+    : '—';
+  document.getElementById('app-detail').innerHTML = `
+    <div><strong>الاسم:</strong> ${esc(a.full_name)}${a.preferred_name ? ` (${esc(a.preferred_name)})` : ''}</div>
+    <div><strong>التواصل:</strong> <span dir="ltr">${esc([a.email, a.phone].filter(Boolean).join(' · ') || '—')}</span></div>
+    <div><strong>الجامعة / التخصص:</strong> ${esc([a.university, a.major].filter(Boolean).join(' — ') || '—')}</div>
+    <div><strong>اللجان المهتم بها:</strong> ${interests}</div>
+    ${a.pitch ? `<div style="margin-top:.5rem"><strong>الدافع:</strong><br>${esc(a.pitch).replace(/\n/g, '<br>')}</div>` : ''}
+    <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-size:.78rem;color:var(--tm)">
+      رقم الطلب: <span dir="ltr">${esc(a.application_id)}</span> · تاريخ الطلب: ${fmtDate(a.created_at)}
+      ${a.decided_at ? ` · قرار في ${fmtDate(a.decided_at)}` : ''}
+      ${a.created_member_id ? ` · العضو: <span dir="ltr">${esc(a.created_member_id)}</span>` : ''}
+    </div>
+  `;
+
+  // Show the right action panel for this status.
+  ['triage', 'decide', 'final'].forEach(k =>
+    document.getElementById('app-action-' + k).style.display = 'none'
+  );
+  if (a.status === 'PendingTriage') {
+    document.getElementById('app-action-triage').style.display = '';
+    // Populate committee dropdown — show full set, suggest the first interest if any.
+    const sel = document.getElementById('app-assign-committee');
+    sel.innerHTML = '<option value="">— اختر لجنة —</option>' + DB.committees.map(c =>
+      `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`
+    ).join('');
+    if (a.interests && a.interests.length) sel.value = a.interests[0];
+  } else if (a.status === 'AssignedToCommittee' || a.status === 'InterviewRequested') {
+    document.getElementById('app-action-decide').style.display = '';
+  } else {
+    document.getElementById('app-action-final').style.display = '';
+  }
+  openModal('application');
+}
+
+async function appAssignCommittee() {
+  if (!_activeApplication) return;
+  const committeeId = gv('app-assign-committee');
+  if (!committeeId) { toast('اختر لجنة', 'twarn'); return; }
+  const res = await api('applications.assignCommittee', {
+    id: _activeApplication.application_id, committee_id: committeeId,
+  });
+  if (res && res.success) {
+    toast('📤 تم الإسناد لرئيس اللجنة');
+    closeModal('application');
+    loadApplications();
+  }
+}
+
+async function appAccept() {
+  if (!_activeApplication) return;
+  const note = gv('app-decision-note');
+  const res = await api('applications.accept', { id: _activeApplication.application_id, note });
+  if (res && res.success) {
+    toast(`✅ تم قبول العضو (${res.data ? res.data.member_id : ''})`);
+    closeModal('application');
+    loadApplications();
+    // Also refresh members so the new row appears immediately if the user navigates there.
+    loadMembers();
+  }
+}
+
+async function appRequestInterview() {
+  if (!_activeApplication) return;
+  const note = gv('app-decision-note');
+  const res = await api('applications.requestInterview', { id: _activeApplication.application_id, note });
+  if (res && res.success) {
+    toast('💬 تم طلب مقابلة');
+    closeModal('application');
+    loadApplications();
+  }
+}
+
+async function appReject() {
+  if (!_activeApplication) return;
+  const reason = prompt('سبب الرفض (اختياري):', gv('app-decision-note') || '');
+  if (reason === null) return;
+  const res = await api('applications.reject', { id: _activeApplication.application_id, reason });
+  if (res && res.success) {
+    toast('❌ تم الرفض');
+    closeModal('application');
+    loadApplications();
+  }
 }
 
 // ══════════════════════════════════════════

@@ -74,6 +74,7 @@ Recent feature branches:
 
 - **`feature/netlify-migration`** — moved the backend off Google Apps Script + Sheets onto Netlify Functions + Netlify DB. Fixed two missing actions (`updateAttendance`, `updateHours`) that were breaking soft-delete in admin.html. Adds the schema, seed flow, JWT auth, and the cross-project polish for Participants/Attendance/Hours tabs. Merged into `main`.
 - **`feature/opportunities-and-approval`** — adds `opportunities` + `assignments` entities (replacing flat participants for new flows) and the two-stage hour approval workflow from §7 of the requirements. Hours go `Draft → PrimaryApproved (committee head) → FinalApproved (presidency)`. Members' `total_hours` rollup counts only `FinalApproved`. The 14 standard roles from §12 are exposed as a dropdown in the new Opportunities tab.
+- **`feature/membership-applications`** — replaces the external Google Form with an in-app pipeline (§6). New public `apply.html` form that anyone can submit; presidency triages each `PendingTriage` row to a committee; that committee's head accepts (auto-creates a `members` row tied to the committee, status `Active`, today's join_date) / rejects with reason / requests an interview. No `users` (login) row is created on accept — login provisioning is intentionally deferred to the upcoming member-portal restructure. The "انضم إلى النادي" CTA on `index.html` is repointed from `forms.gle/...` to `/apply.html`.
 
 ## Critical files for any change
 

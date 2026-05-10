@@ -900,6 +900,158 @@ const handlers = {
     return { id: data.assignment_id };
   },
 
+  // ─── MEMBERSHIP APPLICATIONS (§6) ────────────────────────────────────
+  // Public submission. Anyone on the website can hit this without auth.
+  'applications.submit': async (body) => {
+    const data = body.data || body;
+    if (!data.full_name) throw httpErr('full_name is required', 400);
+    if (!data.email && !data.phone) {
+      throw httpErr('email or phone is required', 400);
+    }
+    const id = data.application_id || shortId('APP');
+    const interests = Array.isArray(data.interests)
+      ? data.interests
+      : (typeof data.interests === 'string' && data.interests
+          ? data.interests.split(',').map(s => s.trim()).filter(Boolean)
+          : []);
+    await sql`
+      INSERT INTO membership_applications
+        (application_id, full_name, preferred_name, email, phone,
+         university, major, gender, interests, pitch, status)
+      VALUES
+        (${id}, ${data.full_name}, ${data.preferred_name || null},
+         ${data.email || null}, ${data.phone || null},
+         ${data.university || null}, ${data.major || null},
+         ${data.gender || null}, ${interests}, ${data.pitch || null},
+         'PendingTriage')
+    `;
+    return { application_id: id };
+  },
+
+  'applications.list': async ({ status, assigned_committee_id }, user) => {
+    requireAuth(user);
+    // Heads only see their committee's queue (plus untriaged ones, so they
+    // can flag items presidency should triage). Presidency sees everything.
+    if (user.access === 'head') {
+      return sql`
+        SELECT a.*, c.committee_name AS assigned_committee_name
+        FROM membership_applications a
+        LEFT JOIN committees c ON c.committee_id = a.assigned_committee_id
+        WHERE 1=1
+          AND (a.assigned_committee_id IS NULL OR a.assigned_committee_id = ${user.committee_id})
+          ${status ? sql`AND a.status = ${status}` : sql``}
+        ORDER BY a.created_at DESC
+      `;
+    }
+    return sql`
+      SELECT a.*, c.committee_name AS assigned_committee_name
+      FROM membership_applications a
+      LEFT JOIN committees c ON c.committee_id = a.assigned_committee_id
+      WHERE 1=1
+        ${status                ? sql`AND a.status                = ${status}`                : sql``}
+        ${assigned_committee_id ? sql`AND a.assigned_committee_id = ${assigned_committee_id}` : sql``}
+      ORDER BY a.created_at DESC
+    `;
+  },
+
+  // Presidency triages a PendingTriage application to a committee.
+  'applications.assignCommittee': async ({ id, committee_id }, user) => {
+    requireSuperadmin(user);
+    if (!committee_id) throw httpErr('committee_id is required', 400);
+    const [row] = await sql`SELECT status FROM membership_applications WHERE application_id = ${id}`;
+    if (!row) throw httpErr('Application not found', 404);
+    if (row.status !== 'PendingTriage') {
+      throw httpErr(`Cannot triage an application in status ${row.status}`, 409);
+    }
+    await sql`
+      UPDATE membership_applications SET
+        status                = 'AssignedToCommittee',
+        assigned_committee_id = ${committee_id}
+      WHERE application_id = ${id}
+    `;
+    return { application_id: id };
+  },
+
+  // Committee head flags that they want to interview before deciding.
+  'applications.requestInterview': async ({ id, note }, user) => {
+    const [row] = await sql`SELECT status, assigned_committee_id FROM membership_applications WHERE application_id = ${id}`;
+    if (!row) throw httpErr('Application not found', 404);
+    requireAdminScope(user, row.assigned_committee_id);
+    if (row.status !== 'AssignedToCommittee' && row.status !== 'InterviewRequested') {
+      throw httpErr(`Cannot request interview for status ${row.status}`, 409);
+    }
+    await sql`
+      UPDATE membership_applications SET
+        status          = 'InterviewRequested',
+        decision_reason = COALESCE(${note}, decision_reason)
+      WHERE application_id = ${id}
+    `;
+    return { application_id: id };
+  },
+
+  // Accept: creates a members row tied to the assigned committee. Per the
+  // current decision, no users (login) row is created — login provisioning
+  // is part of the upcoming member-portal restructure.
+  'applications.accept': async ({ id, note }, user) => {
+    const [app] = await sql`
+      SELECT * FROM membership_applications WHERE application_id = ${id}
+    `;
+    if (!app) throw httpErr('Application not found', 404);
+    requireAdminScope(user, app.assigned_committee_id);
+    if (app.status !== 'AssignedToCommittee' && app.status !== 'InterviewRequested') {
+      throw httpErr(`Cannot accept an application in status ${app.status}`, 409);
+    }
+    if (!app.assigned_committee_id) {
+      throw httpErr('Application must be assigned to a committee before acceptance', 400);
+    }
+    const memberId = shortId('MBR');
+    await sql`
+      INSERT INTO members
+        (member_id, full_name, preferred_name, email, phone, gender,
+         committee_id, club_role, status, join_date)
+      VALUES
+        (${memberId}, ${app.full_name}, ${app.preferred_name || null},
+         ${app.email || null}, ${app.phone || null}, ${app.gender || null},
+         ${app.assigned_committee_id}, 'Member', 'Active', CURRENT_DATE)
+    `;
+    await sql`
+      UPDATE membership_applications SET
+        status             = 'Accepted',
+        decided_by_user_id = ${user.id},
+        decided_at         = NOW(),
+        decision_reason    = COALESCE(${note}, decision_reason),
+        created_member_id  = ${memberId}
+      WHERE application_id = ${id}
+    `;
+    return { application_id: id, member_id: memberId };
+  },
+
+  'applications.reject': async ({ id, reason }, user) => {
+    const [app] = await sql`SELECT status, assigned_committee_id FROM membership_applications WHERE application_id = ${id}`;
+    if (!app) throw httpErr('Application not found', 404);
+    // Heads can reject only within their committee's scope, but only after
+    // triage. Presidency can reject anything (including PendingTriage) for
+    // obvious-spam cases.
+    if (user.access === 'head') {
+      if (!app.assigned_committee_id) throw httpErr('This application has not been triaged yet', 409);
+      requireAdminScope(user, app.assigned_committee_id);
+    } else if (user.access !== 'superadmin') {
+      throw httpErr('Forbidden', 403);
+    }
+    if (app.status === 'Accepted' || app.status === 'Rejected') {
+      throw httpErr(`Application already ${app.status}`, 409);
+    }
+    await sql`
+      UPDATE membership_applications SET
+        status             = 'Rejected',
+        decided_by_user_id = ${user.id},
+        decided_at         = NOW(),
+        decision_reason    = ${reason || null}
+      WHERE application_id = ${id}
+    `;
+    return { application_id: id };
+  },
+
   'assignments.bulkMarkAttendance': async ({ records }, user) => {
     requireAuth(user);
     if (!Array.isArray(records)) throw httpErr('records[] required', 400);

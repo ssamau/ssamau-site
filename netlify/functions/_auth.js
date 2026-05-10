@@ -40,7 +40,8 @@ export const PUBLIC_ACTIONS = new Set([
   'auth',
   'getMembers', 'getCommittees', 'getAdvisors', 'getProjects',
   'certs.verify',
-  'setup.bulkSeed',  // gated server-side: refuses if users already exist
+  'setup.bulkSeed',          // gated server-side: refuses if users already exist
+  'applications.submit',     // §6 public membership form
 ]);
 
 // Actions that require superadmin (presidency-only).
