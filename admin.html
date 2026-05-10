@@ -609,15 +609,15 @@ tr:hover td { background:#fafcfa; }
           <h3>🙋 المشاركون في المشاريع</h3>
           <div class="card-head-right">
             <select class="filter-select" id="participants-project-filter" onchange="loadParticipants(this.value)">
-              <option value="">اختر مشروعاً / فعالية</option>
+              <option value="">كل المشاريع</option>
             </select>
             <button class="btn btn-g" onclick="openModal('participant')">+ إضافة مشارك</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم / البريد</th><th>النوع</th><th>حالة المشاركة</th><th>التوفر</th><th>مميز</th><th>إجراءات</th></tr></thead>
-            <tbody id="participants-tbody"><tr class="empty-row"><td colspan="6">اختر مشروعاً لعرض المشاركين</td></tr></tbody>
+            <thead><tr><th>الاسم / البريد</th><th>المشروع / الفعالية</th><th>النوع</th><th>حالة المشاركة</th><th>التوفر</th><th>مميز</th><th>إجراءات</th></tr></thead>
+            <tbody id="participants-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -630,7 +630,7 @@ tr:hover td { background:#fafcfa; }
           <h3>✅ الحضور</h3>
           <div class="card-head-right">
             <select class="filter-select" id="attendance-project-filter" onchange="loadAttendance(this.value)">
-              <option value="">اختر مشروعاً / فعالية</option>
+              <option value="">كل المشاريع</option>
             </select>
             <button class="btn btn-g" onclick="openModal('attendance')">+ تسجيل حضور</button>
             <button class="btn btn-o" onclick="openModal('bulk-att')">⚡ جماعي</button>
@@ -638,8 +638,8 @@ tr:hover td { background:#fafcfa; }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>العضو / المتطوع</th><th>النوع</th><th>حالة الحضور</th><th>تاريخ الحضور</th><th>سجّله</th><th>إجراءات</th></tr></thead>
-            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="6">اختر مشروعاً لعرض الحضور</td></tr></tbody>
+            <thead><tr><th>العضو / المتطوع</th><th>المشروع / الفعالية</th><th>النوع</th><th>حالة الحضور</th><th>تاريخ الحضور</th><th>سجّله</th><th>إجراءات</th></tr></thead>
+            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1176,7 +1176,38 @@ function logout() {
 // ══════════════════════════════════════════
 // CONFIG & STATE
 // ══════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbwx4prselle8g_6RjBD7PMnTwe70k_yq-1y4Xlv2SFWvO2PPpSMoBQ-ECvLzWq86Hwj/exec';
+const API_URL = '/.netlify/functions/api';
+
+function getAuthToken() {
+  return sessionStorage.getItem('ssam_token') || '';
+}
+
+async function callApi(action, params = {}) {
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ action, ...params }),
+  });
+  if (resp.status === 401) {
+    sessionStorage.removeItem('ssam_session');
+    sessionStorage.removeItem('ssam_token');
+    window.location.href = 'login.html';
+    return null;
+  }
+  const json = await resp.json();
+  if (!json) return null;
+  // Flatten the { success, data } envelope so legacy call-sites that read
+  // `result.data` (arrays) AND `result.<field>` (shaped objects) both work.
+  const inner = json.data;
+  const flat = { success: json.success, error: json.error, data: inner };
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    Object.assign(flat, inner);
+  }
+  return flat;
+}
 
 const DB = {
   members:      [],
@@ -1220,13 +1251,8 @@ const STATUS_COLORS = {
 // ══════════════════════════════════════════
 async function api(action, body = {}) {
   try {
-    const resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action, ...body }),
-    });
-    const data = await resp.json();
-    if (!data.success && data.error) throw new Error(data.error);
+    const data = await callApi(action, body);
+    if (data && !data.success && data.error) throw new Error(data.error);
     return data;
   } catch (err) {
     toast('خطأ في الاتصال: ' + err.message, 'terr');
@@ -1236,13 +1262,8 @@ async function api(action, body = {}) {
 }
 
 async function apiGet(action, params = {}) {
-  const url = new URL(API_URL);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   try {
-    const resp = await fetch(url.toString());
-    const data = await resp.json();
-    return data;
+    return await callApi(action, params);
   } catch (err) {
     toast('خطأ: ' + err.message, 'terr');
     return null;
@@ -1290,8 +1311,8 @@ function showPage(page) {
     advisors:         loadAdvisors,
     committees:       loadCommittees,
     projects:         loadProjects,
-    participants:     () => populateProjectSelects(),
-    attendance:       () => populateProjectSelects(),
+    participants:     () => { populateProjectSelects(); loadParticipants(); },
+    attendance:       () => { populateProjectSelects(); loadAttendance(); },
     hours:            loadHours,
     profile:          loadProfileSelect,
     'project-detail': () => {},
@@ -1394,7 +1415,7 @@ async function loadDashboard() {
     prjTbody.innerHTML = data.recent_projects.map(p => `<tr>
       <td><strong>${esc(p.project_name)}</strong></td>
       <td>${tag(p.project_type, p.project_type === 'Project' ? 't-b' : 't-p')}</td>
-      <td>${p.event_date || '—'}</td>
+      <td>${fmtDate(p.event_date) || '—'}</td>
       <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
     </tr>`).join('');
   } else {
@@ -1504,7 +1525,7 @@ function editMember(id) {
   sv('m-committee-id', m.committee_id);
   sv('m-club-role', m.club_role);
   sv('m-status', m.status);
-  sv('m-join-date', m.join_date);
+  sv('m-join-date', m.join_date ? String(m.join_date).slice(0, 10) : '');
   document.getElementById('member-modal-title').textContent = '✏️ تعديل العضو';
   openModal('member');
 }
@@ -1647,7 +1668,7 @@ function renderProjects(projects) {
     return `<tr>
       <td><strong>${esc(p.project_name)}</strong></td>
       <td>${tag(p.project_type, p.project_type === 'Project' ? 't-b' : 't-p')}</td>
-      <td>${p.event_date || '—'}</td>
+      <td>${fmtDate(p.event_date) || '—'}</td>
       <td style="font-size:.78rem">${esc(p.location) || '—'}</td>
       <td>${mgr ? esc(mgr.preferred_name || mgr.full_name) : '<span style="color:var(--tm)">—</span>'}</td>
       <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
@@ -1690,8 +1711,12 @@ function editProject(id) {
   if (!p) return;
   sv('prj-edit-id', id);
   sv('prj-name', p.project_name); sv('prj-type', p.project_type);
-  sv('prj-desc', p.project_description); sv('prj-date', p.event_date);
-  sv('prj-start', p.start_time); sv('prj-end', p.end_time);
+  sv('prj-desc', p.project_description);
+  // <input type="date"> needs YYYY-MM-DD; <input type="time"> needs HH:MM.
+  // Postgres returns event_date as ISO with time, and start/end_time as 'HH:MM:SS'.
+  sv('prj-date',  p.event_date  ? String(p.event_date).slice(0, 10) : '');
+  sv('prj-start', p.start_time  ? String(p.start_time).slice(0, 5)  : '');
+  sv('prj-end',   p.end_time    ? String(p.end_time).slice(0, 5)    : '');
   sv('prj-location', p.location); sv('prj-proposal', p.proposal_file_url);
   sv('prj-created-by', p.created_by_member_id);
   sv('prj-manager', p.assigned_project_manager_member_id);
@@ -1705,25 +1730,31 @@ function editProject(id) {
 // PARTICIPANTS
 // ══════════════════════════════════════════
 async function loadParticipants(projectId) {
-  if (!projectId) return;
-  const data = await api('getParticipants', { project_id: projectId });
+  const params = projectId ? { project_id: projectId } : {};
+  const data = await api('getParticipants', params);
   if (!data || !data.success) return;
   const tbody = document.getElementById('participants-tbody');
   const items = data.data || [];
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">لا يوجد مشاركون</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد مشاركون بعد</td></tr>';
     return;
   }
   tbody.innerHTML = items.map(p => {
-    const member = DB.members.find(m => m.member_id === p.member_id);
+    const member  = DB.members.find(m  => m.member_id  === p.member_id);
+    const project = DB.projects.find(x => x.project_id === p.project_id);
     const name = p.participant_type === 'Member'
       ? (member ? esc(member.preferred_name || member.full_name) : p.member_id)
       : esc(p.volunteer_name);
+    const projectCell = project
+      ? `<div style="font-weight:600">${esc(project.project_name)}</div>
+         <div style="font-size:.7rem;color:var(--tm)">${tag(project.project_type, project.project_type === 'Project' ? 't-b' : 't-p')}</div>`
+      : `<span style="color:var(--tm)">${esc(p.project_id)}</span>`;
     return `<tr>
       <td>
         <div style="font-weight:700">${name}</div>
         ${p.participant_type === 'Volunteer' ? `<div style="font-size:.72rem;color:var(--tm);direction:ltr">${esc(p.volunteer_email)}</div>` : ''}
       </td>
+      <td>${projectCell}</td>
       <td>${tag(p.participant_type, p.participant_type === 'Member' ? 't-b' : 't-p')}</td>
       <td>${tag(p.participation_status, STATUS_COLORS[p.participation_status] || 't-gr')}</td>
       <td><span class="tag t-gr">${esc(p.availability_type)}</span></td>
@@ -1769,26 +1800,32 @@ function toggleParticipantFields() {
 // ATTENDANCE
 // ══════════════════════════════════════════
 async function loadAttendance(projectId) {
-  if (!projectId) return;
-  const data = await api('getAttendance', { project_id: projectId });
+  const params = projectId ? { project_id: projectId } : {};
+  const data = await api('getAttendance', params);
   if (!data || !data.success) return;
   const tbody = document.getElementById('attendance-tbody');
   const items = data.data || [];
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">لا يوجد حضور مسجّل</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد حضور مسجّل بعد</td></tr>';
     return;
   }
   tbody.innerHTML = items.map(a => {
-    const member = DB.members.find(m => m.member_id === a.member_id);
+    const member  = DB.members.find(m  => m.member_id  === a.member_id);
+    const project = DB.projects.find(x => x.project_id === a.project_id);
     const name = a.participant_type === 'Member'
       ? (member ? esc(member.preferred_name || member.full_name) : a.member_id)
       : esc(a.volunteer_email);
     const checker = DB.members.find(m => m.member_id === a.checked_by_member_id);
+    const projectCell = project
+      ? `<div style="font-weight:600">${esc(project.project_name)}</div>
+         <div style="font-size:.7rem;color:var(--tm)">${fmtDate(project.event_date)}</div>`
+      : `<span style="color:var(--tm)">${esc(a.project_id)}</span>`;
     return `<tr>
       <td><strong>${name}</strong></td>
+      <td>${projectCell}</td>
       <td>${tag(a.participant_type, a.participant_type === 'Member' ? 't-b' : 't-p')}</td>
       <td>${tag(a.attendance_status, STATUS_COLORS[a.attendance_status] || 't-gr')}</td>
-      <td>${a.attendance_date || '—'}</td>
+      <td>${fmtDate(a.attendance_date) || '—'}</td>
       <td>${checker ? esc(checker.preferred_name || checker.full_name) : '—'}</td>
       <td>
         <button class="btn-icon del" onclick="confirmDelete('attendance','${a.attendance_id}','سجل الحضور هذا')">🗑️</button>
@@ -1829,9 +1866,8 @@ function toggleAttFields() {
 // VOLUNTEER HOURS
 // ══════════════════════════════════════════
 async function loadHours(projectId) {
-  const action = 'getHours';
   const params = projectId ? { project_id: projectId } : {};
-  const data = await (projectId ? api(action, params) : apiGet(action, params));
+  const data = await api('getMemberHours', params);
   if (!data || !data.success) return;
   const tbody = document.getElementById('hours-tbody');
   const items = data.data || [];
@@ -1943,7 +1979,7 @@ async function loadMemberProfile(memberId) {
       <div class="profile-stat"><div class="pn">${totalHours.toFixed(1)}</div><div class="pl">ساعة تطوعية</div></div>
       <div class="profile-stat"><div class="pn">${projectsParticipated}</div><div class="pl">مشروع شارك</div></div>
       <div class="profile-stat"><div class="pn">${tag(member.status, STATUS_COLORS[member.status] || 't-gr')}</div><div class="pl">الحالة</div></div>
-      <div class="profile-stat"><div class="pn" style="font-size:1rem">${member.join_date || '—'}</div><div class="pl">تاريخ الانضمام</div></div>
+      <div class="profile-stat"><div class="pn" style="font-size:1rem">${fmtDate(member.join_date) || '—'}</div><div class="pl">تاريخ الانضمام</div></div>
     </div>
     ${hours.length ? `
     <div class="card">
@@ -2074,6 +2110,24 @@ document.querySelectorAll('.overlay').forEach(o =>
 const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 const sv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
 const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// Format any ISO/date string to a short local date. Returns '' for falsy/invalid.
+// Wrapped in <span dir="ltr"> so the page's RTL direction doesn't reorder
+// "30 May 2026" into "May 2026 30".
+function fmtDate(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  const s = d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' });
+  return `<span dir="ltr" style="display:inline-block">${s}</span>`;
+}
+function fmtDateTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  const s = d.toLocaleString('en-GB', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return `<span dir="ltr" style="display:inline-block">${s}</span>`;
+}
 const tag = (text, cls) => `<span class="tag ${cls}">${esc(text)}</span>`;
 
 function clearForm(type) {
@@ -2698,12 +2752,13 @@ function setEl(id, val) {
 // Set sidebar user from session
 if (window.CURRENT_USER) {
   const u = window.CURRENT_USER;
-  const nm = document.getElementById('sb-nm');
+  const nm = document.getElementById('sb-name') || document.getElementById('sb-nm');
   const rl = document.getElementById('sb-role') || document.getElementById('sb-rl');
   const av = document.getElementById('sb-av');
-  if (nm) nm.textContent = u.name;
-  if (rl) rl.textContent = u.role;
-  if (av) av.textContent = u.name.charAt(0);
+  const displayName = u.name || u.username || '—';
+  if (nm) nm.textContent = displayName;
+  if (rl) rl.textContent = u.role || u.access || '—';
+  if (av) av.textContent = (displayName.charAt(0) || '?');
 }
 
 window.addEventListener('load', () => {

@@ -1866,14 +1866,17 @@ function cDrwD() {
 (function() {
   'use strict';
 
-  var API = 'https://script.google.com/macros/s/AKfycbwx4prselle8g_6RjBD7PMnTwe70k_yq-1y4Xlv2SFWvO2PPpSMoBQ-ECvLzWq86Hwj/exec';
+  var API = '/.netlify/functions/api';
 
   function apiGet(action, params) {
-    var url = API + '?action=' + action;
-    if (params) {
-      Object.keys(params).forEach(function(k) { url += '&' + k + '=' + encodeURIComponent(params[k]); });
-    }
-    return fetch(url).then(function(r) { return r.json(); }).catch(function() { return null; });
+    var body = Object.assign({ action: action }, params || {});
+    return fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    .then(function(r) { return r.json(); })
+    .catch(function() { return null; });
   }
 
   // ── تحديث مجلس الإدارة ──────────────────────

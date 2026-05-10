@@ -102,7 +102,7 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 'use strict';
 
 // ── API ───────────────────────────────────────────────────────
-const API = 'https://script.google.com/macros/s/AKfycbwx4prselle8g_6RjBD7PMnTwe70k_yq-1y4Xlv2SFWvO2PPpSMoBQ-ECvLzWq86Hwj/exec';
+const API = '/.netlify/functions/api';
 
 // ── LOGIN LOGIC ──────────────────────────────────────────────
 async function doLogin() {
@@ -121,22 +121,27 @@ async function doLogin() {
   try {
     const resp = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'auth', username, password }),
     });
-    const data = await resp.json();
+    const json = await resp.json();
+    const payload = json && json.data ? json.data : json;
 
-    if (data && data.success && data.user) {
+    if (json && json.success && payload && payload.user && payload.token) {
       const session = {
-        id:       data.user.id,
-        name:     data.user.name,
-        username: data.user.username,
-        role:     data.user.role,
-        access:   data.user.access,
-        loginAt:  new Date().toISOString(),
+        id:         payload.user.id,
+        name:       payload.user.name,
+        username:   payload.user.username,
+        role:       payload.user.role,
+        access:     payload.user.access,
+        member_id:  payload.user.member_id,
+        committee_id: payload.user.committee_id,
+        token:      payload.token,
+        loginAt:    new Date().toISOString(),
       };
       sessionStorage.setItem('ssam_session', JSON.stringify(session));
-      localStorage.setItem('ssam_last_user', data.user.username);
+      sessionStorage.setItem('ssam_token', payload.token);
+      localStorage.setItem('ssam_last_user', payload.user.username);
       window.location.href = 'admin.html';
     } else {
       btn.disabled = false;
