@@ -398,23 +398,41 @@ const handlers = {
     const before = parseFloat(data.hours_before) || 0;
     const during = parseFloat(data.hours_during) || 0;
     const after  = parseFloat(data.hours_after)  || 0;
+
+    // Principle 2 — when an assignment is provided we refuse to log hours
+    // unless attendance was confirmed. Direct (no-assignment) hour entries
+    // remain allowed for legacy/admin-correction cases.
+    if (data.assignment_id) {
+      const [a] = await sql`
+        SELECT a.attendance_status, a.member_id AS a_member_id, a.volunteer_email AS a_volunteer_email,
+               o.project_id AS o_project_id
+        FROM assignments a
+        JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+        WHERE a.assignment_id = ${data.assignment_id}
+      `;
+      if (!a) throw httpErr('Assignment not found', 404);
+      if (a.attendance_status !== 'Attended') {
+        throw httpErr('Hours can only be recorded for assignments marked Attended (Principle 2).', 422);
+      }
+      // Backfill project_id / member from the assignment if the caller didn't supply them.
+      if (!data.project_id)      data.project_id      = a.o_project_id;
+      if (!data.member_id)       data.member_id       = a.a_member_id;
+      if (!data.volunteer_email) data.volunteer_email = a.a_volunteer_email;
+    }
+
     const [r] = await sql`
-      INSERT INTO hours (project_id, member_id, volunteer_email, participant_type,
+      INSERT INTO hours (project_id, assignment_id, member_id, volunteer_email, participant_type,
                          hours_before, hours_during, hours_after,
-                         notes, recorded_by, recorded_by_member_id)
-      VALUES (${data.project_id}, ${data.member_id || null}, ${data.volunteer_email || null},
+                         notes, recorded_by, recorded_by_member_id, approval_status)
+      VALUES (${data.project_id}, ${data.assignment_id || null},
+              ${data.member_id || null}, ${data.volunteer_email || null},
               ${data.participant_type || null},
               ${before}, ${during}, ${after},
-              ${data.notes || null}, ${user.id}, ${data.recorded_by_member_id || null})
+              ${data.notes || null}, ${user.id}, ${data.recorded_by_member_id || null},
+              'Draft')
       RETURNING id, total_hours
     `;
-    if (data.member_id) {
-      await sql`
-        UPDATE members SET total_hours = (
-          SELECT COALESCE(SUM(total_hours), 0) FROM hours WHERE member_id = ${data.member_id} AND notes IS DISTINCT FROM 'Deleted'
-        ) WHERE member_id = ${data.member_id}
-      `;
-    }
+    await recomputeMemberTotalHours(data.member_id);
     return { id: r.id, hours_id: r.id, total_hours: r.total_hours };
   },
 
@@ -429,25 +447,110 @@ const handlers = {
         notes        = COALESCE(${data.notes},        notes)
       WHERE id = ${id}
     `;
-    if (row?.member_id) {
-      await sql`
-        UPDATE members SET total_hours = (
-          SELECT COALESCE(SUM(total_hours), 0) FROM hours WHERE member_id = ${row.member_id} AND notes IS DISTINCT FROM 'Deleted'
-        ) WHERE member_id = ${row.member_id}
-      `;
-    }
+    await recomputeMemberTotalHours(row?.member_id);
     return { id };
   },
 
-  getMemberHours: async ({ member_id, project_id }) => sql`
-    SELECT h.id AS hours_id, h.*, p.project_name, p.event_date,
-           m.full_name AS member_full_name, m.preferred_name AS member_preferred_name
+  // ─── HOURS APPROVAL (§7) ─────────────────────────────────────────────
+  // Two-stage approval: committee head primary-approves Draft rows for
+  // opportunities owned by their committee; presidency final-approves
+  // PrimaryApproved rows. `members.total_hours` rollups count only
+  // FinalApproved rows.
+  'hours.primaryApprove': async ({ id }, user) => {
+    const [row] = await sql`
+      SELECT h.id, h.member_id, h.approval_status, o.owning_committee_id
+      FROM hours h
+      LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
+      LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+      WHERE h.id = ${id}
+    `;
+    if (!row) throw httpErr('Hours row not found', 404);
+    if (row.approval_status !== 'Draft') {
+      throw httpErr(`Cannot primary-approve a row in status ${row.approval_status}`, 409);
+    }
+    requireAdminScope(user, row.owning_committee_id);
+    await sql`
+      UPDATE hours SET
+        approval_status     = 'PrimaryApproved',
+        primary_approver_id = ${user.id},
+        primary_approved_at = NOW()
+      WHERE id = ${id}
+    `;
+    await recomputeMemberTotalHours(row.member_id);
+    return { id };
+  },
+
+  'hours.finalApprove': async ({ id }, user) => {
+    requireSuperadmin(user);
+    const [row] = await sql`SELECT id, member_id, approval_status FROM hours WHERE id = ${id}`;
+    if (!row) throw httpErr('Hours row not found', 404);
+    if (row.approval_status !== 'PrimaryApproved') {
+      throw httpErr(`Final approval requires PrimaryApproved (currently ${row.approval_status})`, 409);
+    }
+    await sql`
+      UPDATE hours SET
+        approval_status   = 'FinalApproved',
+        final_approver_id = ${user.id},
+        final_approved_at = NOW()
+      WHERE id = ${id}
+    `;
+    await recomputeMemberTotalHours(row.member_id);
+    return { id };
+  },
+
+  'hours.reject': async ({ id, reason }, user) => {
+    const [row] = await sql`
+      SELECT h.id, h.member_id, h.approval_status, o.owning_committee_id
+      FROM hours h
+      LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
+      LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+      WHERE h.id = ${id}
+    `;
+    if (!row) throw httpErr('Hours row not found', 404);
+    // Anyone in the approval chain can reject:
+    //   - committee head can reject Draft rows in their committee
+    //   - presidency can reject anything pre-FinalApproved
+    //   - presidency can also reject FinalApproved (rolls it back)
+    if (user.access === 'head') {
+      if (row.approval_status !== 'Draft') {
+        throw httpErr('Committee heads can only reject Draft rows', 403);
+      }
+      requireAdminScope(user, row.owning_committee_id);
+    } else if (user.access !== 'superadmin') {
+      throw httpErr('Forbidden', 403);
+    }
+    await sql`
+      UPDATE hours SET
+        approval_status = 'Rejected',
+        rejected_reason = ${reason || null}
+      WHERE id = ${id}
+    `;
+    await recomputeMemberTotalHours(row.member_id);
+    return { id };
+  },
+
+  getMemberHours: async ({ member_id, project_id, approval_status }) => sql`
+    SELECT h.id AS hours_id, h.*,
+           p.project_name, p.event_date,
+           m.full_name           AS member_full_name,
+           m.preferred_name      AS member_preferred_name,
+           o.role_name           AS opportunity_role_name,
+           o.owning_committee_id AS opportunity_committee_id,
+           pa.full_name          AS primary_approver_name,
+           fa.full_name          AS final_approver_name
     FROM hours h
-    LEFT JOIN projects p ON p.project_id = h.project_id
-    LEFT JOIN members m  ON m.member_id  = h.member_id
+    LEFT JOIN projects     p  ON p.project_id     = h.project_id
+    LEFT JOIN members      m  ON m.member_id      = h.member_id
+    LEFT JOIN assignments  a  ON a.assignment_id  = h.assignment_id
+    LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN users        upa ON upa.id          = h.primary_approver_id
+    LEFT JOIN members      pa ON pa.member_id     = upa.member_id
+    LEFT JOIN users        ufa ON ufa.id          = h.final_approver_id
+    LEFT JOIN members      fa ON fa.member_id     = ufa.member_id
     WHERE (h.notes IS DISTINCT FROM 'Deleted')
-      ${member_id  ? sql`AND h.member_id  = ${member_id}`  : sql``}
-      ${project_id ? sql`AND h.project_id = ${project_id}` : sql``}
+      ${member_id       ? sql`AND h.member_id       = ${member_id}`       : sql``}
+      ${project_id      ? sql`AND h.project_id      = ${project_id}`      : sql``}
+      ${approval_status ? sql`AND h.approval_status = ${approval_status}` : sql``}
     ORDER BY h.recorded_at DESC
   `,
 
@@ -618,7 +721,7 @@ const handlers = {
         (SELECT COUNT(*) FROM members WHERE status='Active')    AS active_members,
         (SELECT COUNT(*) FROM members)                          AS total_members,
         (SELECT COUNT(*) FROM projects)                         AS total_projects,
-        (SELECT COALESCE(SUM(total_hours), 0) FROM hours WHERE notes IS DISTINCT FROM 'Deleted') AS total_hours,
+        (SELECT COALESCE(SUM(total_hours), 0) FROM hours WHERE approval_status = 'FinalApproved') AS total_hours,
         (SELECT COUNT(*) FROM committees WHERE status='Active') AS total_committees
     `;
     const topVolunteers = await sql`
@@ -626,7 +729,7 @@ const handlers = {
              COALESCE(m.preferred_name, m.full_name) AS name,
              COALESCE(SUM(h.total_hours), 0) AS hours
       FROM members m
-      LEFT JOIN hours h ON h.member_id = m.member_id AND h.notes IS DISTINCT FROM 'Deleted'
+      LEFT JOIN hours h ON h.member_id = m.member_id AND h.approval_status = 'FinalApproved'
       WHERE m.status = 'Active'
       GROUP BY m.member_id
       ORDER BY hours DESC, m.full_name
@@ -637,7 +740,7 @@ const handlers = {
              COALESCE(SUM(h.total_hours), 0) AS hours
       FROM committees c
       LEFT JOIN members m ON m.committee_id = c.committee_id
-      LEFT JOIN hours   h ON h.member_id    = m.member_id AND h.notes IS DISTINCT FROM 'Deleted'
+      LEFT JOIN hours   h ON h.member_id    = m.member_id AND h.approval_status = 'FinalApproved'
       GROUP BY c.committee_id, c.committee_name
       ORDER BY hours DESC
     `;
@@ -672,6 +775,148 @@ const handlers = {
     `;
     const hours = await sql`SELECT * FROM hours WHERE project_id = ${project_id}`;
     return { project, participants, attendance, hours };
+  },
+
+  // ─── OPPORTUNITIES (§4, §12) ─────────────────────────────────────────
+  'opportunities.list': async ({ project_id, committee_id, status }) => sql`
+    SELECT o.*,
+      p.project_name, p.project_type, p.event_date,
+      c.committee_name AS owning_committee_name,
+      (SELECT COUNT(*) FROM assignments a WHERE a.opportunity_id = o.opportunity_id) AS assigned_count,
+      (SELECT COUNT(*) FROM assignments a
+        WHERE a.opportunity_id = o.opportunity_id AND a.attendance_status = 'Attended') AS attended_count
+    FROM opportunities o
+    LEFT JOIN projects   p ON p.project_id   = o.project_id
+    LEFT JOIN committees c ON c.committee_id = o.owning_committee_id
+    WHERE 1=1
+      ${project_id   ? sql`AND o.project_id          = ${project_id}`   : sql``}
+      ${committee_id ? sql`AND o.owning_committee_id = ${committee_id}` : sql``}
+      ${status       ? sql`AND o.status              = ${status}`       : sql``}
+    ORDER BY p.event_date DESC NULLS LAST, o.created_at DESC
+  `,
+
+  'opportunities.create': async (body, user) => {
+    const data = body.data || body;
+    if (!data.project_id || !data.role_name) {
+      throw httpErr('project_id and role_name are required', 400);
+    }
+    requireAdminScope(user, data.owning_committee_id);
+    const id = data.opportunity_id || shortId('OPP');
+    await sql`
+      INSERT INTO opportunities (opportunity_id, project_id, role_name, role_key,
+                                 estimated_hours, headcount_needed, owning_committee_id,
+                                 status, notes, created_by)
+      VALUES (${id}, ${data.project_id}, ${data.role_name}, ${data.role_key || null},
+              ${data.estimated_hours || 0}, ${data.headcount_needed || 1},
+              ${data.owning_committee_id || null}, ${data.status || 'Open'},
+              ${data.notes || null}, ${user.id})
+    `;
+    return { opportunity_id: id };
+  },
+
+  'opportunities.update': async ({ id, data }, user) => {
+    const [existing] = await sql`SELECT owning_committee_id FROM opportunities WHERE opportunity_id = ${id}`;
+    if (!existing) throw httpErr('Opportunity not found', 404);
+    requireAdminScope(user, existing.owning_committee_id);
+    if (data.owning_committee_id) requireAdminScope(user, data.owning_committee_id);
+    await sql`
+      UPDATE opportunities SET
+        role_name           = COALESCE(${data.role_name},           role_name),
+        role_key            = COALESCE(${data.role_key},            role_key),
+        estimated_hours     = COALESCE(${data.estimated_hours},     estimated_hours),
+        headcount_needed    = COALESCE(${data.headcount_needed},    headcount_needed),
+        owning_committee_id = COALESCE(${data.owning_committee_id}, owning_committee_id),
+        status              = COALESCE(${data.status},              status),
+        notes               = COALESCE(${data.notes},               notes)
+      WHERE opportunity_id = ${id}
+    `;
+    return { opportunity_id: id };
+  },
+
+  'opportunities.delete': async ({ id }, user) => {
+    const [existing] = await sql`SELECT owning_committee_id FROM opportunities WHERE opportunity_id = ${id}`;
+    if (!existing) return { opportunity_id: id };
+    requireAdminScope(user, existing.owning_committee_id);
+    await sql`DELETE FROM opportunities WHERE opportunity_id = ${id}`;
+    return { opportunity_id: id };
+  },
+
+  // ─── ASSIGNMENTS ─────────────────────────────────────────────────────
+  'assignments.list': async ({ opportunity_id, project_id, member_id }) => sql`
+    SELECT a.*,
+      o.role_name, o.role_key, o.estimated_hours, o.project_id, o.owning_committee_id,
+      p.project_name, p.project_type, p.event_date,
+      m.full_name AS member_full_name, m.preferred_name AS member_preferred_name,
+      m.email AS member_email
+    FROM assignments a
+    JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN projects p ON p.project_id     = o.project_id
+    LEFT JOIN members  m ON m.member_id      = a.member_id
+    WHERE 1=1
+      ${opportunity_id ? sql`AND a.opportunity_id = ${opportunity_id}` : sql``}
+      ${project_id     ? sql`AND o.project_id     = ${project_id}`     : sql``}
+      ${member_id      ? sql`AND a.member_id      = ${member_id}`      : sql``}
+    ORDER BY a.created_at DESC
+  `,
+
+  'assignments.add': async (body, user) => {
+    const data = body.data || body;
+    requireAuth(user);
+    if (!data.opportunity_id) throw httpErr('opportunity_id is required', 400);
+    if (!data.member_id && !data.volunteer_name) {
+      throw httpErr('member_id or volunteer_name is required', 400);
+    }
+    const [r] = await sql`
+      INSERT INTO assignments (opportunity_id, member_id, volunteer_name, volunteer_email,
+                               assigned_by, attendance_status)
+      VALUES (${data.opportunity_id}, ${data.member_id || null},
+              ${data.volunteer_name || null}, ${data.volunteer_email || null},
+              ${user.id}, 'Pending')
+      RETURNING assignment_id
+    `;
+    return { id: r.assignment_id, assignment_id: r.assignment_id };
+  },
+
+  'assignments.remove': async ({ id }, user) => {
+    requireAuth(user);
+    await sql`DELETE FROM assignments WHERE assignment_id = ${id}`;
+    return { id };
+  },
+
+  'assignments.markAttendance': async (body, user) => {
+    const data = body.data || body;
+    requireAuth(user);
+    if (!data.assignment_id || !data.attendance_status) {
+      throw httpErr('assignment_id and attendance_status are required', 400);
+    }
+    await sql`
+      UPDATE assignments SET
+        attendance_status    = ${data.attendance_status},
+        attendance_notes     = ${data.attendance_notes || null},
+        attendance_marked_by = ${user.id},
+        attendance_marked_at = NOW()
+      WHERE assignment_id = ${data.assignment_id}
+    `;
+    return { id: data.assignment_id };
+  },
+
+  'assignments.bulkMarkAttendance': async ({ records }, user) => {
+    requireAuth(user);
+    if (!Array.isArray(records)) throw httpErr('records[] required', 400);
+    let count = 0;
+    for (const r of records) {
+      if (!r.assignment_id || !r.attendance_status) continue;
+      await sql`
+        UPDATE assignments SET
+          attendance_status    = ${r.attendance_status},
+          attendance_notes     = ${r.attendance_notes || null},
+          attendance_marked_by = ${user.id},
+          attendance_marked_at = NOW()
+        WHERE assignment_id = ${r.assignment_id}
+      `;
+      count++;
+    }
+    return { count };
   },
 
   // ─── SETUP ───────────────────────────────────────────────────────────
@@ -804,4 +1049,20 @@ function httpErr(msg, status) {
   const e = new Error(msg);
   e.status = status;
   return e;
+}
+
+// Single source of truth for `members.total_hours`: sum of FinalApproved hours
+// only. Everything that records/edits/approves hours must call this with the
+// affected member_id (or no-op on null) so the cache stays consistent.
+async function recomputeMemberTotalHours(member_id) {
+  if (!member_id) return;
+  await sql`
+    UPDATE members SET total_hours = (
+      SELECT COALESCE(SUM(total_hours), 0)
+      FROM hours
+      WHERE member_id = ${member_id}
+        AND approval_status = 'FinalApproved'
+    )
+    WHERE member_id = ${member_id}
+  `;
 }

@@ -435,6 +435,10 @@ tr:hover td { background:#fafcfa; }
     <div class="sb-item" data-page="participants" onclick="showPage('participants')">
       <span class="sb-ic">🙋</span>المشاركون
     </div>
+    <div class="sb-item" data-page="opportunities" onclick="showPage('opportunities')">
+      <span class="sb-ic">🎯</span>الفرص التطوعية
+      <span class="sb-badge" id="b-opportunities">0</span>
+    </div>
 
     <div class="sb-section">المتابعة</div>
     <div class="sb-item" data-page="attendance" onclick="showPage('attendance')">
@@ -623,6 +627,44 @@ tr:hover td { background:#fafcfa; }
       </div>
     </div>
 
+    <!-- ══════════ OPPORTUNITIES (§4, §12) ══════════ -->
+    <div class="page" id="page-opportunities">
+      <div class="card">
+        <div class="card-head">
+          <h3>🎯 الفرص التطوعية</h3>
+          <div class="card-head-right">
+            <select class="filter-select" id="opportunities-project-filter" onchange="loadOpportunities()">
+              <option value="">كل المشاريع</option>
+            </select>
+            <select class="filter-select" id="opportunities-status-filter" onchange="loadOpportunities()">
+              <option value="">كل الحالات</option>
+              <option value="Open">مفتوحة</option>
+              <option value="Filled">مكتملة</option>
+              <option value="NeedsHelp">تحتاج مساعدة</option>
+              <option value="Cancelled">ملغاة</option>
+              <option value="Done">منتهية</option>
+            </select>
+            <button class="btn btn-g" onclick="openModal('opportunity')">+ إضافة فرصة</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>المشروع / الفعالية</th>
+              <th>الدور</th>
+              <th>اللجنة المستفيدة</th>
+              <th>الساعات المقدّرة</th>
+              <th>المسندون / المطلوب</th>
+              <th>الحضور</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr></thead>
+            <tbody id="opportunities-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ══════════ ATTENDANCE ══════════ -->
     <div class="page" id="page-attendance">
       <div class="card">
@@ -659,7 +701,7 @@ tr:hover td { background:#fafcfa; }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>العضو / المتطوع</th><th>المشروع</th><th>قبل</th><th>خلال</th><th>بعد</th><th>الإجمالي</th><th>ملاحظات</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>العضو / المتطوع</th><th>المشروع / الدور</th><th>قبل</th><th>خلال</th><th>بعد</th><th>الإجمالي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="hours-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
@@ -927,6 +969,82 @@ tr:hover td { background:#fafcfa; }
   </div>
 </div>
 
+<!-- OPPORTUNITY MODAL -->
+<div class="overlay" id="ov-opportunity">
+  <div class="modal">
+    <div class="modal-head"><h3>🎯 فرصة تطوعية</h3><button class="modal-close" onclick="closeModal('opportunity')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="opp-edit-id"/>
+      <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="opp-project"><option value="">— اختر —</option></select></div>
+      <div class="fg-row">
+        <div class="fg"><label>الدور <span class="required">*</span></label>
+          <select id="opp-role-key" onchange="onOppRolePreset()">
+            <option value="">— اختر دور قياسي —</option>
+          </select>
+        </div>
+        <div class="fg"><label>اسم الدور <span class="required">*</span></label><input id="opp-role-name" placeholder="مثل: منسق استقبال"/></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>الساعات المقدّرة</label><input id="opp-est-hours" type="number" step="0.5" min="0" value="2"/></div>
+        <div class="fg"><label>عدد المتطوعين المطلوب</label><input id="opp-headcount" type="number" min="1" value="1"/></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>اللجنة المستفيدة</label><select id="opp-committee"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label>الحالة</label>
+          <select id="opp-status">
+            <option value="Open">مفتوحة</option>
+            <option value="Filled">مكتملة</option>
+            <option value="NeedsHelp">تحتاج مساعدة</option>
+            <option value="Cancelled">ملغاة</option>
+            <option value="Done">منتهية</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>ملاحظات</label><textarea id="opp-notes"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" onclick="closeModal('opportunity')">إلغاء</button>
+      <button class="btn btn-g" onclick="saveOpportunity()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- OPPORTUNITY ASSIGNMENTS MODAL -->
+<div class="overlay" id="ov-opp-assign">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <h3>👥 المسندون على الفرصة</h3>
+      <button class="modal-close" onclick="closeModal('opp-assign')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="opp-assign-header" style="background:var(--c-soft);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem"></div>
+      <div class="fg-row" style="align-items:end">
+        <div class="fg" style="flex:1"><label>إضافة عضو</label>
+          <select id="opp-assign-member"><option value="">— اختر —</option></select>
+        </div>
+        <button class="btn btn-g" onclick="addAssignmentMember()">+ إسناد عضو</button>
+      </div>
+      <details style="margin:.5rem 0 1rem">
+        <summary style="cursor:pointer;font-size:.85rem;color:var(--tm)">إسناد متطوع غير عضو</summary>
+        <div class="fg-row" style="margin-top:.5rem;align-items:end">
+          <div class="fg" style="flex:1"><label>اسم المتطوع</label><input id="opp-assign-vol-name"/></div>
+          <div class="fg" style="flex:1"><label>البريد</label><input id="opp-assign-vol-email" dir="ltr"/></div>
+          <button class="btn btn-g" onclick="addAssignmentVolunteer()">+ إسناد</button>
+        </div>
+      </details>
+      <div class="table-wrap" style="max-height:380px;overflow:auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>الحضور</th><th>إجراءات</th></tr></thead>
+          <tbody id="opp-assign-tbody"><tr class="empty-row"><td colspan="3">لا يوجد مسندون بعد</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" onclick="closeModal('opp-assign')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- PARTICIPANT MODAL -->
 <div class="overlay" id="ov-participant">
   <div class="modal">
@@ -1009,6 +1127,32 @@ tr:hover td { background:#fafcfa; }
     <div class="modal-head"><h3>⏱️ تسجيل ساعات تطوعية</h3><button class="modal-close" onclick="closeModal('hours')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="hrs-edit-id"/>
+      <input type="hidden" id="hrs-assignment-id"/>
+
+      <!-- Principle-2 path: tie hours to a specific assignment so the server can
+           enforce that the person was marked Attended. Leave the dropdowns empty
+           to fall back to the legacy direct-entry path (admin correction). -->
+      <div style="background:var(--gl);border-radius:var(--rs);padding:.85rem 1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--g);margin-bottom:.4rem;font-size:.85rem">
+          🎯 تسجيل عبر فرصة (موصى به)
+        </div>
+        <div style="font-size:.72rem;color:var(--tm);margin-bottom:.6rem">
+          الساعات المرتبطة بفرصة تتطلّب أن تكون حالة الحضور "حضر" — تطبيقاً للمبدأ الثاني.
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>الفرصة</label>
+            <select id="hrs-opportunity" onchange="onHrsOpportunityChange()">
+              <option value="">— تسجيل مباشر بدون فرصة —</option>
+            </select>
+          </div>
+          <div class="fg"><label>المسنَد (الحاضر)</label>
+            <select id="hrs-assignment" onchange="onHrsAssignmentChange()">
+              <option value="">— اختر بعد اختيار الفرصة —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="hrs-project"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>نوع المشارك</label>
         <select id="hrs-type" onchange="toggleHrsFields()">
@@ -1217,6 +1361,7 @@ const DB = {
   participants: [],
   attendance:   [],
   hours:        [],
+  opportunities:[],
 };
 
 const ROLE_COLORS = {
@@ -1244,7 +1389,39 @@ const STATUS_COLORS = {
   'Excused':   't-b',
   'Confirmed': 't-g',
   'Pending':   't-y',
+  // Opportunity statuses
+  'Open':           't-b',
+  'Filled':         't-g',
+  'NeedsHelp':      't-r',
+  'Done':           't-gr',
+  // Hours approval (§7)
+  'Draft':            't-y',
+  'PrimaryApproved':  't-b',
+  'FinalApproved':    't-g',
+  'Rejected':         't-r',
+  // Attendance on assignments
+  'Attended':         't-g',
 };
+
+// 14 standard roles from the requirements doc §12. The UI offers them as a
+// dropdown; the user can also type a custom role_name. role_key is canonical
+// (used by reports later); estimated_hours is the *default* — editable per row.
+const STANDARD_ROLES = [
+  { key: 'reception_coordinator', name: 'منسق استقبال',          hours: 2.5 },
+  { key: 'food_lead',             name: 'مسؤول طعام',            hours: 3.5 },
+  { key: 'photographer',          name: 'مصوّر',                 hours: 3.5 },
+  { key: 'logistics_coordinator', name: 'منسق لوجستي',           hours: 6.5 },
+  { key: 'pre_event_setup',       name: 'تحضير قبلي',            hours: 3 },
+  { key: 'cleanup',               name: 'تنظيف وإقفال',          hours: 2 },
+  { key: 'general_supervisor',    name: 'مشرف عام',              hours: 9 },
+  { key: 'mc',                    name: 'مقدّم برنامج',          hours: 4 },
+  { key: 'registration',          name: 'مسؤول تسجيل',           hours: 3 },
+  { key: 'av_support',            name: 'دعم فني (صوت وإضاءة)',  hours: 5 },
+  { key: 'heritage_display',      name: 'مسؤول عرض تراثي',       hours: 4 },
+  { key: 'academy_teacher',       name: 'معلم بالأكاديمية',      hours: 0 },
+  { key: 'academy_coordinator',   name: 'منسق أكاديمية',         hours: 0 },
+  { key: 'design_media',          name: 'تصميم وإعلام',          hours: 0 },
+];
 
 // ══════════════════════════════════════════
 // API
@@ -1287,6 +1464,7 @@ const PAGE_TITLES = {
   interest:        '🙋 طلبات المشاركة',
   emails:          '💌 الإيميلات والشكر',
   certificates:    '🏅 الشهادات',
+  opportunities:   '🎯 الفرص التطوعية',
 };
 
 function showPage(page) {
@@ -1312,6 +1490,7 @@ function showPage(page) {
     committees:       loadCommittees,
     projects:         loadProjects,
     participants:     () => { populateProjectSelects(); loadParticipants(); },
+    opportunities:    () => { populateProjectSelects(); loadOpportunities(); },
     attendance:       () => { populateProjectSelects(); loadAttendance(); },
     hours:            loadHours,
     profile:          loadProfileSelect,
@@ -1797,6 +1976,247 @@ function toggleParticipantFields() {
 }
 
 // ══════════════════════════════════════════
+// OPPORTUNITIES (§4, §12) + ASSIGNMENTS
+// ══════════════════════════════════════════
+const ATTENDANCE_OPTIONS = ['Pending', 'Attended', 'Absent', 'Excused'];
+const ATTENDANCE_LABEL_AR = {
+  Pending: 'قيد الانتظار', Attended: 'حضر', Absent: 'غاب', Excused: 'معذور',
+};
+const OPP_STATUS_AR = {
+  Open: 'مفتوحة', Filled: 'مكتملة', NeedsHelp: 'تحتاج مساعدة',
+  Cancelled: 'ملغاة', Done: 'منتهية',
+};
+
+let _activeOpportunity = null; // currently-open opportunity in the assignments modal
+
+async function loadOpportunities() {
+  const params = {};
+  const pid = gv('opportunities-project-filter'); if (pid) params.project_id = pid;
+  const st  = gv('opportunities-status-filter');  if (st)  params.status     = st;
+  const data = await api('opportunities.list', params);
+  if (!data || !data.success) return;
+  DB.opportunities = data.data || [];
+  renderOpportunities(DB.opportunities);
+  const badge = document.getElementById('b-opportunities');
+  if (badge) badge.textContent = DB.opportunities.length;
+}
+
+function renderOpportunities(items) {
+  const tbody = document.getElementById('opportunities-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد فرص بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(o => {
+    const project = DB.projects.find(p => p.project_id === o.project_id);
+    const com = DB.committees.find(c => c.committee_id === o.owning_committee_id);
+    const projectCell = project
+      ? `<div style="font-weight:600">${esc(project.project_name)}</div>
+         <div style="font-size:.7rem;color:var(--tm)">${fmtDate(project.event_date)}</div>`
+      : esc(o.project_id);
+    const filled = (o.assigned_count || 0);
+    const need   = o.headcount_needed || 1;
+    const fillBar = `${filled} / ${need}` + (filled >= need ? ' ✅' : '');
+    const att = `${o.attended_count || 0} حضر`;
+    const statusLabel = OPP_STATUS_AR[o.status] || o.status;
+    return `<tr>
+      <td>${projectCell}</td>
+      <td><strong>${esc(o.role_name)}</strong></td>
+      <td>${com ? esc(com.committee_name) : '<span style="color:var(--tm)">—</span>'}</td>
+      <td>${o.estimated_hours} س</td>
+      <td>${fillBar}</td>
+      <td style="font-size:.8rem">${att}</td>
+      <td>${tag(statusLabel, STATUS_COLORS[o.status] || 't-gr')}</td>
+      <td>
+        <button class="btn-icon" title="إدارة المسندين" onclick="openOpportunityAssignments('${o.opportunity_id}')">👥</button>
+        <button class="btn-icon edit" onclick="editOpportunity('${o.opportunity_id}')">✏️</button>
+        <button class="btn-icon del" onclick="confirmDeleteOpportunity('${o.opportunity_id}','${esc(o.role_name).replace(/'/g, "\\'")}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function populateRolePresets() {
+  const sel = document.getElementById('opp-role-key');
+  if (!sel || sel.options.length > 1) return;
+  for (const r of STANDARD_ROLES) {
+    const opt = document.createElement('option');
+    opt.value = r.key;
+    opt.textContent = `${r.name} (${r.hours || '—'} س)`;
+    sel.appendChild(opt);
+  }
+}
+
+function onOppRolePreset() {
+  const key = gv('opp-role-key');
+  if (!key) return;
+  const r = STANDARD_ROLES.find(x => x.key === key);
+  if (!r) return;
+  // Only fill when the user hasn't typed anything custom yet — don't clobber.
+  if (!gv('opp-role-name')) sv('opp-role-name', r.name);
+  if (r.hours && parseFloat(gv('opp-est-hours') || 0) === 2) sv('opp-est-hours', r.hours);
+}
+
+async function saveOpportunity() {
+  const id = gv('opp-edit-id');
+  const body = {
+    project_id:          gv('opp-project'),
+    role_name:           gv('opp-role-name'),
+    role_key:            gv('opp-role-key') || null,
+    estimated_hours:     parseFloat(gv('opp-est-hours')) || 0,
+    headcount_needed:    parseInt(gv('opp-headcount'), 10) || 1,
+    owning_committee_id: gv('opp-committee') || null,
+    status:              gv('opp-status'),
+    notes:               gv('opp-notes'),
+  };
+  if (!body.project_id || !body.role_name) {
+    toast('المشروع واسم الدور مطلوبان', 'twarn'); return;
+  }
+  const res = id
+    ? await api('opportunities.update', { id, data: body })
+    : await api('opportunities.create', body);
+  if (res && res.success) {
+    toast('✅ تم الحفظ');
+    closeModal('opportunity');
+    clearForm('opportunity');
+    loadOpportunities();
+  }
+}
+
+function editOpportunity(id) {
+  const o = DB.opportunities.find(x => x.opportunity_id === id);
+  if (!o) return;
+  sv('opp-edit-id', id);
+  sv('opp-project', o.project_id);
+  sv('opp-role-key', o.role_key || '');
+  sv('opp-role-name', o.role_name || '');
+  sv('opp-est-hours', o.estimated_hours || 0);
+  sv('opp-headcount', o.headcount_needed || 1);
+  sv('opp-committee', o.owning_committee_id || '');
+  sv('opp-status', o.status || 'Open');
+  sv('opp-notes', o.notes || '');
+  openModal('opportunity');
+}
+
+function confirmDeleteOpportunity(id, name) {
+  document.getElementById('confirm-msg').textContent = `هل تريد حذف الفرصة "${name}"؟ سيتم حذف جميع المسندين عليها.`;
+  document.getElementById('confirm-btn').onclick = async () => {
+    const res = await api('opportunities.delete', { id });
+    if (res && res.success) {
+      toast('🗑️ تم الحذف');
+      closeModal('confirm');
+      loadOpportunities();
+    }
+  };
+  openModal('confirm');
+}
+
+// ─── ASSIGNMENTS MODAL ───────────────────────────────────────────────
+async function openOpportunityAssignments(opportunityId) {
+  _activeOpportunity = DB.opportunities.find(o => o.opportunity_id === opportunityId);
+  if (!_activeOpportunity) return;
+  const o = _activeOpportunity;
+  const project = DB.projects.find(p => p.project_id === o.project_id);
+  const com = DB.committees.find(c => c.committee_id === o.owning_committee_id);
+  document.getElementById('opp-assign-header').innerHTML = `
+    <div style="font-weight:700">${esc(o.role_name)}</div>
+    <div style="font-size:.78rem;color:var(--tm);margin-top:.25rem">
+      ${project ? esc(project.project_name) : ''} · ${o.estimated_hours} س ·
+      ${com ? esc(com.committee_name) : '—'}
+    </div>`;
+
+  // Fill member-picker with members not yet assigned to this opportunity
+  const memberSel = document.getElementById('opp-assign-member');
+  memberSel.innerHTML = '<option value="">— اختر —</option>';
+  const r = await api('assignments.list', { opportunity_id: opportunityId });
+  const assigned = (r && r.success ? r.data : []) || [];
+  const assignedMemberIds = new Set(assigned.map(a => a.member_id).filter(Boolean));
+  for (const m of DB.members) {
+    if (assignedMemberIds.has(m.member_id)) continue;
+    const opt = document.createElement('option');
+    opt.value = m.member_id;
+    opt.textContent = m.preferred_name || m.full_name;
+    memberSel.appendChild(opt);
+  }
+  renderAssignments(assigned);
+  openModal('opp-assign');
+}
+
+function renderAssignments(items) {
+  const tbody = document.getElementById('opp-assign-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="3">لا يوجد مسندون بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(a => {
+    const member = DB.members.find(m => m.member_id === a.member_id);
+    const name = a.member_id
+      ? (member ? esc(member.preferred_name || member.full_name) : a.member_id)
+      : `${esc(a.volunteer_name)}${a.volunteer_email ? ` <span style="color:var(--tm);font-size:.72rem;direction:ltr">(${esc(a.volunteer_email)})</span>` : ''}`;
+    const opts = ATTENDANCE_OPTIONS.map(s =>
+      `<option value="${s}" ${a.attendance_status === s ? 'selected' : ''}>${ATTENDANCE_LABEL_AR[s]}</option>`
+    ).join('');
+    return `<tr>
+      <td>${name}</td>
+      <td><select onchange="markAttendance(${a.assignment_id}, this.value)">${opts}</select></td>
+      <td><button class="btn-icon del" onclick="removeAssignment(${a.assignment_id})">🗑️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addAssignmentMember() {
+  const memberId = gv('opp-assign-member');
+  if (!memberId || !_activeOpportunity) return;
+  const res = await api('assignments.add', {
+    opportunity_id: _activeOpportunity.opportunity_id,
+    member_id:      memberId,
+  });
+  if (res && res.success) {
+    toast('✅ تم الإسناد');
+    openOpportunityAssignments(_activeOpportunity.opportunity_id);
+    loadOpportunities();
+  }
+}
+
+async function addAssignmentVolunteer() {
+  const name  = gv('opp-assign-vol-name');
+  const email = gv('opp-assign-vol-email');
+  if (!name || !_activeOpportunity) { toast('اسم المتطوع مطلوب', 'twarn'); return; }
+  const res = await api('assignments.add', {
+    opportunity_id:  _activeOpportunity.opportunity_id,
+    volunteer_name:  name,
+    volunteer_email: email || null,
+  });
+  if (res && res.success) {
+    toast('✅ تم الإسناد');
+    sv('opp-assign-vol-name', '');
+    sv('opp-assign-vol-email', '');
+    openOpportunityAssignments(_activeOpportunity.opportunity_id);
+    loadOpportunities();
+  }
+}
+
+async function markAttendance(assignmentId, status) {
+  const res = await api('assignments.markAttendance', {
+    assignment_id: assignmentId, attendance_status: status,
+  });
+  if (res && res.success) {
+    toast('✅ تم التحديث');
+    if (_activeOpportunity) loadOpportunities();
+  }
+}
+
+async function removeAssignment(assignmentId) {
+  if (!confirm('إزالة هذا الشخص من الفرصة؟')) return;
+  const res = await api('assignments.remove', { id: assignmentId });
+  if (res && res.success) {
+    toast('🗑️ تمت الإزالة');
+    if (_activeOpportunity) openOpportunityAssignments(_activeOpportunity.opportunity_id);
+    loadOpportunities();
+  }
+}
+
+// ══════════════════════════════════════════
 // ATTENDANCE
 // ══════════════════════════════════════════
 async function loadAttendance(projectId) {
@@ -1875,32 +2295,87 @@ async function loadHours(projectId) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد ساعات مسجّلة</td></tr>';
     return;
   }
-  tbody.innerHTML = items.map(h => {
-    const member = DB.members.find(m => m.member_id === h.member_id);
-    const project = DB.projects.find(p => p.project_id === h.project_id);
-    const name = h.participant_type === 'Member'
-      ? (member ? esc(member.preferred_name || member.full_name) : h.member_id)
-      : esc(h.volunteer_email);
-    return `<tr>
-      <td><strong>${name}</strong></td>
-      <td style="font-size:.78rem">${project ? esc(project.project_name) : h.project_id}</td>
-      <td>${h.hours_before || 0}</td>
-      <td>${h.hours_during || 0}</td>
-      <td>${h.hours_after || 0}</td>
-      <td><strong style="color:var(--g)">${h.total_hours || 0}</strong></td>
-      <td style="font-size:.78rem;max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(h.notes) || '—'}</td>
-      <td>
-        <button class="btn-icon del" onclick="confirmDelete('hours','${h.hours_id}','هذا السجل')">🗑️</button>
-      </td>
-    </tr>`;
-  }).join('');
+  tbody.innerHTML = items.map(h => renderHoursRow(h)).join('');
+}
+
+// Renders one hours row with the right approval-stage badge and action buttons
+// (per §7). Visibility of approve/reject buttons is controlled by the caller's
+// access level — the server still re-checks every action.
+function renderHoursRow(h) {
+  const member  = DB.members.find(m => m.member_id === h.member_id);
+  const project = DB.projects.find(p => p.project_id === h.project_id);
+  const name = h.participant_type === 'Member'
+    ? (member ? esc(member.preferred_name || member.full_name) : h.member_id)
+    : esc(h.volunteer_email);
+  const projectCell = project
+    ? `<div style="font-weight:600">${esc(project.project_name)}</div>
+       ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`
+    : esc(h.project_id);
+  const status = h.approval_status || 'Draft';
+  const statusLabelAR = {
+    Draft: 'مسودة', PrimaryApproved: 'اعتماد أولي',
+    FinalApproved: 'اعتماد نهائي', Rejected: 'مرفوض',
+  }[status] || status;
+
+  const access = (window.CURRENT_USER || {}).access;
+  const isHead = access === 'head';
+  const isAdmin = access === 'superadmin';
+  const ownsCommittee = isAdmin
+    || (isHead && h.opportunity_committee_id === window.CURRENT_USER.committee_id);
+
+  const actions = [];
+  if (status === 'Draft' && ownsCommittee) {
+    actions.push(`<button class="btn-icon" title="اعتماد أولي" onclick="primaryApproveHours(${h.hours_id})">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" onclick="rejectHours(${h.hours_id})">❌</button>`);
+  } else if (status === 'PrimaryApproved' && isAdmin) {
+    actions.push(`<button class="btn-icon" title="اعتماد نهائي" onclick="finalApproveHours(${h.hours_id})">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" onclick="rejectHours(${h.hours_id})">❌</button>`);
+  } else if (status === 'FinalApproved' && isAdmin) {
+    actions.push(`<button class="btn-icon" title="رفض / استرجاع" onclick="rejectHours(${h.hours_id})">↩️</button>`);
+  }
+  actions.push(`<button class="btn-icon del" onclick="confirmDelete('hours','${h.hours_id}','هذا السجل')">🗑️</button>`);
+
+  const approverHint = h.primary_approver_name
+    ? `<div style="font-size:.65rem;color:var(--tm);margin-top:.15rem">أولي: ${esc(h.primary_approver_name)}${h.final_approver_name ? ` · نهائي: ${esc(h.final_approver_name)}` : ''}</div>`
+    : '';
+  const rejectHint = h.rejected_reason
+    ? `<div style="font-size:.65rem;color:var(--rd);margin-top:.15rem">سبب: ${esc(h.rejected_reason)}</div>`
+    : '';
+
+  return `<tr>
+    <td><strong>${name}</strong></td>
+    <td style="font-size:.78rem">${projectCell}</td>
+    <td>${h.hours_before || 0}</td>
+    <td>${h.hours_during || 0}</td>
+    <td>${h.hours_after || 0}</td>
+    <td><strong style="color:var(--g)">${h.total_hours || 0}</strong></td>
+    <td>${tag(statusLabelAR, STATUS_COLORS[status] || 't-gr')}${approverHint}${rejectHint}</td>
+    <td>${actions.join('')}</td>
+  </tr>`;
+}
+
+async function primaryApproveHours(id) {
+  const res = await api('hours.primaryApprove', { id });
+  if (res && res.success) { toast('✅ اعتماد أولي'); loadHours(gv('hours-project-filter') || ''); }
+}
+async function finalApproveHours(id) {
+  const res = await api('hours.finalApprove', { id });
+  if (res && res.success) { toast('✅ اعتماد نهائي'); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
+}
+async function rejectHours(id) {
+  const reason = prompt('سبب الرفض (اختياري):');
+  if (reason === null) return;
+  const res = await api('hours.reject', { id, reason });
+  if (res && res.success) { toast('❌ تم الرفض'); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
 }
 
 async function saveHours() {
   const before = parseFloat(gv('hrs-before') || 0);
   const during = parseFloat(gv('hrs-during') || 0);
   const after  = parseFloat(gv('hrs-after')  || 0);
+  const assignmentId = gv('hrs-assignment-id');
   const body = {
+    assignment_id:        assignmentId ? parseInt(assignmentId, 10) : null,
     project_id:           gv('hrs-project'),
     participant_type:     gv('hrs-type'),
     member_id:            gv('hrs-member'),
@@ -1914,10 +2389,82 @@ async function saveHours() {
   if (!body.project_id) { toast('اختر مشروعاً', 'twarn'); return; }
   if (before + during + after <= 0) { toast('أدخل عدد الساعات', 'twarn'); return; }
   const res = await api('recordHours', body);
-  if (res) {
+  if (res && res.success) {
     toast(`✅ تم تسجيل ${res.total_hours} ساعة`);
     closeModal('hours'); clearForm('hours');
     loadHours(gv('hours-project-filter') || '');
+  }
+}
+
+// ─── Hours via Opportunity (Principle 2) ─────────────────────────────
+let _hrsOpportunityCache = null;
+let _hrsAssignmentsCache = [];
+
+async function populateHrsOpportunitySelect() {
+  const sel = document.getElementById('hrs-opportunity');
+  if (!sel) return;
+  sv('hrs-assignment-id', '');
+  // Use the cache from the Opportunities tab if it's already loaded; otherwise fetch.
+  if (DB.opportunities && DB.opportunities.length) {
+    _hrsOpportunityCache = DB.opportunities;
+  } else {
+    const r = await api('opportunities.list', {});
+    _hrsOpportunityCache = (r && r.success ? r.data : []) || [];
+  }
+  sel.innerHTML = '<option value="">— تسجيل مباشر بدون فرصة —</option>'
+    + _hrsOpportunityCache.map(o => {
+        const proj = DB.projects.find(p => p.project_id === o.project_id);
+        const projName = proj ? proj.project_name : o.project_id;
+        return `<option value="${o.opportunity_id}">${esc(projName)} — ${esc(o.role_name)}</option>`;
+      }).join('');
+  // Reset assignment select
+  document.getElementById('hrs-assignment').innerHTML =
+    '<option value="">— اختر بعد اختيار الفرصة —</option>';
+}
+
+async function onHrsOpportunityChange() {
+  sv('hrs-assignment-id', '');
+  const oid = gv('hrs-opportunity');
+  const assignSel = document.getElementById('hrs-assignment');
+  if (!oid) {
+    assignSel.innerHTML = '<option value="">— اختر بعد اختيار الفرصة —</option>';
+    _hrsAssignmentsCache = [];
+    return;
+  }
+  const r = await api('assignments.list', { opportunity_id: oid });
+  _hrsAssignmentsCache = (r && r.success ? r.data : []) || [];
+  // Only show assignments marked Attended — Principle 2.
+  const attended = _hrsAssignmentsCache.filter(a => a.attendance_status === 'Attended');
+  if (!attended.length) {
+    assignSel.innerHTML = '<option value="">لا يوجد حضور مؤكَّد لهذه الفرصة</option>';
+    return;
+  }
+  assignSel.innerHTML = '<option value="">— اختر —</option>' + attended.map(a => {
+    const member = DB.members.find(m => m.member_id === a.member_id);
+    const name = a.member_id
+      ? (member ? (member.preferred_name || member.full_name) : a.member_id)
+      : (a.volunteer_name + (a.volunteer_email ? ` — ${a.volunteer_email}` : ''));
+    return `<option value="${a.assignment_id}">${esc(name)}</option>`;
+  }).join('');
+}
+
+function onHrsAssignmentChange() {
+  const aid = gv('hrs-assignment');
+  if (!aid) { sv('hrs-assignment-id', ''); return; }
+  sv('hrs-assignment-id', aid);
+  const a = _hrsAssignmentsCache.find(x => String(x.assignment_id) === String(aid));
+  if (!a) return;
+  // Auto-fill project, participant type, and member from the assignment.
+  sv('hrs-project', a.project_id || '');
+  if (a.member_id) {
+    sv('hrs-type', 'Member'); toggleHrsFields(); sv('hrs-member', a.member_id);
+  } else {
+    sv('hrs-type', 'Volunteer'); toggleHrsFields(); sv('hrs-vol-email', a.volunteer_email || '');
+  }
+  // Default during-hours to the opportunity's estimated_hours if currently zero.
+  if (parseFloat(gv('hrs-during') || 0) === 0 && a.estimated_hours) {
+    sv('hrs-during', a.estimated_hours);
+    document.getElementById('hrs-total').textContent = a.estimated_hours;
   }
 }
 
@@ -2030,22 +2577,26 @@ function populateProjectSelects() {
     `<option value="${p.project_id}">${esc(p.project_name)}</option>`
   ).join('');
   ['participants-project-filter','attendance-project-filter','hours-project-filter',
-   'par-project','att-project','hrs-project'
+   'opportunities-project-filter',
+   'par-project','att-project','hrs-project','opp-project'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
+      const prev = el.value;
       const isFilter = id.includes('filter');
-      el.innerHTML = (isFilter ? '<option value="">اختر مشروعاً...</option>' : '<option value="">— اختر —</option>') + options;
+      el.innerHTML = (isFilter ? '<option value="">كل المشاريع</option>' : '<option value="">— اختر —</option>') + options;
+      if (prev) el.value = prev;
     }
   });
 }
 
 function populateCommitteeSelects() {
-  const el = document.getElementById('m-committee-id');
-  if (el) {
-    el.innerHTML = '<option value="">— بدون لجنة —</option>' +
-      DB.committees.map(c => `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`).join('');
-  }
+  const opts = '<option value="">— بدون لجنة —</option>' +
+    DB.committees.map(c => `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`).join('');
+  ['m-committee-id','opp-committee'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { const prev = el.value; el.innerHTML = opts; if (prev) el.value = prev; }
+  });
 }
 
 // ══════════════════════════════════════════
@@ -2087,12 +2638,14 @@ function confirmDelete(type, id, name) {
 function openModal(type) {
   document.getElementById('ov-' + type).classList.add('open');
   // Pre-populate selects
-  if (['member','participant','project','attendance','hours'].includes(type)) {
+  if (['member','participant','project','attendance','hours','opportunity'].includes(type)) {
     populateMemberSelects();
     populateProjectSelects();
     populateCommitteeSelects();
   }
   if (type === 'committee') populateMemberSelects();
+  if (type === 'opportunity') populateRolePresets();
+  if (type === 'hours') populateHrsOpportunitySelect();
   // Set today's date defaults
   if (type === 'attendance') sv('att-date', new Date().toISOString().split('T')[0]);
   if (type === 'member' && !gv('m-join-date')) sv('m-join-date', new Date().toISOString().split('T')[0]);
@@ -2139,6 +2692,7 @@ function clearForm(type) {
     participant: ['par-vol-name','par-vol-email','par-vol-phone','par-notes'],
     attendance:  ['att-vol-email','att-notes'],
     hours:       ['hrs-vol-email','hrs-notes'],
+    opportunity: ['opp-edit-id','opp-role-name','opp-notes'],
   };
   (fields[type] || []).forEach(id => sv(id, ''));
   // Reset number inputs

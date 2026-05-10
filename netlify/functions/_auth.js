@@ -50,6 +50,7 @@ export const SUPERADMIN_ACTIONS = new Set([
   'createCommittee', 'updateCommittee', 'deleteCommittee',
   'deleteMember',
   'setup.seedMembers',
+  'hours.finalApprove',  // §7 — final stage of the two-stage approval is presidency-only
 ]);
 
 export function requireAuth(user) {
