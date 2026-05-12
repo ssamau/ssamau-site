@@ -5,6 +5,19 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # esbuild's transitive-CJS resolver misses nested deps (xtend/mutable inside
+  # pg's postgres-interval, lib/sign-stream inside jws, etc.). `included_files`
+  # ships the project's entire node_modules into the function, so Node's
+  # standard require() resolution works at runtime — no manual whack-a-mole
+  # listing every transitive package. Trade-off: bigger function bundle.
+  external_node_modules = [
+    "pg",
+    "@neondatabase/serverless",
+    "@netlify/database",
+    "jsonwebtoken",
+    "bcryptjs",
+  ]
+  included_files = ["node_modules/**"]
 
 [dev]
   publish = "."

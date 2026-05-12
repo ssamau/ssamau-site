@@ -385,7 +385,6 @@ tr:hover td { background:#fafcfa; }
 .com-bar-trk{flex:1;background:#f0f0f0;border-radius:50px;height:17px;overflow:hidden;}
 .com-bar-fill{height:100%;border-radius:50px;background:var(--g);display:flex;align-items:center;justify-content:flex-end;padding-left:.3rem;transition:width .5s;}
 .com-bar-fill span{font-size:.62rem;font-weight:800;color:#fff;white-space:nowrap;}
-.seed-bar{background:var(--wnb);border:1.5px solid rgba(217,119,6,.25);border-radius:var(--rs);padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.65rem;flex-wrap:wrap;margin-bottom:1rem;}
 .seed-txt{font-size:.78rem;color:var(--wn);font-weight:600;}
 @media(max-width:880px){.proj-kpis{grid-template-columns:1fr 1fr;}.sum-row{grid-template-columns:1fr 1fr;}}
 
@@ -423,6 +422,10 @@ tr:hover td { background:#fafcfa; }
     <div class="sb-item" data-page="applications" onclick="showPage('applications')">
       <span class="sb-ic">📥</span>طلبات العضوية
       <span class="sb-badge" id="b-applications">0</span>
+    </div>
+    <div class="sb-item" data-page="accounts" onclick="showPage('accounts')" data-superadmin-only>
+      <span class="sb-ic">🔑</span>حسابات المستخدمين
+      <span class="sb-badge" id="b-accounts">0</span>
     </div>
     <div class="sb-item" data-page="advisors" onclick="showPage('advisors')">
       <span class="sb-ic">🎓</span>المستشارون
@@ -542,6 +545,33 @@ tr:hover td { background:#fafcfa; }
           <table>
             <thead><tr><th>الاسم</th><th>رقم الهوية</th><th>التواصل</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="members-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ USER ACCOUNTS (superadmin: all; head: own committee, reset-pw only) ══════════ -->
+    <div class="page" id="page-accounts">
+      <div class="card">
+        <div class="card-head">
+          <h3 id="accounts-head-title">🔑 حسابات المستخدمين</h3>
+          <div class="card-head-right">
+            <input class="search-input" placeholder="بحث باسم المستخدم..." oninput="filterTable('accounts-tbody',this.value)"/>
+            <button class="btn btn-g" id="accounts-add-btn" onclick="openAccountModal()">+ إضافة حساب</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>اسم المستخدم</th>
+              <th>الصلاحية</th>
+              <th>العضو المرتبط</th>
+              <th>اللجنة</th>
+              <th>آخر دخول</th>
+              <th>تاريخ الإنشاء</th>
+              <th>إجراءات</th>
+            </tr></thead>
+            <tbody id="accounts-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1012,6 +1042,75 @@ tr:hover td { background:#fafcfa; }
     <div class="modal-footer">
       <button class="btn btn-ol" onclick="closeModal('project')">إلغاء</button>
       <button class="btn btn-g" onclick="saveProject()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER ACCOUNT CREATE/EDIT MODAL -->
+<div class="overlay" id="ov-account">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3 id="account-modal-title">🔑 إضافة حساب</h3>
+      <button class="modal-close" onclick="closeModal('account')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="acc-edit-id"/>
+      <div class="fg">
+        <label>اسم المستخدم <span class="required">*</span></label>
+        <input id="acc-username" dir="ltr" placeholder="e.g. saad" autocomplete="off"/>
+        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">حروف وأرقام لاتينية فقط — يستخدمه المستخدم لتسجيل الدخول.</div>
+      </div>
+      <div class="fg" id="acc-pw-section">
+        <label>كلمة المرور <span class="required" id="acc-pw-required">*</span></label>
+        <div style="display:flex;gap:.4rem">
+          <input id="acc-password" dir="ltr" style="flex:1" autocomplete="off"/>
+          <button type="button" class="btn btn-ol" onclick="generateAccountPw()" style="padding:.4rem .7rem;font-size:.8rem">🎲 توليد</button>
+        </div>
+        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem" id="acc-pw-hint">على الأقل 6 أحرف. اتركها فارغة للاحتفاظ بكلمة المرور الحالية.</div>
+      </div>
+      <div class="fg">
+        <label>الصلاحية <span class="required">*</span></label>
+        <select id="acc-access">
+          <option value="member">عضو (member)</option>
+          <option value="head">رئيس لجنة (head)</option>
+          <option value="superadmin">مدير عام (superadmin)</option>
+          <option value="volunteer">متطوع (volunteer)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>ربط بعضو موجود (اختياري)</label>
+        <select id="acc-member">
+          <option value="">— حساب مدير غير مرتبط بعضو —</option>
+        </select>
+        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">القائمة تعرض فقط الأعضاء الذين ليس لديهم حساب بعد. لإنشاء عضو جديد، استخدم تبويب الأعضاء أولاً.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" onclick="closeModal('account')">إلغاء</button>
+      <button class="btn btn-g" onclick="saveAccount()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD RESULT MODAL -->
+<div class="overlay" id="ov-pw-shown">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h3>🔑 كلمة المرور المؤقتة</h3>
+      <button class="modal-close" onclick="closeModal('pw-shown')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <p style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
+        انسخها الآن — لن تظهر مرة أخرى. سلّمها للمستخدم بقناة آمنة وغيّرها بعد أول دخول.
+      </p>
+      <div style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;padding:.85rem;font-family:Menlo,Consolas,monospace;font-size:1.1rem;font-weight:700;color:#1A5C2E;letter-spacing:.05em;direction:ltr" id="pw-shown-value">—</div>
+      <div style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
+        المستخدم: <span dir="ltr" id="pw-shown-username">—</span>
+      </div>
+      <button class="btn btn-g" style="margin-top:1rem" onclick="copyShownPw()">📋 نسخ كلمة المرور</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" onclick="closeModal('pw-shown')">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1552,6 +1651,7 @@ const PAGE_TITLES = {
   certificates:    '🏅 الشهادات',
   opportunities:   '🎯 الفرص التطوعية',
   applications:    '📥 طلبات العضوية',
+  accounts:        '🔑 حسابات المستخدمين',
 };
 
 function showPage(page) {
@@ -1574,6 +1674,7 @@ function showPage(page) {
     dashboard:        loadDashboard,
     members:          loadMembers,
     applications:     loadApplications,
+    accounts:         loadAccounts,
     advisors:         loadAdvisors,
     committees:       loadCommittees,
     projects:         loadProjects,
@@ -2082,6 +2183,227 @@ function toggleParticipantFields() {
   const type = gv('par-type');
   document.getElementById('par-member-section').style.display   = type === 'Member' ? '' : 'none';
   document.getElementById('par-volunteer-section').style.display = type === 'Volunteer' ? '' : 'none';
+}
+
+// ══════════════════════════════════════════
+// USER ACCOUNTS (superadmin only)
+// ══════════════════════════════════════════
+const ACCESS_LABEL_AR = {
+  superadmin: 'مدير عام',
+  head:       'رئيس لجنة',
+  member:     'عضو',
+  volunteer:  'متطوع',
+};
+const ACCESS_COLOR = {
+  superadmin: 't-o',
+  head:       't-g',
+  member:     't-b',
+  volunteer:  't-p',
+};
+
+async function loadAccounts() {
+  // Adapt the UI to the caller's role:
+  //   superadmin → full management ("حسابات المستخدمين" + Add button)
+  //   head       → reset-only view scoped to their committee
+  const isAdmin = RBAC.isSuperAdmin();
+  const title = document.getElementById('accounts-head-title');
+  const addBtn = document.getElementById('accounts-add-btn');
+  if (title) title.textContent = isAdmin
+    ? '🔑 حسابات المستخدمين'
+    : '🔑 حسابات أعضاء لجنتي — إعادة تعيين كلمات المرور';
+  if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
+
+  // Ensure members + committees are loaded for the linking dropdown + rendering.
+  if (!DB.members.length) {
+    const m = await api('getMembers', {});
+    DB.members = (m && m.success ? m.data : []) || [];
+  }
+  if (!DB.committees.length) {
+    const c = await api('getCommittees', {});
+    DB.committees = (c && c.success ? c.data : []) || [];
+  }
+  const data = await api('users.list', {});
+  if (!data || !data.success) return;
+  const items = data.data || [];
+  DB._accounts = items;
+  const tbody = document.getElementById('accounts-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد حسابات بعد</td></tr>';
+  } else {
+    tbody.innerHTML = items.map(a => renderAccountRow(a)).join('');
+  }
+  const badge = document.getElementById('b-accounts');
+  if (badge) badge.textContent = items.length;
+}
+
+function renderAccountRow(a) {
+  // For heads, some rows are members WITHOUT an account yet — `a.id` is null
+  // and we show a "no account yet" state with no actions (admin needs to
+  // create the account first via the create-account modal).
+  const hasAccount = !!a.id;
+  const isSelf    = hasAccount && window.CURRENT_USER && a.id === window.CURRENT_USER.id;
+  const isAdmin   = RBAC.isSuperAdmin();
+
+  const memberCell = a.member_id
+    ? `<div style="font-weight:600">${esc(a.member_preferred_name || a.member_full_name || a.member_id)}</div>
+       <div style="font-size:.7rem;color:var(--tm)">${esc(a.member_club_role || '')} · <span dir="ltr">${esc(a.member_id)}</span></div>`
+    : '<span style="color:var(--tm)">— (حساب مدير غير مرتبط) —</span>';
+
+  const usernameCell = hasAccount
+    ? `<span dir="ltr" style="font-weight:700;font-family:Menlo,Consolas,monospace;font-size:.85rem">${esc(a.username)}</span>${isSelf ? ' <span style="font-size:.7rem;color:var(--g)">(أنت)</span>' : ''}`
+    : `<span style="color:var(--tm);font-size:.78rem">— لم يُنشأ حساب بعد —</span>`;
+
+  const accessCell = hasAccount
+    ? tag(ACCESS_LABEL_AR[a.access_level] || a.access_level, ACCESS_COLOR[a.access_level] || 't-gr')
+    : `<span style="font-size:.7rem;color:var(--tm)">${isAdmin ? 'لا يوجد حساب' : 'اطلب من المدير إنشاء حساب'}</span>`;
+
+  const lastLoginCell = hasAccount
+    ? (a.last_login_at ? fmtDateTime(a.last_login_at) : '<span style="color:var(--tm)">لم يدخل بعد</span>')
+    : '<span style="color:var(--tm)">—</span>';
+
+  const createdCell = hasAccount ? (fmtDate(a.created_at) || '—') : '<span style="color:var(--tm)">—</span>';
+
+  // Action buttons by role + state:
+  //   account exists + superadmin → edit, reset, delete (except self-delete)
+  //   account exists + head      → reset only (and not on heads/superadmins)
+  //   no account + superadmin    → ➕ quick-create account for this member
+  //   no account + head          → no actions; head asks admin to create
+  const actions = [];
+  if (hasAccount) {
+    if (isAdmin) {
+      actions.push(`<button class="btn-icon edit" title="تعديل" onclick="editAccount(${a.id})">✏️</button>`);
+    }
+    if (isAdmin || (a.access_level !== 'superadmin' && a.access_level !== 'head')) {
+      actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور" onclick="resetAccountPassword(${a.id}, ${attrJson(a.username)})">🔑</button>`);
+    }
+    if (isAdmin && !isSelf) {
+      actions.push(`<button class="btn-icon del" title="حذف" onclick="confirmDeleteAccount(${a.id}, ${attrJson(a.username)})">🗑️</button>`);
+    }
+  } else if (isAdmin) {
+    actions.push(`<button class="btn-icon" title="إنشاء حساب لهذا العضو" onclick="openAccountModalForMember(${attrJson(a.member_id)})">➕</button>`);
+  }
+
+  // Slightly fade no-account rows so the eye lands on the actionable ones.
+  const rowStyle = hasAccount ? '' : ' style="opacity:.65"';
+
+  return `<tr${rowStyle}>
+    <td>${usernameCell}</td>
+    <td>${accessCell}</td>
+    <td>${memberCell}</td>
+    <td style="font-size:.78rem">${esc(a.member_committee_name) || '<span style="color:var(--tm)">—</span>'}</td>
+    <td style="font-size:.78rem">${lastLoginCell}</td>
+    <td style="font-size:.78rem">${createdCell}</td>
+    <td>${actions.join('') || '<span style="color:var(--tm)">—</span>'}</td>
+  </tr>`;
+}
+
+// Shortcut: admin clicks ➕ on a no-account member row → opens create-account
+// modal pre-populated with that member selected + a freshly generated password.
+function openAccountModalForMember(memberId) {
+  openAccountModal();
+  setTimeout(() => {
+    sv('acc-member', memberId);
+    // If the member has an NID, auto-suggest it as username (per agreed convention).
+    const m = DB.members.find(x => x.member_id === memberId);
+    if (m && m.national_id && !gv('acc-username')) sv('acc-username', m.national_id);
+    if (!gv('acc-password')) generateAccountPw();
+  }, 50);
+}
+
+function openAccountModal(forEditId) {
+  // Reset form
+  sv('acc-edit-id', forEditId || '');
+  sv('acc-username', '');
+  sv('acc-password', '');
+  sv('acc-access', 'member');
+  document.getElementById('account-modal-title').textContent =
+    forEditId ? '✏️ تعديل حساب' : '🔑 إضافة حساب';
+  document.getElementById('acc-pw-required').style.display = forEditId ? 'none' : '';
+  document.getElementById('acc-pw-hint').textContent = forEditId
+    ? 'اتركها فارغة للاحتفاظ بكلمة المرور الحالية. لإعادة التعيين استخدم زر 🔑 في الجدول.'
+    : 'على الأقل 6 أحرف.';
+
+  // Populate the member dropdown — only members without an account
+  // (or the current account's own member when editing).
+  const sel = document.getElementById('acc-member');
+  const usedMemberIds = new Set((DB._accounts || []).map(a => a.member_id).filter(Boolean));
+  const current = forEditId ? (DB._accounts || []).find(a => a.id === forEditId) : null;
+  if (current && current.member_id) usedMemberIds.delete(current.member_id);
+  const linkableMembers = DB.members.filter(m => !usedMemberIds.has(m.member_id));
+  sel.innerHTML = '<option value="">— حساب مدير غير مرتبط بعضو —</option>' +
+    linkableMembers.map(m =>
+      `<option value="${m.member_id}">${esc(m.preferred_name || m.full_name)}${m.club_role ? ' · ' + esc(m.club_role) : ''}</option>`
+    ).join('');
+
+  if (current) {
+    sv('acc-username', current.username);
+    sv('acc-access', current.access_level);
+    sv('acc-member', current.member_id || '');
+  }
+  openModal('account');
+}
+
+function editAccount(id) { openAccountModal(id); }
+
+function generateAccountPw() {
+  // 9-char URL-safe random. Matches the server-side helper used by resetPassword.
+  const arr = new Uint8Array(7);
+  crypto.getRandomValues(arr);
+  const pw = btoa(String.fromCharCode(...arr))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  sv('acc-password', pw);
+}
+
+async function saveAccount() {
+  const id = gv('acc-edit-id');
+  const body = {
+    username:     gv('acc-username'),
+    password:     gv('acc-password'),
+    member_id:    gv('acc-member') || null,
+    access_level: gv('acc-access'),
+  };
+  if (!body.username) { toast('اسم المستخدم مطلوب', 'twarn'); return; }
+  if (!id && !body.password) { toast('كلمة المرور مطلوبة للحساب الجديد', 'twarn'); return; }
+
+  let res;
+  if (id) {
+    // Don't send password if the input was left blank — preserves the existing one.
+    const updateBody = { id: parseInt(id, 10), username: body.username,
+                         member_id: body.member_id, access_level: body.access_level };
+    res = await api('users.update', { data: updateBody });
+  } else {
+    res = await api('users.create', body);
+  }
+  if (res && res.success) {
+    toast(id ? '✅ تم تعديل الحساب' : '✅ تم إنشاء الحساب');
+    closeModal('account');
+    loadAccounts();
+  }
+}
+
+async function resetAccountPassword(id, username) {
+  if (!confirm(`إعادة تعيين كلمة مرور ${username}؟\nسيتم توليد كلمة مرور جديدة وإلغاء كلمة المرور الحالية فوراً.`)) return;
+  const res = await api('users.resetPassword', { id });
+  if (res && res.success) {
+    document.getElementById('pw-shown-value').textContent = res.data.temp_password;
+    document.getElementById('pw-shown-username').textContent = res.data.username;
+    openModal('pw-shown');
+  }
+}
+
+function copyShownPw() {
+  const v = document.getElementById('pw-shown-value').textContent;
+  navigator.clipboard.writeText(v).then(
+    () => toast('📋 تم النسخ'),
+    () => toast('تعذّر النسخ — انسخها يدوياً', 'twarn')
+  );
+}
+
+function confirmDeleteAccount(id, username) {
+  if (!confirm(`حذف حساب ${username}؟ سيخسر المستخدم القدرة على تسجيل الدخول.`)) return;
+  api('users.delete', { id }).then(res => {
+    if (res && res.success) { toast('🗑️ تم الحذف'); loadAccounts(); }
+  });
 }
 
 // ══════════════════════════════════════════
@@ -3114,8 +3436,6 @@ function toast(msg, cls = 'tok') {
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
-// ── SEED DATA (59 members, 8 committees) ──────────────
-const SEED_DATA = {"members": [{"id": "MBR_LEAD_001", "nm": "عبدالمحسن سادس", "role": "President", "cm": "", "gender": "ذكر", "email": "president@ssamau.com"}, {"id": "MBR_LEAD_002", "nm": "عبدالله الدماعين", "role": "Vice President", "cm": "", "gender": "ذكر", "email": "vp@ssamau.com"}, {"id": "MBR_LEAD_003", "nm": "روان العجمي", "role": "Deputy Vice President", "cm": "", "gender": "أنثى", "email": "dvp@ssamau.com"}, {"id": "MBR_HEAD_001", "nm": "سعد الشريف", "role": "Committee Head", "cm": "اللجنة اللوجستية", "gender": "ذكر", "email": "saad@ssamau.com"}, {"id": "MBR_HEAD_002", "nm": "أمجد أبو الخير", "role": "Committee Head", "cm": "لجنة شؤون الطلبة", "gender": "ذكر", "email": "amjad@ssamau.com"}, {"id": "MBR_HEAD_003", "nm": "فاطمة الحداد", "role": "Committee Vice Head", "cm": "لجنة شؤون الطلبة", "gender": "أنثى", "email": "fatima@ssamau.com"}, {"id": "MBR_HEAD_004", "nm": "محمد الغامدي", "role": "Committee Head", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": "mohammed.g@ssamau.com"}, {"id": "MBR_HEAD_005", "nm": "حنين الرحيلي", "role": "Committee Head", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": "haneen@ssamau.com"}, {"id": "MBR_HEAD_006", "nm": "انمار بريسالي", "role": "Committee Vice Head", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": "anmar@ssamau.com"}, {"id": "MBR_HEAD_007", "nm": "أحمد الرويلي", "role": "Committee Head", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": "ahmed.r@ssamau.com"}, {"id": "MBR_HEAD_008", "nm": "عبدالرحمن الحربي", "role": "Committee Head", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": "abdulrahman@ssamau.com"}, {"id": "MBR_HEAD_009", "nm": "حنان الزهراني", "role": "Committee Vice Head", "cm": "لجنة الاتصال المؤسسي", "gender": "أنثى", "email": "hanan@ssamau.com"}, {"id": "MBR_HEAD_010", "nm": "علي المرحبي", "role": "Committee Head", "cm": "لجنة التقييم والجودة", "gender": "ذكر", "email": "ali@ssamau.com"}, {"id": "MBR_002", "nm": "بتال الأحمدي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_003", "nm": "نهار الاحمدي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_004", "nm": "ريما الشقيق", "role": "Member", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": ""}, {"id": "MBR_005", "nm": "محمد حكمي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_006", "nm": "عبدالرحمن الغامدي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_007", "nm": "حسن الشغب", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_008", "nm": "بيان الجارودي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": ""}, {"id": "MBR_009", "nm": "هديل حمدي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": ""}, {"id": "MBR_010", "nm": "تميم الغامدي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_011", "nm": "سراج قاسم", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_012", "nm": "بسام الراجحي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "ذكر", "email": ""}, {"id": "MBR_013", "nm": "أسماء الفضلي", "role": "Member", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": ""}, {"id": "MBR_014", "nm": "جنى الحصان", "role": "Member", "cm": "لجنة الفعاليات", "gender": "أنثى", "email": ""}, {"id": "MBR_017", "nm": "يوسف الشهري", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "ذكر", "email": ""}, {"id": "MBR_018", "nm": "أسامه باركب", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "ذكر", "email": ""}, {"id": "MBR_019", "nm": "عبدالعزيز الصيخان", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "ذكر", "email": ""}, {"id": "MBR_020", "nm": "غلا زاحم", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "أنثى", "email": ""}, {"id": "MBR_021", "nm": "عبدالاله القريني", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "ذكر", "email": ""}, {"id": "MBR_022", "nm": "عبير العميري", "role": "Member", "cm": "لجنة شؤون الطلبة", "gender": "أنثى", "email": ""}, {"id": "MBR_024", "nm": "عبدالرحمن الفيفي", "role": "Member", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": ""}, {"id": "MBR_025", "nm": "عبدالله العجاجي", "role": "Member", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": ""}, {"id": "MBR_026", "nm": "حسين الشريه", "role": "Member", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": ""}, {"id": "MBR_027", "nm": "فؤاد الحديثي", "role": "Member", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": ""}, {"id": "MBR_028", "nm": "ايمن الشخص", "role": "Member", "cm": "لجنة الأنشطة الرياضية", "gender": "ذكر", "email": ""}, {"id": "MBR_029", "nm": "جمانه عمير", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "أنثى", "email": ""}, {"id": "MBR_030", "nm": "عبدالله الجهوري", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": ""}, {"id": "MBR_031", "nm": "يزن الحربي", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": ""}, {"id": "MBR_032", "nm": "محمد الشهري", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": ""}, {"id": "MBR_033", "nm": "علي شريف", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": ""}, {"id": "MBR_034", "nm": "عمر الحسين", "role": "Member", "cm": "لجنة البرامج العلمية والمهنية", "gender": "ذكر", "email": ""}, {"id": "MBR_036", "nm": "ريان العنزي", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_037", "nm": "خالد باتياه", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_038", "nm": "عبدالرحمن الشهرب", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_039", "nm": "بشرى الشمري", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "أنثى", "email": ""}, {"id": "MBR_040", "nm": "هدى البكيري", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "أنثى", "email": ""}, {"id": "MBR_041", "nm": "ابراهيم الخراشي", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_042", "nm": "رضا الصالح", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_044", "nm": "عيسى المتعاني", "role": "Member", "cm": "لجنة الاتصال المؤسسي", "gender": "ذكر", "email": ""}, {"id": "MBR_045", "nm": "مروة الحربي", "role": "Member", "cm": "لجنة التقييم والجودة", "gender": "أنثى", "email": ""}, {"id": "MBR_046", "nm": "رزان السعدي", "role": "Member", "cm": "لجنة التقييم والجودة", "gender": "أنثى", "email": ""}, {"id": "MBR_048", "nm": "هاشم الشريف", "role": "Member", "cm": "اللجنة اللوجستية", "gender": "ذكر", "email": ""}, {"id": "MBR_049", "nm": "سلطان طاهر", "role": "Member", "cm": "اللجنة اللوجستية", "gender": "ذكر", "email": ""}, {"id": "MBR_051", "nm": "سلطان الظفيري", "role": "Member", "cm": "اللجنة اللوجستية", "gender": "ذكر", "email": ""}, {"id": "MBR_052", "nm": "فيصل العتيبي", "role": "Member", "cm": "اللجنة اللوجستية", "gender": "ذكر", "email": ""}, {"id": "MBR_053", "nm": "سوسن الغامدي", "role": "Member", "cm": "لجنة الشؤون المالية", "gender": "أنثى", "email": ""}, {"id": "MBR_054", "nm": "عبدالعزيز الرشيد", "role": "Member", "cm": "لجنة الشؤون المالية", "gender": "ذكر", "email": ""}], "committees": [{"id": "COM_001", "name": "اللجنة اللوجستية", "head": "MBR_HEAD_001", "vice": ""}, {"id": "COM_002", "name": "لجنة شؤون الطلبة", "head": "MBR_HEAD_002", "vice": "MBR_HEAD_003"}, {"id": "COM_003", "name": "لجنة الأنشطة الرياضية", "head": "MBR_HEAD_004", "vice": ""}, {"id": "COM_004", "name": "لجنة الفعاليات", "head": "MBR_HEAD_005", "vice": "MBR_HEAD_006"}, {"id": "COM_005", "name": "لجنة الشؤون المالية", "head": "", "vice": ""}, {"id": "COM_006", "name": "لجنة البرامج العلمية والمهنية", "head": "MBR_HEAD_007", "vice": ""}, {"id": "COM_007", "name": "لجنة الاتصال المؤسسي", "head": "MBR_HEAD_008", "vice": "MBR_HEAD_009"}, {"id": "COM_008", "name": "لجنة التقييم والجودة", "head": "MBR_HEAD_010", "vice": ""}]};
 
 window.addEventListener('DOMContentLoaded', () => {
   setApiStatus('pending', 'جاري الاتصال...');
@@ -3158,7 +3478,8 @@ const RBAC = {
   // هل يمكن رؤية هذه الصفحة؟
   canSeePage(page) {
     if (this.isSuperAdmin()) return true;
-    // رؤساء اللجان: يشوفون كل شيء عدا الإعدادات والمستشارين
+    // رؤساء اللجان: يشوفون كل شيء عدا المستشارين. تبويب الحسابات متاح لهم
+    // (مع تصفية إلى أعضاء لجنتهم فقط) لإعادة تعيين كلمات المرور.
     const restricted = ['advisors'];
     return !restricted.includes(page);
   },
@@ -3185,7 +3506,8 @@ const RBAC = {
   applyUIRestrictions() {
     if (this.isSuperAdmin()) return; // سوبر أدمن يشوف كل شيء
 
-    // إخفاء بعض خيارات الـ sidebar
+    // إخفاء بعض خيارات الـ sidebar (المستشارون للسوبر أدمن فقط؛
+    // تبويب الحسابات متاح للرؤساء بنطاق لجنتهم)
     const hidePages = ['advisors'];
     hidePages.forEach(page => {
       const el = document.querySelector(`[data-page="${page}"]`);
@@ -3657,36 +3979,11 @@ function openModalWithPrj(modal, selectId, pid) {
   if (modal === 'bulk-att') loadBulkAttGrid(pid);
 }
 
-// ── SEED MEMBERS TO BACKEND ──────────────────────────────────
-async function seedMembersToBackend() {
-  if (!confirm('سيتم رفع بيانات الـ 59 عضواً إلى Google Sheets. هل تريد المتابعة؟')) return;
-  toast('⏳ جاري رفع البيانات...', 'twarn');
-  const r = await api('setup.seedMembers', {
-    members: SEED_DATA.members.map(m => ({
-      id: m.id, full_name: m.nm, preferred_name: m.nm.split(' ')[0],
-      email: m.email || '', gender: m.gender || '',
-      club_role: m.role || 'Member', committee_name: m.cm || '',
-    })),
-    committees: SEED_DATA.committees.map(c => ({
-      id: c.id, name: c.name, head: c.head, vice: c.vice || '',
-    })),
-  });
-  if (r) {
-    toast(`✅ أعضاء: ${r.members_inserted} | لجان: ${r.committees_inserted}`);
-    await loadMembers();
-    await loadCommittees();
-  }
-}
-
-function injectSeedBanner() {
-  const pg = document.getElementById('page-members');
-  if (!pg || pg.querySelector('.seed-bar')) return;
-  const div = document.createElement('div');
-  div.className = 'seed-bar';
-  div.innerHTML = `<span class="seed-txt">⚠️ بيانات الأعضاء محلية — اضغط لرفعها إلى Google Sheets</span>
-    <button class="btn btn-o btn-sm" onclick="seedMembersToBackend()">☁️ رفع 59 عضو</button>`;
-  pg.insertBefore(div, pg.firstChild);
-}
+// Apps-Script-era "Seed members → Google Sheets" banner removed in the
+// Netlify migration — the data lives in Postgres now and the import flow
+// is `npm run import:members` (see SETUP.md). Keeping a no-op stub here
+// so the existing init code doesn't break.
+function injectSeedBanner() { /* removed — see commit history */ }
 
 // ── SIMPLE HELPERS ────────────────────────────────────────────
 function setEl(id, val) {

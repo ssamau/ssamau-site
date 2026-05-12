@@ -52,6 +52,10 @@ export const SUPERADMIN_ACTIONS = new Set([
   'deleteMember',
   'setup.seedMembers',
   'hours.finalApprove',  // §7 — final stage of the two-stage approval is presidency-only
+  // User-account management. Create/edit/delete is superadmin only. `users.list`
+  // and `users.resetPassword` are allowed for heads too (handler scopes them to
+  // their own committee), so they're intentionally NOT in this set.
+  'users.create', 'users.update', 'users.delete',
 ]);
 
 export function requireAuth(user) {

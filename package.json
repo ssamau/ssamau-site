@@ -9,13 +9,15 @@
     "import:inspect": "node db/inspect-import.js",
     "import:preview": "node db/preview-import.js",
     "import:members": "node db/import-members.js",
-    "import:static-events": "node db/import-static-events.js"
+    "import:static-events": "node db/import-static-events.js",
+    "admin:create": "node db/create-admin.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@netlify/database": "^1.0.0",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.2",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xtend": "^4.0.2"
   }
 }

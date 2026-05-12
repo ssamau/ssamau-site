@@ -95,6 +95,202 @@ const handlers = {
     };
   },
 
+  // ─── USERS (admin account management) ────────────────────────────────
+  // Superadmin-only CRUD over the `users` login table. Used by the
+  // "حسابات المستخدمين" admin tab to pre-create accounts for members
+  // who don't have one yet (e.g. heads + presidency for the beta), and
+  // to maintain non-member admin accounts (devs, maintainers) that have
+  // member_id = NULL.
+  //
+  // Linking semantics: an admin picks an EXISTING `members` row from
+  // the dropdown — we never auto-create members from this flow, and we
+  // refuse to attach a second user to a member that already has one
+  // (one human, one login).
+
+  'users.list': async (_body, user) => {
+    requireAuth(user);
+    // Heads see EVERY member in their committee + their account info if any.
+    // The page acts as a roster: members without an account are shown with a
+    // "no account yet" state so the head knows who to ask the admin to onboard.
+    // (Admin-only accounts with member_id IS NULL stay invisible to heads —
+    // those are the dev/maintainer rows the head has no business touching.)
+    if (user.access === 'head') {
+      return sql`
+        SELECT u.id, u.username, u.access_level, u.created_at, u.last_login_at,
+               m.member_id,
+               m.full_name      AS member_full_name,
+               m.preferred_name AS member_preferred_name,
+               m.committee_id   AS member_committee_id,
+               m.club_role      AS member_club_role,
+               c.committee_name AS member_committee_name
+        FROM members m
+        LEFT JOIN users      u ON u.member_id      = m.member_id
+        LEFT JOIN committees c ON c.committee_id   = m.committee_id
+        WHERE m.committee_id = ${user.committee_id}
+        ORDER BY
+          CASE WHEN u.id IS NULL THEN 1 ELSE 0 END,  -- members with accounts first
+          CASE m.club_role
+            WHEN 'Committee Head'      THEN 1
+            WHEN 'Committee Vice Head' THEN 2
+            ELSE 9
+          END,
+          m.full_name
+      `;
+    }
+    if (user.access !== 'superadmin') throw httpErr('Forbidden', 403);
+    return sql`
+      SELECT u.id, u.username, u.access_level, u.created_at, u.last_login_at,
+             u.member_id,
+             m.full_name      AS member_full_name,
+             m.preferred_name AS member_preferred_name,
+             m.committee_id   AS member_committee_id,
+             m.club_role      AS member_club_role,
+             c.committee_name AS member_committee_name
+      FROM users u
+      LEFT JOIN members    m ON m.member_id    = u.member_id
+      LEFT JOIN committees c ON c.committee_id = m.committee_id
+      ORDER BY
+        CASE u.access_level
+          WHEN 'superadmin' THEN 1
+          WHEN 'head'       THEN 2
+          WHEN 'member'     THEN 3
+          WHEN 'volunteer'  THEN 4
+        END,
+        u.username
+    `;
+  },
+
+  'users.create': async (body, user) => {
+    requireSuperadmin(user);
+    const data = body.data || body;
+    const username = String(data.username || '').trim().toLowerCase();
+    const password = String(data.password || '');
+    const memberId = data.member_id || null;
+    const access   = data.access_level || 'member';
+
+    if (!username) throw httpErr('username is required', 400);
+    if (!password || password.length < 6) throw httpErr('password must be at least 6 characters', 400);
+    if (!['superadmin','head','member','volunteer'].includes(access)) {
+      throw httpErr(`invalid access_level: ${access}`, 400);
+    }
+
+    // Uniqueness check (case-insensitive).
+    const [existsByUser] = await sql`SELECT id FROM users WHERE LOWER(username) = ${username}`;
+    if (existsByUser) throw httpErr(`Username "${username}" is already taken`, 409);
+
+    if (memberId) {
+      // The linked member must exist and must not already have a user account.
+      const [member] = await sql`SELECT member_id, full_name FROM members WHERE member_id = ${memberId}`;
+      if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+      const [existingForMember] = await sql`SELECT id, username FROM users WHERE member_id = ${memberId}`;
+      if (existingForMember) {
+        throw httpErr(`Member ${memberId} (${member.full_name}) already has an account: "${existingForMember.username}"`, 409);
+      }
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const [r] = await sql`
+      INSERT INTO users (username, password_hash, member_id, access_level)
+      VALUES (${username}, ${hash}, ${memberId}, ${access})
+      RETURNING id, username, access_level, member_id
+    `;
+    return { id: r.id, username: r.username, access_level: r.access_level, member_id: r.member_id };
+  },
+
+  'users.update': async (body, user) => {
+    requireSuperadmin(user);
+    const data = body.data || body;
+    const id = data.id;
+    if (!id) throw httpErr('id is required', 400);
+
+    const [target] = await sql`SELECT * FROM users WHERE id = ${id}`;
+    if (!target) throw httpErr('User not found', 404);
+
+    // Safety: don't let the only superadmin demote themselves into being
+    // demoted out of superadmin — keeps at least one root user alive.
+    if (target.access_level === 'superadmin' && data.access_level && data.access_level !== 'superadmin') {
+      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'`;
+      if (count <= 1) throw httpErr('Cannot demote the only remaining superadmin', 409);
+    }
+
+    if (data.username) {
+      const newU = String(data.username).trim().toLowerCase();
+      if (newU !== target.username.toLowerCase()) {
+        const [clash] = await sql`SELECT id FROM users WHERE LOWER(username) = ${newU} AND id <> ${id}`;
+        if (clash) throw httpErr(`Username "${newU}" is already taken`, 409);
+      }
+    }
+    if (data.member_id && data.member_id !== target.member_id) {
+      const [clash] = await sql`SELECT id, username FROM users WHERE member_id = ${data.member_id} AND id <> ${id}`;
+      if (clash) throw httpErr(`That member already has an account: "${clash.username}"`, 409);
+      const [member] = await sql`SELECT member_id FROM members WHERE member_id = ${data.member_id}`;
+      if (!member) throw httpErr(`Member ${data.member_id} not found`, 404);
+    }
+    if (data.access_level && !['superadmin','head','member','volunteer'].includes(data.access_level)) {
+      throw httpErr(`invalid access_level: ${data.access_level}`, 400);
+    }
+
+    await sql`
+      UPDATE users SET
+        username     = COALESCE(${data.username ? String(data.username).trim().toLowerCase() : null}, username),
+        member_id    = COALESCE(${data.member_id}, member_id),
+        access_level = COALESCE(${data.access_level}, access_level)
+      WHERE id = ${id}
+    `;
+    return { id };
+  },
+
+  'users.delete': async ({ id }, user) => {
+    requireSuperadmin(user);
+    const [target] = await sql`SELECT id, username, access_level FROM users WHERE id = ${id}`;
+    if (!target) return { id };
+    // Same safety as update: at least one superadmin must survive.
+    if (target.access_level === 'superadmin') {
+      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'`;
+      if (count <= 1) throw httpErr('Cannot delete the only remaining superadmin', 409);
+    }
+    if (target.id === user.id) throw httpErr('You cannot delete your own account', 409);
+    await sql`DELETE FROM users WHERE id = ${id}`;
+    return { id };
+  },
+
+  'users.resetPassword': async ({ id }, user) => {
+    requireAuth(user);
+    // Look up the target with its member's committee — needed for head-scope.
+    const [target] = await sql`
+      SELECT u.id, u.username, u.access_level, u.member_id,
+             m.committee_id AS member_committee_id
+      FROM users u
+      LEFT JOIN members m ON m.member_id = u.member_id
+      WHERE u.id = ${id}
+    `;
+    if (!target) throw httpErr('User not found', 404);
+
+    // Permission gates:
+    //   - superadmin: can reset anyone (including other superadmins)
+    //   - head: can reset a non-admin user IF the linked member is in their
+    //     committee. Cannot reset other heads, superadmins, or admin-only
+    //     accounts (those have member_id = NULL).
+    //   - everyone else: forbidden
+    if (user.access === 'head') {
+      if (!target.member_id) throw httpErr('Forbidden', 403);
+      if (target.access_level === 'superadmin' || target.access_level === 'head') {
+        throw httpErr('Committee heads cannot reset admin or head passwords', 403);
+      }
+      if (target.member_committee_id !== user.committee_id) {
+        throw httpErr('Forbidden — that member is not in your committee', 403);
+      }
+    } else if (user.access !== 'superadmin') {
+      throw httpErr('Forbidden', 403);
+    }
+
+    // 9-char URL-safe random — shown once to the caller, never stored in plain.
+    const tempPw = randomBytesB64Url(7);
+    const hash = await bcrypt.hash(tempPw, 10);
+    await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${id}`;
+    return { id, username: target.username, temp_password: tempPw };
+  },
+
   // ─── MEMBERS ─────────────────────────────────────────────────────────
   getMembers: async () => sql`
     SELECT * FROM members
