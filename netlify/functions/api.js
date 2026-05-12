@@ -115,9 +115,11 @@ const handlers = {
     requireAdminScope(user, data.committee_id);
     const id = data.member_id || shortId('MBR');
     await sql`
-      INSERT INTO members (member_id, full_name, preferred_name, email, phone, gender,
+      INSERT INTO members (member_id, full_name, preferred_name, national_id,
+                           email, phone, gender,
                            profile_photo_url, committee_id, club_role, status, join_date, total_hours)
-      VALUES (${id}, ${data.full_name}, ${data.preferred_name || null}, ${data.email || null},
+      VALUES (${id}, ${data.full_name}, ${data.preferred_name || null}, ${data.national_id || null},
+              ${data.email || null},
               ${data.phone || null}, ${data.gender || null}, ${data.profile_photo_url || null},
               ${data.committee_id || null}, ${data.club_role || 'Member'},
               ${data.status || 'Active'}, ${data.join_date || null}, ${data.total_hours || 0})
@@ -136,6 +138,7 @@ const handlers = {
       UPDATE members SET
         full_name         = COALESCE(${data.full_name},         full_name),
         preferred_name    = COALESCE(${data.preferred_name},    preferred_name),
+        national_id       = COALESCE(${data.national_id},       national_id),
         email             = COALESCE(${data.email},             email),
         phone             = COALESCE(${data.phone},             phone),
         gender            = COALESCE(${data.gender},            gender),
@@ -902,28 +905,58 @@ const handlers = {
 
   // ─── MEMBERSHIP APPLICATIONS (§6) ────────────────────────────────────
   // Public submission. Anyone on the website can hit this without auth.
+  // Accepts the expanded apply-form-v2 payload — see migration 0005 for the
+  // column list and apply.html for the canonical value sets.
   'applications.submit': async (body) => {
     const data = body.data || body;
-    if (!data.full_name) throw httpErr('full_name is required', 400);
+
+    // Display name: prefer the new structured name_ar; fall back to full_name
+    // for any old/legacy callers still posting the original v1 schema.
+    const displayName = data.name_ar || data.full_name;
+    if (!displayName) throw httpErr('name_ar (or full_name) is required', 400);
     if (!data.email && !data.phone) {
       throw httpErr('email or phone is required', 400);
     }
+    if (data.confirmation_accepted !== true) {
+      throw httpErr('confirmation_accepted must be true', 400);
+    }
+
     const id = data.application_id || shortId('APP');
     const interests = Array.isArray(data.interests)
       ? data.interests
       : (typeof data.interests === 'string' && data.interests
           ? data.interests.split(',').map(s => s.trim()).filter(Boolean)
           : []);
+
     await sql`
-      INSERT INTO membership_applications
-        (application_id, full_name, preferred_name, email, phone,
-         university, major, gender, interests, pitch, status)
-      VALUES
-        (${id}, ${data.full_name}, ${data.preferred_name || null},
-         ${data.email || null}, ${data.phone || null},
-         ${data.university || null}, ${data.major || null},
-         ${data.gender || null}, ${interests}, ${data.pitch || null},
-         'PendingTriage')
+      INSERT INTO membership_applications (
+        application_id, full_name, preferred_name, email, phone,
+        university, major, gender, interests, pitch,
+        national_id, name_ar, name_en, date_of_birth,
+        address_melbourne, phone_country_code,
+        scholarship_entity, scholarship_entity_other,
+        study_level, degree_field, university_other,
+        study_started_window, expected_graduation_window,
+        cv_url, skills_hobbies, about_self,
+        referral_source, referral_source_other, suggestions,
+        confirmation_accepted, status
+      ) VALUES (
+        ${id}, ${displayName}, ${data.preferred_name || null},
+        ${data.email || null}, ${data.phone || null},
+        ${data.university || null}, ${data.degree_field || data.major || null},
+        ${data.gender || null}, ${interests}, ${data.about_self || data.pitch || null},
+        ${data.national_id || null}, ${data.name_ar || null}, ${data.name_en || null},
+        ${data.date_of_birth || null},
+        ${data.address_melbourne || null}, ${data.phone_country_code || null},
+        ${data.scholarship_entity || null}, ${data.scholarship_entity_other || null},
+        ${data.study_level || null}, ${data.degree_field || null}, ${data.university_other || null},
+        ${data.study_started_window || null}, ${data.expected_graduation_window || null},
+        ${data.cv_url || null}, ${data.skills_hobbies || null}, ${data.about_self || null},
+        ${data.referral_source || null}, ${data.referral_source_other || null},
+        ${data.suggestions || null},
+        ${data.confirmation_accepted === true},
+        'PendingTriage'
+      )
     `;
     return { application_id: id };
   },
@@ -1005,14 +1038,18 @@ const handlers = {
       throw httpErr('Application must be assigned to a committee before acceptance', 400);
     }
     const memberId = shortId('MBR');
+    // Display name preference: structured Arabic name first, then full_name
+    // (covers both v2 and any legacy v1 applications still in the queue).
+    const displayName = app.name_ar || app.full_name;
     await sql`
       INSERT INTO members
         (member_id, full_name, preferred_name, email, phone, gender,
-         committee_id, club_role, status, join_date)
+         committee_id, club_role, status, join_date, national_id)
       VALUES
-        (${memberId}, ${app.full_name}, ${app.preferred_name || null},
+        (${memberId}, ${displayName}, ${app.preferred_name || null},
          ${app.email || null}, ${app.phone || null}, ${app.gender || null},
-         ${app.assigned_committee_id}, 'Member', 'Active', CURRENT_DATE)
+         ${app.assigned_committee_id}, 'Member', 'Active', CURRENT_DATE,
+         ${app.national_id || null})
     `;
     await sql`
       UPDATE membership_applications SET

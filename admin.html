@@ -540,8 +540,8 @@ tr:hover td { background:#fafcfa; }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="members-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+            <thead><tr><th>الاسم</th><th>رقم الهوية</th><th>البريد</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <tbody id="members-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -880,6 +880,11 @@ tr:hover td { background:#fafcfa; }
       <div class="fg-row">
         <div class="fg"><label>الاسم الكامل <span class="required">*</span></label><input id="m-full-name" placeholder="أحمد علي الشمري"/></div>
         <div class="fg"><label>الاسم المفضّل</label><input id="m-preferred-name" placeholder="أحمد"/></div>
+      </div>
+      <div class="fg">
+        <label>رقم الهوية الوطنية / الإقامة</label>
+        <input id="m-national-id" dir="ltr" maxlength="15" placeholder="1xxxxxxxxx"/>
+        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">يُستخدم لتسجيل دخول العضو لاحقاً عبر صفحة التسجيل.</div>
       </div>
       <div class="fg-row">
         <div class="fg"><label>البريد الإلكتروني <span class="required">*</span></label><input id="m-email" type="email" dir="ltr" placeholder="ahmed@example.com"/></div>
@@ -1698,17 +1703,21 @@ async function loadMembers() {
 function renderMembers(members) {
   const tbody = document.getElementById('members-tbody');
   if (!members.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد أعضاء</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا يوجد أعضاء</td></tr>';
     return;
   }
   tbody.innerHTML = members.map(m => {
     const com = DB.committees.find(c => c.committee_id === m.committee_id);
+    const nid = m.national_id
+      ? `<span dir="ltr" style="font-family:Menlo,Consolas,monospace;font-size:.78rem">${esc(m.national_id)}</span>`
+      : '<span style="color:var(--tm)">—</span>';
     return `<tr>
       <td>
         <div style="font-weight:700">${esc(m.preferred_name || m.full_name)}</div>
         <div style="font-size:.72rem;color:var(--tm)">${esc(m.full_name)}</div>
       </td>
-      <td style="font-size:.78rem;direction:ltr">${esc(m.email)}</td>
+      <td>${nid}</td>
+      <td style="font-size:.78rem;direction:ltr;text-align:left">${esc(m.email) || '<span style="color:var(--tm)">—</span>'}</td>
       <td>${tag(m.club_role, ROLE_COLORS[m.club_role] || 't-gr')}</td>
       <td>${com ? tag(com.committee_name, 't-b') : '<span style="color:var(--tm)">—</span>'}</td>
       <td><strong style="color:var(--g)">${m.total_hours || 0}</strong></td>
@@ -1745,6 +1754,7 @@ async function saveMember() {
   const body = {
     full_name:        gv('m-full-name'),
     preferred_name:   gv('m-preferred-name'),
+    national_id:      gv('m-national-id'),
     email:            gv('m-email'),
     phone:            gv('m-phone'),
     gender:           gv('m-gender'),
@@ -1776,6 +1786,7 @@ function editMember(id) {
   sv('m-edit-id', id);
   sv('m-full-name', m.full_name);
   sv('m-preferred-name', m.preferred_name);
+  sv('m-national-id', m.national_id || '');
   sv('m-email', m.email);
   sv('m-phone', m.phone);
   sv('m-gender', m.gender);
@@ -2064,6 +2075,53 @@ const APP_STATUS_AR = {
   Accepted:            'مقبولة',
   Rejected:            'مرفوضة',
 };
+
+// Canonical-value → Arabic label maps for the expanded apply-form-v2 fields.
+// Keep the canonical-value strings in sync with apply.html and migration 0005.
+const SCHOLARSHIP_LABELS = {
+  khadem_alharamain:    'برنامج خادم الحرمين الشريفين',
+  job_sponsored:        'ابتعاث وظيفي (حكومي/عسكري)',
+  private_sector:       'الشركات والقطاع الخاص',
+  cultural_tourism:     'الابتعاث الثقافي والسياحي',
+  companion_student:    'مرافق دارس',
+  self_funded:          'دارس على الحساب الخاص',
+  companion_non_student: 'مرافق غير دارس',
+};
+const UNIVERSITY_LABELS = {
+  melbourne:  'Melbourne University',
+  monash:     'Monash University',
+  rmit:       'RMIT',
+  deakin:     'Deakin University',
+  latrobe:    'La Trobe University',
+  swinburne:  'Swinburne University',
+  victoria:   'Victoria University',
+  acu:        'Australian Catholic University',
+};
+const STUDY_LEVEL_LABELS = {
+  PhD:       'دكتوراه',
+  Masters:   'ماجستير',
+  Bachelor:  'بكالوريوس',
+  Diploma:   'دبلوم',
+  Language:  'دراسة لغة',
+};
+const STUDY_START_LABELS = {
+  '<6mo':   'أقل من 6 أشهر',
+  '6mo-1y': '6 أشهر إلى سنة',
+  '>1y':    'أكثر من سنة',
+};
+const GRADUATION_LABELS = {
+  Jul2027: 'يوليو 2027',
+  Dec2027: 'ديسمبر 2027',
+  '2028+': '2028 أو لاحقاً',
+};
+const REFERRAL_LABELS = {
+  twitter:   'منصة إكس (تويتر)',
+  snapchat:  'سناب شات',
+  instagram: 'انستقرام',
+  whatsapp:  'واتس اب',
+  website:   'الموقع الإلكتروني',
+  friend:    'صديق / زميل',
+};
 const APP_STATUS_COLOR = {
   PendingTriage:       't-y',
   AssignedToCommittee: 't-b',
@@ -2137,20 +2195,75 @@ function openApplicationReview(applicationId) {
   sv('app-edit-id', a.application_id);
   sv('app-decision-note', a.decision_reason || '');
 
-  // Detail panel — read-only summary the reviewer needs to make a decision.
+  // Detail panel — every field captured by apply.html, grouped the same way
+  // the form groups them so reviewers can scan top-down.
   const interests = (a.interests && a.interests.length)
     ? a.interests.map(id => {
         const c = DB.committees.find(cc => cc.committee_id === id);
         return c ? c.committee_name : id;
       }).join('، ')
     : '—';
+  const phone = a.phone ? `${a.phone_country_code || ''} ${a.phone}`.trim() : '—';
+  const scholarship = a.scholarship_entity === 'other'
+    ? (a.scholarship_entity_other || 'أخرى')
+    : (SCHOLARSHIP_LABELS[a.scholarship_entity] || a.scholarship_entity || '—');
+  const university = a.university === 'other'
+    ? (a.university_other || 'أخرى')
+    : (UNIVERSITY_LABELS[a.university] || a.university || '—');
+  const studyLevel = STUDY_LEVEL_LABELS[a.study_level] || a.study_level || '—';
+  const studyStarted = STUDY_START_LABELS[a.study_started_window] || a.study_started_window || '—';
+  const expectedGrad = GRADUATION_LABELS[a.expected_graduation_window] || a.expected_graduation_window || '—';
+  const referral = a.referral_source === 'other'
+    ? (a.referral_source_other || 'أخرى')
+    : (REFERRAL_LABELS[a.referral_source] || a.referral_source || '—');
+
+  const block = (title, rows) => {
+    const visible = rows.filter(([, v]) => v && v !== '—');
+    if (!visible.length) return '';
+    return `<div style="margin-top:.75rem;padding-top:.6rem;border-top:1px solid #e5e7eb">
+      <div style="font-size:.74rem;color:var(--tm);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem">${title}</div>
+      ${visible.map(([k, v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}
+    </div>`;
+  };
+
   document.getElementById('app-detail').innerHTML = `
-    <div><strong>الاسم:</strong> ${esc(a.full_name)}${a.preferred_name ? ` (${esc(a.preferred_name)})` : ''}</div>
-    <div><strong>التواصل:</strong> <span dir="ltr">${esc([a.email, a.phone].filter(Boolean).join(' · ') || '—')}</span></div>
-    <div><strong>الجامعة / التخصص:</strong> ${esc([a.university, a.major].filter(Boolean).join(' — ') || '—')}</div>
-    <div><strong>اللجان المهتم بها:</strong> ${interests}</div>
-    ${a.pitch ? `<div style="margin-top:.5rem"><strong>الدافع:</strong><br>${esc(a.pitch).replace(/\n/g, '<br>')}</div>` : ''}
-    <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-size:.78rem;color:var(--tm)">
+    <div style="font-size:.95rem;font-weight:700;color:var(--g)">${esc(a.name_ar || a.full_name)}${a.preferred_name ? ` <span style="color:var(--tm);font-size:.78rem">(${esc(a.preferred_name)})</span>` : ''}</div>
+    ${a.name_en ? `<div dir="ltr" style="font-size:.78rem;color:var(--tm);margin-top:.1rem">${esc(a.name_en)}</div>` : ''}
+
+    ${block('الهوية', [
+      ['رقم الهوية',   a.national_id ? `<span dir="ltr">${esc(a.national_id)}</span>` : ''],
+      ['الجنس',        esc(a.gender)],
+      ['تاريخ الميلاد', fmtDate(a.date_of_birth)],
+    ])}
+
+    ${block('التواصل', [
+      ['البريد',   a.email ? `<span dir="ltr">${esc(a.email)}</span>` : ''],
+      ['الجوال',  a.phone ? `<span dir="ltr">${esc(phone)}</span>` : ''],
+      ['العنوان', esc(a.address_melbourne)],
+    ])}
+
+    ${block('الابتعاث والدراسة', [
+      ['جهة الابتعاث',         esc(scholarship)],
+      ['المرحلة',              esc(studyLevel)],
+      ['التخصص',               esc(a.degree_field || a.major)],
+      ['الجامعة',              esc(university)],
+      ['بدء الدراسة',          esc(studyStarted)],
+      ['التخرج المتوقع',       esc(expectedGrad)],
+    ])}
+
+    ${block('عنه', [
+      ['اللجان المهتم بها', interests],
+      ['المهارات والهوايات', a.skills_hobbies ? esc(a.skills_hobbies).replace(/\n/g, '<br>') : ''],
+      ['عن نفسه',           (a.about_self || a.pitch) ? esc(a.about_self || a.pitch).replace(/\n/g, '<br>') : ''],
+      ['السيرة الذاتية',    a.cv_url ? `<a href="${esc(a.cv_url)}" target="_blank" rel="noopener" dir="ltr" style="color:var(--g);text-decoration:underline">فتح الرابط ↗</a>` : ''],
+    ])}
+
+    ${block('إضافات', [
+      ['كيف علم بالنادي', esc(referral)],
+      ['اقتراحات',       a.suggestions ? esc(a.suggestions).replace(/\n/g, '<br>') : ''],
+    ])}
+
+    <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-size:.74rem;color:var(--tm)">
       رقم الطلب: <span dir="ltr">${esc(a.application_id)}</span> · تاريخ الطلب: ${fmtDate(a.created_at)}
       ${a.decided_at ? ` · قرار في ${fmtDate(a.decided_at)}` : ''}
       ${a.created_member_id ? ` · العضو: <span dir="ltr">${esc(a.created_member_id)}</span>` : ''}

@@ -12,41 +12,74 @@ html,body{font-family:'Almarai',sans-serif;background:linear-gradient(135deg,#0e
 body{display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem}
 body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 20% 30%,rgba(184,147,42,.08) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(184,147,42,.06) 0%,transparent 50%);pointer-events:none}
 
-.card{background:#fff;border-radius:20px;width:100%;max-width:680px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.35);position:relative;z-index:1}
-.head{background:linear-gradient(135deg,#0e3a1c,#1A5C2E);padding:2.5rem 2rem;text-align:center;color:#fff}
-.head .logo{width:90px;height:90px;border-radius:50%;background:#fff;border:3px solid rgba(184,147,42,.5);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card{background:#fff;border-radius:20px;width:100%;max-width:760px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.35);position:relative;z-index:1}
+.head{background:linear-gradient(135deg,#0e3a1c,#1A5C2E);padding:2.2rem 2rem;text-align:center;color:#fff}
+.head .logo{width:80px;height:80px;border-radius:50%;background:#fff;border:3px solid rgba(184,147,42,.5);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .head .logo img{width:90%;height:90%;object-fit:contain}
-.head h1{font-size:1.25rem;font-weight:800;margin-bottom:.35rem}
-.head p{font-size:.78rem;color:rgba(255,255,255,.65)}
+.head h1{font-size:1.2rem;font-weight:800;margin-bottom:.3rem}
+.head p{font-size:.75rem;color:rgba(255,255,255,.65)}
 
-.body{padding:2rem}
-.body h2{font-size:1.05rem;color:#0e3a1c;margin-bottom:.4rem}
-.body .sub{font-size:.85rem;color:#4b5563;line-height:1.6;margin-bottom:1.5rem}
+.body{padding:1.5rem 2rem 2rem}
+.body .intro{font-size:.86rem;color:#4b5563;line-height:1.7;margin-bottom:1.25rem;text-align:center}
 
-.fg{margin-bottom:1.1rem}
-.fg label{display:block;font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.35rem}
-.fg label .req{color:#dc2626;margin-right:.2rem}
-.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:.7rem .85rem;font-size:.9rem;font-family:'Almarai',sans-serif;direction:rtl;outline:none;background:#f9fafb;transition:border-color .2s,background .2s}
+.section{margin-top:1.25rem;padding-top:1.25rem;border-top:1.5px solid #e5e7eb}
+.section:first-of-type{margin-top:.5rem;padding-top:0;border-top:none}
+.section h3{font-size:.92rem;color:#0e3a1c;font-weight:800;margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+.section h3 .num{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;background:#1A5C2E;color:#fff;border-radius:50%;font-size:.72rem}
+
+.fg{margin-bottom:.95rem}
+.fg label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:.32rem}
+.fg label .req{color:#dc2626;margin-right:.18rem}
+.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:.65rem .8rem;font-size:.88rem;font-family:'Almarai',sans-serif;outline:none;background:#f9fafb;transition:border-color .2s,background .2s}
+.fg input,.fg textarea{direction:rtl}
+.fg input[type=email],.fg input[type=date]{direction:ltr;text-align:right}
+.fg input.ltr,.fg textarea.ltr{direction:ltr;text-align:left}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1A5C2E;background:#fff;box-shadow:0 0 0 3px rgba(26,92,46,.1)}
 .fg textarea{min-height:80px;resize:vertical}
-.fg .hint{font-size:.7rem;color:#6b7280;margin-top:.3rem}
-.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
-@media(max-width:520px){.fg-row{grid-template-columns:1fr}}
+.fg .hint{font-size:.7rem;color:#6b7280;margin-top:.28rem;line-height:1.5}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.fg-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem}
+@media(max-width:540px){.fg-row,.fg-row3{grid-template-columns:1fr}}
 
-.committees{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.5rem}
-.committees label{display:flex;align-items:center;gap:.4rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;padding:.6rem .8rem;cursor:pointer;font-size:.82rem;font-weight:600;color:#374151;transition:border-color .2s,background .2s}
+/* phone with country-code dropdown */
+.phone-wrap{display:grid;grid-template-columns:90px 1fr;gap:.4rem}
+.phone-wrap select{padding:.65rem .4rem;font-size:.8rem;text-align:center;direction:ltr}
+.phone-wrap input{direction:ltr;text-align:left}
+
+/* Radio / checkbox option lists */
+.opts{display:flex;flex-direction:column;gap:.4rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:.6rem .8rem}
+.opts label{display:flex;align-items:center;gap:.55rem;font-size:.85rem;font-weight:600;color:#374151;cursor:pointer;padding:.25rem .15rem;border-radius:6px;transition:background .15s}
+.opts label:hover{background:#fff}
+.opts input{width:auto;margin:0;accent-color:#1A5C2E}
+.opts .other-input{margin-top:.3rem;padding-right:1.55rem}
+.opts .other-input input{font-size:.82rem;padding:.45rem .65rem}
+
+/* Committees checklist (compact grid) */
+.committees{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.4rem}
+.committees label{display:flex;align-items:center;gap:.4rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;padding:.5rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#374151;transition:all .15s}
 .committees label:has(input:checked){border-color:#1A5C2E;background:#e8f5ec;color:#0e3a1c}
-.committees input{width:auto;margin:0}
+.committees input{width:auto;margin:0;accent-color:#1A5C2E}
 
-.btn{width:100%;background:linear-gradient(135deg,#1A5C2E,#2a7a42);color:#fff;border:none;border-radius:10px;padding:.85rem;font-size:.95rem;font-weight:800;font-family:'Almarai',sans-serif;cursor:pointer;transition:transform .15s,box-shadow .2s;margin-top:.5rem}
+/* CV upload "button" */
+.cv-btn{display:inline-flex;align-items:center;gap:.5rem;background:#f3f4f6;border:1.5px dashed #9ca3af;border-radius:10px;padding:.7rem 1rem;font-family:inherit;font-size:.85rem;color:#374151;cursor:pointer;transition:all .15s}
+.cv-btn:hover{border-color:#1A5C2E;color:#1A5C2E;background:#fff}
+.cv-state{margin-top:.45rem;font-size:.75rem;color:#1A5C2E;font-weight:600;display:none}
+.cv-state.show{display:block}
+.cv-state .clear{color:#dc2626;cursor:pointer;margin-right:.4rem;text-decoration:underline;font-weight:700}
+
+/* Confirmation */
+.confirm{display:flex;align-items:flex-start;gap:.65rem;background:#fef9e7;border:1.5px solid #f6c14f;border-radius:10px;padding:.9rem 1rem;font-size:.82rem;color:#78350f;line-height:1.6}
+.confirm input{margin-top:.18rem;width:auto;accent-color:#1A5C2E;flex-shrink:0}
+
+.btn{width:100%;background:linear-gradient(135deg,#1A5C2E,#2a7a42);color:#fff;border:none;border-radius:10px;padding:.95rem;font-size:.95rem;font-weight:800;font-family:'Almarai',sans-serif;cursor:pointer;transition:transform .15s,box-shadow .2s,opacity .2s;margin-top:1.25rem}
 .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,92,46,.35)}
-.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 
-.msg{border-radius:10px;padding:.85rem 1rem;font-size:.85rem;margin-top:1rem;display:none}
+.msg{border-radius:10px;padding:.85rem 1rem;font-size:.84rem;margin-top:1rem;display:none}
 .msg.show{display:block}
 .msg.err{background:#fef2f2;border:1.5px solid rgba(220,38,38,.2);color:#dc2626}
-.msg.ok{background:#ecfdf5;border:1.5px solid rgba(16,185,129,.25);color:#065f46}
 
+/* Thank-you state */
 .thanks{text-align:center;padding:2rem 1rem}
 .thanks .icon{font-size:3rem;margin-bottom:.6rem}
 .thanks h2{font-size:1.2rem;color:#0e3a1c;margin-bottom:.6rem}
@@ -55,8 +88,20 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 .thanks a{color:#1A5C2E;font-weight:700;text-decoration:none}
 .thanks a:hover{text-decoration:underline}
 
-.foot{padding:1rem 2rem 1.5rem;text-align:center;color:#9ca3af;font-size:.7rem}
+.foot{padding:.85rem 2rem 1.2rem;text-align:center;color:#9ca3af;font-size:.7rem}
 .foot a{color:#1A5C2E;text-decoration:none;font-weight:700}
+
+/* Small "URL-paste" modal for the CV button */
+.cv-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;align-items:center;justify-content:center;padding:1rem}
+.cv-modal.open{display:flex}
+.cv-modal .card{max-width:440px;padding:1.5rem;border-radius:14px;box-shadow:0 25px 60px rgba(0,0,0,.35)}
+.cv-modal h4{font-size:.95rem;color:#0e3a1c;margin-bottom:.5rem}
+.cv-modal p{font-size:.78rem;color:#4b5563;margin-bottom:.85rem;line-height:1.5}
+.cv-modal input{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:.65rem .8rem;font-size:.85rem;direction:ltr}
+.cv-modal .acts{display:flex;gap:.5rem;margin-top:.85rem}
+.cv-modal .acts button{flex:1;padding:.65rem;border-radius:8px;border:none;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer}
+.cv-modal .acts .ok{background:#1A5C2E;color:#fff}
+.cv-modal .acts .cancel{background:#f3f4f6;color:#374151}
 </style>
 </head>
 <body>
@@ -68,71 +113,216 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
     <p>Saudi Students Association in Melbourne · Membership Application</p>
   </div>
 
-  <!-- FORM VIEW -->
+  <!-- FORM -->
   <div class="body" id="form-view">
-    <h2>ابدأ مسيرتك معنا</h2>
-    <p class="sub">عبّئ النموذج وسيراجعه فريق النادي ثم يحوّله لرئيس اللجنة المناسبة. ستصلك الموافقة عبر بريدك أو رقم جوالك خلال أيام قليلة.</p>
+    <p class="intro">يرجى تعبئة النموذج بدقّة — ستخدم البيانات لإصدار العضوية وشهادات الملحقية الثقافية.</p>
 
-    <div class="fg-row">
+    <!-- ── 1. Identity ────────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">1</span> بطاقة الهوية</h3>
       <div class="fg">
-        <label>الاسم الكامل <span class="req">*</span></label>
-        <input id="f-full-name" placeholder="مثال: عبدالله محمد العتيبي"/>
+        <label>رقم الهوية الوطنية / الإقامة <span class="req">*</span></label>
+        <input id="f-national-id" class="ltr" maxlength="15" placeholder="1xxxxxxxxx"/>
+        <div class="hint">يجب أن يطابق رقم الهوية الوطنية أو الإقامة في الجواز.</div>
+      </div>
+      <div class="fg">
+        <label>الاسم الرباعي بالعربية <span class="req">*</span></label>
+        <input id="f-name-ar" placeholder="مثال: عبدالله محمد سعد العتيبي"/>
+        <div class="hint">يجب أن يطابق الاسم الموجود في بطاقة الأحوال / الإقامة.</div>
+      </div>
+      <div class="fg">
+        <label>الاسم الرباعي بالإنجليزية <span class="req">*</span></label>
+        <input id="f-name-en" class="ltr" placeholder="Abdullah Mohammed Saad Alotaibi"/>
+        <div class="hint">يجب أن يطابق الاسم الموجود في جواز السفر.</div>
       </div>
       <div class="fg">
         <label>الاسم المختصر (الكنية)</label>
-        <input id="f-preferred-name" placeholder="مثال: عبدالله"/>
+        <input id="f-preferred-name" placeholder="عبدالله"/>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>الجنس <span class="req">*</span></label>
+          <select id="f-gender">
+            <option value="">— اختر —</option>
+            <option value="ذكر">ذكر</option>
+            <option value="أنثى">أنثى</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>تاريخ الميلاد <span class="req">*</span></label>
+          <input id="f-dob" type="date"/>
+        </div>
       </div>
     </div>
 
-    <div class="fg-row">
+    <!-- ── 2. Contact ─────────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">2</span> معلومات التواصل</h3>
       <div class="fg">
-        <label>البريد الإلكتروني</label>
-        <input id="f-email" type="email" dir="ltr" placeholder="you@example.com"/>
+        <label>العنوان الحالي في ملبورن <span class="req">*</span></label>
+        <input id="f-address" placeholder="مثال: 14 La Trobe St, Melbourne VIC 3000"/>
       </div>
       <div class="fg">
-        <label>رقم الجوال</label>
-        <input id="f-phone" dir="ltr" placeholder="+61 4XX XXX XXX"/>
+        <label>رقم الجوال <span class="req">*</span></label>
+        <div class="phone-wrap">
+          <select id="f-phone-cc">
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+966">🇸🇦 +966</option>
+          </select>
+          <input id="f-phone" type="tel" placeholder="4XX XXX XXX"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>البريد الإلكتروني <span class="req">*</span></label>
+        <input id="f-email" type="email" class="ltr" placeholder="you@example.com"/>
       </div>
     </div>
-    <div class="fg" style="margin-top:-.6rem"><div class="hint">يلزم تعبئة البريد أو الجوال على الأقل لكي نتمكن من التواصل معك.</div></div>
 
-    <div class="fg-row">
+    <!-- ── 3. Sponsorship ─────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">3</span> جهة الابتعاث <span class="req">*</span></h3>
+      <div class="opts" id="opts-scholarship">
+        <label><input type="radio" name="scholarship" value="khadem_alharamain"/> برنامج خادم الحرمين الشريفين للابتعاث (يشمل مسارات: التميز، الرواد، إمداد، واعد)</label>
+        <label><input type="radio" name="scholarship" value="job_sponsored"/> الابتعاث الوظيفي (حكومي / عسكري)</label>
+        <label><input type="radio" name="scholarship" value="private_sector"/> ابتعاث الشركات والقطاع الخاص (أرامكو، سابك، نيوم، معادن، وغيرها)</label>
+        <label><input type="radio" name="scholarship" value="cultural_tourism"/> الابتعاث الثقافي والسياحي</label>
+        <label><input type="radio" name="scholarship" value="companion_student"/> مرافق دارس</label>
+        <label><input type="radio" name="scholarship" value="self_funded"/> دارس على الحساب الخاص</label>
+        <label><input type="radio" name="scholarship" value="companion_non_student"/> مرافق غير دارس</label>
+        <label><input type="radio" name="scholarship" value="other" onchange="toggleOther('scholarship')"/> أخرى</label>
+        <div class="other-input" id="other-scholarship" style="display:none">
+          <input id="f-scholarship-other" placeholder="حدّد جهة الابتعاث"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 4. Study ───────────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">4</span> الدراسة</h3>
+      <div class="fg-row">
+        <div class="fg">
+          <label>المرحلة الدراسية <span class="req">*</span></label>
+          <select id="f-study-level">
+            <option value="">— اختر —</option>
+            <option value="PhD">دكتوراه</option>
+            <option value="Masters">ماجستير</option>
+            <option value="Bachelor">بكالوريوس</option>
+            <option value="Diploma">دبلوم</option>
+            <option value="Language">دراسة لغة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>التخصص <span class="req">*</span></label>
+          <input id="f-degree-field" placeholder="مثال: علوم الحاسب"/>
+        </div>
+      </div>
       <div class="fg">
-        <label>الجنس</label>
-        <select id="f-gender">
+        <label>الجامعة <span class="req">*</span></label>
+        <select id="f-university" onchange="toggleUniOther()">
           <option value="">— اختر —</option>
-          <option value="ذكر">ذكر</option>
-          <option value="أنثى">أنثى</option>
+          <option value="melbourne">Melbourne University</option>
+          <option value="monash">Monash University</option>
+          <option value="rmit">RMIT University</option>
+          <option value="deakin">Deakin University</option>
+          <option value="latrobe">La Trobe University</option>
+          <option value="swinburne">Swinburne University</option>
+          <option value="victoria">Victoria University</option>
+          <option value="acu">Australian Catholic University</option>
+          <option value="other">أخرى</option>
         </select>
       </div>
-      <div class="fg">
-        <label>الجامعة</label>
-        <input id="f-university" placeholder="مثال: RMIT University"/>
+      <div class="fg" id="university-other-wrap" style="display:none">
+        <label>اسم الجامعة <span class="req">*</span></label>
+        <input id="f-university-other" class="ltr"/>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>متى بدأت الدراسة؟ <span class="req">*</span></label>
+          <select id="f-study-started">
+            <option value="">— اختر —</option>
+            <option value="<6mo">أقل من 6 أشهر</option>
+            <option value="6mo-1y">من 6 أشهر إلى سنة</option>
+            <option value=">1y">أكثر من سنة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>تاريخ التخرج المتوقع <span class="req">*</span></label>
+          <select id="f-graduation">
+            <option value="">— اختر —</option>
+            <option value="Jul2027">يوليو 2027</option>
+            <option value="Dec2027">ديسمبر 2027</option>
+            <option value="2028+">2028 أو لاحقاً</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="fg">
-      <label>التخصص</label>
-      <input id="f-major" placeholder="مثال: علوم الحاسب"/>
+    <!-- ── 5. About you ───────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">5</span> عنك</h3>
+      <div class="fg">
+        <label>السيرة الذاتية (اختياري)</label>
+        <button type="button" class="cv-btn" onclick="openCvModal()">📎 إرفاق رابط السيرة الذاتية</button>
+        <div class="cv-state" id="cv-state">
+          ✅ تم الإرفاق: <span dir="ltr" id="cv-display">—</span>
+          <span class="clear" onclick="clearCv()">إزالة</span>
+        </div>
+        <div class="hint">ارفع السيرة على Google Drive أو Dropbox واضغط الزر لإلصاق الرابط.</div>
+      </div>
+      <div class="fg">
+        <label>ما هي المهارات والهوايات التي تتقنها؟ <span class="req">*</span></label>
+        <textarea id="f-skills" placeholder="مثال: تصميم، تصوير، رياضة، برمجة، تنظيم فعاليات…"></textarea>
+      </div>
+      <div class="fg">
+        <label>فضلاً اكتب لنا عن نفسك <span class="req">*</span></label>
+        <textarea id="f-about" placeholder="نبذة قصيرة عنك وعن خلفيتك ودوافع انضمامك"></textarea>
+      </div>
+      <div class="fg">
+        <label>اللجان التي تهتم بالانضمام إليها</label>
+        <div class="committees" id="committees-grid"></div>
+        <div class="hint">يمكنك اختيار أكثر من لجنة. سيختار رئيس النادي اللجنة الأنسب.</div>
+      </div>
     </div>
 
-    <div class="fg">
-      <label>اللجان التي تهتم بها</label>
-      <div class="committees" id="committees-grid"></div>
-      <div class="hint">يمكنك اختيار أكثر من لجنة. سيختار رئيس النادي الأنسب لاهتماماتك.</div>
+    <!-- ── 6. Referral + suggestions ──────────────────────── -->
+    <div class="section">
+      <h3><span class="num">6</span> بيانات إضافية</h3>
+      <div class="fg">
+        <label>كيف علمت عن النادي السعودي في ملبورن؟ <span class="req">*</span></label>
+        <div class="opts" id="opts-referral">
+          <label><input type="radio" name="referral" value="twitter"/> منصة إكس (X — تويتر سابقاً)</label>
+          <label><input type="radio" name="referral" value="snapchat"/> سناب شات</label>
+          <label><input type="radio" name="referral" value="instagram"/> انستقرام</label>
+          <label><input type="radio" name="referral" value="whatsapp"/> واتس اب</label>
+          <label><input type="radio" name="referral" value="website"/> الموقع الإلكتروني للنادي</label>
+          <label><input type="radio" name="referral" value="friend"/> عن طريق صديق / زميل</label>
+          <label><input type="radio" name="referral" value="other" onchange="toggleOther('referral')"/> أخرى</label>
+          <div class="other-input" id="other-referral" style="display:none">
+            <input id="f-referral-other" placeholder="حدّد"/>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>ما هي اقتراحاتك أو الأفكار التي تودّ أن يقدّمها النادي خلال هذا العام؟ <span class="req">*</span></label>
+        <div class="hint" style="margin-top:-.2rem;margin-bottom:.4rem">(فعاليات — برامج — مبادرات — أنشطة اجتماعية أو مهنية)</div>
+        <textarea id="f-suggestions"></textarea>
+      </div>
     </div>
 
-    <div class="fg">
-      <label>لماذا تريد الانضمام؟</label>
-      <textarea id="f-pitch" placeholder="فقرة قصيرة عن دوافعك ومهاراتك (اختياري)"></textarea>
+    <!-- ── 7. Confirmation ────────────────────────────────── -->
+    <div class="section">
+      <h3><span class="num">7</span> الإقرار <span class="req">*</span></h3>
+      <label class="confirm">
+        <input type="checkbox" id="f-confirm" onchange="updateSubmitState()"/>
+        <span>أُقرّ بصحّة ودقّة المعلومات التي قمت بإدخالها في هذا النموذج، وأتعهّد بإبلاغ إدارة النادي في حال حدوث أي تغيير عليها.</span>
+      </label>
     </div>
 
-    <button class="btn" id="submit-btn" onclick="doSubmit()">📨 إرسال الطلب</button>
-
+    <button class="btn" id="submit-btn" onclick="doSubmit()" disabled>📨 إرسال الطلب</button>
     <div class="msg err" id="err-msg"></div>
   </div>
 
-  <!-- THANK-YOU VIEW -->
+  <!-- THANK-YOU -->
   <div class="thanks" id="thanks-view" style="display:none">
     <div class="icon">✅</div>
     <h2>تم استلام طلبك!</h2>
@@ -148,12 +338,24 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
   </div>
 </div>
 
+<!-- CV URL paste modal -->
+<div class="cv-modal" id="cv-modal" onclick="if(event.target===this) closeCvModal()">
+  <div class="card">
+    <h4>📎 رابط السيرة الذاتية</h4>
+    <p>ارفع ملفك على Google Drive أو Dropbox (أو أي مكان قابل للوصول) ثم الصق الرابط هنا.</p>
+    <input id="cv-url-input" type="url" dir="ltr" placeholder="https://drive.google.com/..."/>
+    <div class="acts">
+      <button class="cancel" onclick="closeCvModal()">إلغاء</button>
+      <button class="ok" onclick="saveCv()">حفظ الرابط</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 const API = '/.netlify/functions/api';
 
-// Populate the committees grid from the live API. Falls back to a static list
-// if the API is unreachable so the form stays usable.
+// ─── Committees (live + fallback) ────────────────────────────────────────────
 const FALLBACK_COMMITTEES = [
   { committee_id: 'COM_001', committee_name: 'لجنة العلاقات العامة' },
   { committee_id: 'COM_002', committee_name: 'لجنة الفعاليات' },
@@ -164,64 +366,164 @@ const FALLBACK_COMMITTEES = [
   { committee_id: 'COM_007', committee_name: 'لجنة الأكاديمية والمهنية' },
   { committee_id: 'COM_008', committee_name: 'لجنة الموارد المالية' },
 ];
-
 function renderCommittees(list) {
-  const grid = document.getElementById('committees-grid');
-  grid.innerHTML = list.map(c =>
+  document.getElementById('committees-grid').innerHTML = list.map(c =>
     `<label><input type="checkbox" name="interest" value="${c.committee_id}"/> ${c.committee_name}</label>`
   ).join('');
 }
-
-(async function loadCommittees() {
+(async () => {
   try {
-    const resp = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const r = await fetch(API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'getCommittees' }),
     });
-    const j = await resp.json();
-    const list = (j && j.success && Array.isArray(j.data) && j.data.length) ? j.data : FALLBACK_COMMITTEES;
-    renderCommittees(list);
-  } catch {
-    renderCommittees(FALLBACK_COMMITTEES);
-  }
+    const j = await r.json();
+    renderCommittees((j && j.success && Array.isArray(j.data) && j.data.length) ? j.data : FALLBACK_COMMITTEES);
+  } catch { renderCommittees(FALLBACK_COMMITTEES); }
 })();
 
+// ─── Form helpers ────────────────────────────────────────────────────────────
 function gv(id) { return document.getElementById(id).value.trim(); }
 function showErr(msg) {
   const el = document.getElementById('err-msg');
   el.textContent = '❌ ' + msg;
   el.classList.add('show');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function clearErr() { document.getElementById('err-msg').classList.remove('show'); }
 
+function toggleOther(group) {
+  const radios = document.querySelectorAll(`input[name=${group}]`);
+  const sel = Array.from(radios).find(r => r.checked);
+  const wrap = document.getElementById('other-' + group);
+  wrap.style.display = (sel && sel.value === 'other') ? '' : 'none';
+}
+document.querySelectorAll('input[name=scholarship]').forEach(r => r.addEventListener('change', () => toggleOther('scholarship')));
+document.querySelectorAll('input[name=referral]').forEach(r => r.addEventListener('change', () => toggleOther('referral')));
+
+function toggleUniOther() {
+  const wrap = document.getElementById('university-other-wrap');
+  wrap.style.display = (gv('f-university') === 'other') ? '' : 'none';
+}
+
+function updateSubmitState() {
+  const ok = document.getElementById('f-confirm').checked;
+  document.getElementById('submit-btn').disabled = !ok;
+}
+
+// ─── CV paste modal ──────────────────────────────────────────────────────────
+let _cvUrl = '';
+function openCvModal() {
+  document.getElementById('cv-url-input').value = _cvUrl;
+  document.getElementById('cv-modal').classList.add('open');
+  setTimeout(() => document.getElementById('cv-url-input').focus(), 50);
+}
+function closeCvModal() { document.getElementById('cv-modal').classList.remove('open'); }
+function saveCv() {
+  const u = document.getElementById('cv-url-input').value.trim();
+  if (u && !/^https?:\/\//i.test(u)) { alert('الرجاء إدخال رابط صحيح (يبدأ بـ http أو https).'); return; }
+  _cvUrl = u;
+  const state = document.getElementById('cv-state');
+  if (u) {
+    state.classList.add('show');
+    document.getElementById('cv-display').textContent = u.length > 40 ? u.slice(0, 38) + '…' : u;
+  } else {
+    state.classList.remove('show');
+  }
+  closeCvModal();
+}
+function clearCv() { _cvUrl = ''; document.getElementById('cv-state').classList.remove('show'); }
+
+// ─── Submit ──────────────────────────────────────────────────────────────────
+function radioVal(name) {
+  const r = Array.from(document.querySelectorAll(`input[name=${name}]:checked`));
+  return r.length ? r[0].value : '';
+}
+
 async function doSubmit() {
   clearErr();
+
   const body = {
     action: 'applications.submit',
-    full_name:      gv('f-full-name'),
+    // Identity
+    national_id:    gv('f-national-id'),
+    name_ar:        gv('f-name-ar'),
+    name_en:        gv('f-name-en'),
     preferred_name: gv('f-preferred-name'),
-    email:          gv('f-email'),
-    phone:          gv('f-phone'),
     gender:         gv('f-gender'),
-    university:     gv('f-university'),
-    major:          gv('f-major'),
-    pitch:          gv('f-pitch'),
+    date_of_birth:  gv('f-dob'),
+    // Contact
+    address_melbourne:  gv('f-address'),
+    phone_country_code: gv('f-phone-cc'),
+    phone:              gv('f-phone'),
+    email:              gv('f-email'),
+    // Sponsorship
+    scholarship_entity:       radioVal('scholarship'),
+    scholarship_entity_other: gv('f-scholarship-other'),
+    // Study
+    study_level:                 gv('f-study-level'),
+    degree_field:                gv('f-degree-field'),
+    university:                  gv('f-university'),
+    university_other:            gv('f-university-other'),
+    study_started_window:        gv('f-study-started'),
+    expected_graduation_window:  gv('f-graduation'),
+    // About + interests
+    cv_url:         _cvUrl,
+    skills_hobbies: gv('f-skills'),
+    about_self:     gv('f-about'),
     interests:      Array.from(document.querySelectorAll('input[name=interest]:checked')).map(i => i.value),
+    // Referral + suggestions
+    referral_source:       radioVal('referral'),
+    referral_source_other: gv('f-referral-other'),
+    suggestions:           gv('f-suggestions'),
+    // Confirmation
+    confirmation_accepted: document.getElementById('f-confirm').checked,
   };
-  if (!body.full_name) { showErr('الاسم الكامل مطلوب'); return; }
-  if (!body.email && !body.phone) { showErr('أدخل البريد أو رقم الجوال'); return; }
+
+  // Required-field validation matches the form's spec.
+  const required = [
+    ['national_id',         'رقم الهوية'],
+    ['name_ar',             'الاسم بالعربية'],
+    ['name_en',             'الاسم بالإنجليزية'],
+    ['gender',              'الجنس'],
+    ['date_of_birth',       'تاريخ الميلاد'],
+    ['address_melbourne',   'العنوان في ملبورن'],
+    ['phone',               'رقم الجوال'],
+    ['email',               'البريد الإلكتروني'],
+    ['scholarship_entity',  'جهة الابتعاث'],
+    ['study_level',         'المرحلة الدراسية'],
+    ['degree_field',        'التخصص'],
+    ['university',          'الجامعة'],
+    ['study_started_window','وقت بدء الدراسة'],
+    ['expected_graduation_window','تاريخ التخرج المتوقع'],
+    ['skills_hobbies',      'المهارات والهوايات'],
+    ['about_self',          'النبذة عن نفسك'],
+    ['referral_source',     'كيف علمت عن النادي'],
+    ['suggestions',         'الاقتراحات'],
+  ];
+  for (const [k, label] of required) {
+    if (!body[k]) { showErr(`الحقل مطلوب: ${label}`); return; }
+  }
+  if (body.scholarship_entity === 'other' && !body.scholarship_entity_other) {
+    showErr('فضلاً حدّد جهة الابتعاث في خانة "أخرى".'); return;
+  }
+  if (body.university === 'other' && !body.university_other) {
+    showErr('فضلاً اكتب اسم الجامعة.'); return;
+  }
+  if (body.referral_source === 'other' && !body.referral_source_other) {
+    showErr('فضلاً حدّد مصدر معرفتك بالنادي.'); return;
+  }
+  if (!body.confirmation_accepted) { showErr('يجب الموافقة على الإقرار.'); return; }
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = '⏳ جاري الإرسال…';
   try {
-    const resp = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const r = await fetch(API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const j = await resp.json();
+    const j = await r.json();
     if (!j || !j.success) {
       showErr((j && j.error) || 'تعذّر إرسال الطلب — حاول مجدداً');
       btn.disabled = false;
