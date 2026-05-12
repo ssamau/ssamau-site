@@ -1322,48 +1322,73 @@ const handlers = {
   // ─── SETUP ───────────────────────────────────────────────────────────
   'setup.seedMembers': async () => ({ ok: true, note: 'Use `npm run seed` instead.' }),
 
-  // ─── Bulk import (leadership-supplied xlsx) ─────────────────────────
-  // Replaces the dummy seed members with real ones from the leadership xlsx.
-  // Idempotency guard: refuses to run if any member already has a national_id
-  // (= the import has already happened) unless `force: true` is passed.
+  // One-shot full-system seeder. Reads the leadership-supplied xlsx (pre-
+  // normalised by db/seed.js, which calls inspect-import.js's helpers) and
+  // creates everything needed for the system to function from a clean DB:
+  //   • the committees that actually exist in the xlsx (no more hardcoded list)
+  //   • every member row with full profile (NID, dual phones, study, etc.)
+  //   • committee head/vice-head FK wiring
+  //   • user accounts for every leadership row, with NID or email-local-part
+  //     as the username and a generated temp password (returned to the caller
+  //     in a one-time table)
+  //   • optionally, a dev/maintainer superadmin account that's NOT tied to
+  //     a member row (member_id IS NULL) — used by Faisal for tech support
   //
-  // Pipeline:
-  //   1. Create the 5 new committees from `new_committees[]` (id pattern COM_xxx).
-  //   2. For each row:
-  //        - try to find existing member by case/space-normalised full_name
-  //        - if match → UPDATE in place (preserves member_id + any user FK)
-  //        - if no match → INSERT with a fresh MBR_xxxxxx id
-  //   3. Set committee_head_member_id / committee_vice_head_member_id from
-  //      the leadership rows in the payload.
-  //   4. Delete any dummy member rows that didn't get matched (national_id IS
-  //      NULL AND no users row points at them) — that's the seed dummies.
-  //   5. Return a summary the client can print.
-  'setup.bulkImportMembers': async (body, user) => {
-    requireSuperadmin(user);
+  // Refuses to run if any users already exist (idempotency safeguard), unless
+  // force:true is passed. The whole thing runs in one logical pass.
+  //
+  // Payload shape (built by db/seed.js):
+  //   {
+  //     committees: [{ name }],
+  //     rows:       [...normalised member rows from inspect-import.js...],
+  //     dev_admin:  { username, password? } | null,
+  //     force?:     boolean
+  //   }
+  'setup.bulkSeed': async (body) => {
     const data = body.data || body;
     const rows = Array.isArray(data.rows) ? data.rows : [];
-    const newCommitteeNames = Array.isArray(data.new_committees) ? data.new_committees : [];
+    const committeeNames = Array.isArray(data.committees) ? data.committees : [];
     if (!rows.length) throw httpErr('rows[] is required and non-empty', 400);
 
     if (!data.force) {
-      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM members WHERE national_id IS NOT NULL`;
+      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users`;
       if (count > 0) {
-        throw httpErr(`Already imported (${count} members have a national_id). Pass force:true to re-run.`, 409);
+        throw httpErr(`Already seeded (${count} users exist). Pass force:true to wipe + re-seed.`, 409);
       }
+    } else {
+      // force:true → wipe everything app-level so the seed runs from a clean
+      // slate. We use DELETE in FK-safe order rather than TRUNCATE so the
+      // function's own connection doesn't fight a TRUNCATE's exclusive table
+      // lock against other open sessions.
+      await sql`DELETE FROM users`;
+      await sql`DELETE FROM hours`;
+      await sql`DELETE FROM attendance`;
+      await sql`DELETE FROM assignments`;
+      await sql`DELETE FROM opportunities`;
+      await sql`DELETE FROM thanks_emails`;
+      await sql`DELETE FROM certificates`;
+      await sql`DELETE FROM interest_requests`;
+      await sql`DELETE FROM participants`;
+      await sql`DELETE FROM membership_applications`;
+      await sql`UPDATE committees SET committee_head_member_id = NULL, committee_vice_head_member_id = NULL`;
+      await sql`UPDATE projects SET created_by_member_id = NULL, assigned_project_manager_member_id = NULL, assigned_event_manager_member_id = NULL`;
+      await sql`DELETE FROM members`;
+      await sql`DELETE FROM committees`;
+      await sql`DELETE FROM projects`;
     }
 
-    // ─── 1. New committees ────────────────────────────────────────────
-    // We assign IDs by walking forward from COM_009 (the existing pool ends
-    // at COM_008). If any of those collide with rows added by a future
-    // migration we just bump past them.
+    // ─── 1. Committees ───────────────────────────────────────────────
+    // Each committee gets COM_001, COM_002, ... in the order they appear in
+    // the payload (which is the order they appeared in the xlsx). Same scheme
+    // we used before, just driven by the data instead of a hardcoded list.
     const [{ max_n }] = await sql`
       SELECT COALESCE(MAX(NULLIF(REGEXP_REPLACE(committee_id, '\\D', '', 'g'), '')::INT), 0) AS max_n
       FROM committees
     `;
-    let nextN = Math.max(9, (max_n || 0) + 1);
-    const newCommitteeIds = {};   // canonical name → assigned committee_id
+    let nextN = Math.max(1, (max_n || 0) + 1);
+    const committeeIdByName = {};
     const createdCommittees = [];
-    for (const name of newCommitteeNames) {
+    for (const name of committeeNames) {
       const id = `COM_${String(nextN).padStart(3, '0')}`;
       nextN++;
       await sql`
@@ -1371,277 +1396,153 @@ const handlers = {
         VALUES (${id}, ${name}, 'Active')
         ON CONFLICT (committee_id) DO NOTHING
       `;
-      newCommitteeIds[name] = id;
+      committeeIdByName[name] = id;
       createdCommittees.push({ committee_id: id, committee_name: name });
     }
 
     // ─── 2. Members ──────────────────────────────────────────────────
-    const existing = await sql`SELECT member_id, full_name FROM members`;
-    // Match key: NFKC + strip extended whitespace + lowercase for case-fold.
-    const norm = s => String(s || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
-    const byName = new Map(existing.map(m => [norm(m.full_name), m.member_id]));
-
-    let updated = 0, inserted = 0;
-    const memberIdByXlsxRow = {};   // _xlsx_row → member_id (used for committee-head wiring below)
-
+    let inserted = 0;
+    const memberIdByXlsxRow = {};
     for (const r of rows) {
-      // Resolve committee_id: either an existing/preassigned id, or a new one
-      // we just created above, or null (board members / unspecified).
-      let committeeId = r.committee_id || null;
-      if (!committeeId && r.new_committee_name) {
-        committeeId = newCommitteeIds[r.new_committee_name] || null;
-      }
+      // Resolve committee_id from the xlsx-canonical name. Board members and
+      // unspecified-committee rows just get null (allowed).
+      const committeeId = r.new_committee_name
+        ? committeeIdByName[r.new_committee_name] || null
+        : (r.committee_id || null);
+
+      const memberId = shortId('MBR');
       const displayName = r.name_ar || r.full_name;
-      const existingId = byName.get(norm(displayName));
-
-      // Common field set used by both UPDATE and INSERT.
-      const fields = {
-        full_name:         displayName,
-        preferred_name:    r.preferred_name || null,
-        name_en:           r.name_en || null,
-        national_id:       r.national_id || null,
-        email:             r.email || null,
-        phone:             r.phone || null,
-        whatsapp:          r.whatsapp || null,
-        gender:            r.gender || null,
-        date_of_birth:     r.date_of_birth || null,
-        address_melbourne: r.address_melbourne || null,
-        committee_id:      committeeId,
-        club_role:         r.club_role || 'Member',
-        status:            'Active',
-        scholarship_entity:         r.scholarship_entity || null,
-        scholarship_entity_other:   r.scholarship_entity_raw && !r.scholarship_entity
-                                      ? r.scholarship_entity_raw : null,
-        study_level:                r.study_level || null,
-        degree_field:               r.degree_field || null,
-        university:                 r.university || null,
-        university_other:           r.university_other || null,
-        study_started_window:       r.study_started_window || null,
-        expected_graduation_window: r.expected_graduation_window || null,
-        skills_hobbies:             r.skills_hobbies || null,
-        about_self:                 r.about_self || null,
-        cv_url:                     r.cv_url || null,
-        linkedin_url:               r.linkedin || null,
-      };
-
-      let memberId;
-      if (existingId) {
-        memberId = existingId;
-        await sql`
-          UPDATE members SET
-            full_name         = ${fields.full_name},
-            preferred_name    = COALESCE(${fields.preferred_name}, preferred_name),
-            name_en           = COALESCE(${fields.name_en},        name_en),
-            national_id       = ${fields.national_id},
-            email             = COALESCE(${fields.email},          email),
-            phone             = COALESCE(${fields.phone},          phone),
-            whatsapp          = COALESCE(${fields.whatsapp},       whatsapp),
-            gender            = COALESCE(${fields.gender},         gender),
-            date_of_birth     = COALESCE(${fields.date_of_birth},  date_of_birth),
-            address_melbourne = COALESCE(${fields.address_melbourne}, address_melbourne),
-            committee_id      = COALESCE(${fields.committee_id},   committee_id),
-            club_role         = COALESCE(${fields.club_role},      club_role),
-            scholarship_entity         = COALESCE(${fields.scholarship_entity},         scholarship_entity),
-            scholarship_entity_other   = COALESCE(${fields.scholarship_entity_other},   scholarship_entity_other),
-            study_level                = COALESCE(${fields.study_level},                study_level),
-            degree_field               = COALESCE(${fields.degree_field},               degree_field),
-            university                 = COALESCE(${fields.university},                 university),
-            university_other           = COALESCE(${fields.university_other},           university_other),
-            study_started_window       = COALESCE(${fields.study_started_window},       study_started_window),
-            expected_graduation_window = COALESCE(${fields.expected_graduation_window}, expected_graduation_window),
-            skills_hobbies             = COALESCE(${fields.skills_hobbies},             skills_hobbies),
-            about_self                 = COALESCE(${fields.about_self},                 about_self),
-            cv_url                     = COALESCE(${fields.cv_url},                     cv_url),
-            linkedin_url               = COALESCE(${fields.linkedin_url},               linkedin_url)
-          WHERE member_id = ${memberId}
-        `;
-        updated++;
-      } else {
-        memberId = shortId('MBR');
-        await sql`
-          INSERT INTO members (
-            member_id, full_name, preferred_name, name_en, national_id,
-            email, phone, whatsapp, gender, date_of_birth, address_melbourne,
-            committee_id, club_role, status, join_date,
-            scholarship_entity, scholarship_entity_other,
-            study_level, degree_field, university, university_other,
-            study_started_window, expected_graduation_window,
-            skills_hobbies, about_self, cv_url, linkedin_url
-          ) VALUES (
-            ${memberId}, ${fields.full_name}, ${fields.preferred_name}, ${fields.name_en}, ${fields.national_id},
-            ${fields.email}, ${fields.phone}, ${fields.whatsapp},
-            ${fields.gender}, ${fields.date_of_birth}, ${fields.address_melbourne},
-            ${fields.committee_id}, ${fields.club_role}, ${fields.status}, CURRENT_DATE,
-            ${fields.scholarship_entity}, ${fields.scholarship_entity_other},
-            ${fields.study_level}, ${fields.degree_field}, ${fields.university}, ${fields.university_other},
-            ${fields.study_started_window}, ${fields.expected_graduation_window},
-            ${fields.skills_hobbies}, ${fields.about_self}, ${fields.cv_url}, ${fields.linkedin_url}
-          )
-        `;
-        inserted++;
-      }
+      await sql`
+        INSERT INTO members (
+          member_id, full_name, preferred_name, name_en, national_id,
+          email, phone, whatsapp, gender, date_of_birth, address_melbourne,
+          committee_id, club_role, status, join_date,
+          scholarship_entity, scholarship_entity_other,
+          study_level, degree_field, university, university_other,
+          study_started_window, expected_graduation_window,
+          skills_hobbies, about_self, cv_url, linkedin_url, total_hours
+        ) VALUES (
+          ${memberId}, ${displayName}, ${r.preferred_name || null}, ${r.name_en || null}, ${r.national_id || null},
+          ${r.email || null}, ${r.phone || null}, ${r.whatsapp || null},
+          ${r.gender || null}, ${r.date_of_birth || null}, ${r.address_melbourne || null},
+          ${committeeId}, ${r.club_role || 'Member'}, 'Active', CURRENT_DATE,
+          ${r.scholarship_entity || null},
+          ${r.scholarship_entity_raw && !r.scholarship_entity ? r.scholarship_entity_raw : null},
+          ${r.study_level || null}, ${r.degree_field || null}, ${r.university || null}, ${r.university_other || null},
+          ${r.study_started_window || null}, ${r.expected_graduation_window || null},
+          ${r.skills_hobbies || null}, ${r.about_self || null}, ${r.cv_url || null}, ${r.linkedin || null}, 0
+        )
+      `;
       memberIdByXlsxRow[r._xlsx_row] = memberId;
+      inserted++;
     }
 
-    // ─── 3. Committee head / vice-head wiring ────────────────────────
+    // ─── 3. Committee head / vice-head FK wiring ─────────────────────
     let headsAssigned = 0;
     for (const r of rows) {
-      const committeeId = r.committee_id ||
-        (r.new_committee_name ? newCommitteeIds[r.new_committee_name] : null);
+      const committeeId = r.new_committee_name
+        ? committeeIdByName[r.new_committee_name] || null
+        : (r.committee_id || null);
       if (!committeeId) continue;
       const memberId = memberIdByXlsxRow[r._xlsx_row];
       if (!memberId) continue;
       if (r.club_role === 'Committee Head') {
-        await sql`
-          UPDATE committees SET committee_head_member_id = ${memberId}
-          WHERE committee_id = ${committeeId}
-        `;
+        await sql`UPDATE committees SET committee_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
         headsAssigned++;
       } else if (r.club_role === 'Committee Vice Head') {
-        await sql`
-          UPDATE committees SET committee_vice_head_member_id = ${memberId}
-          WHERE committee_id = ${committeeId}
-        `;
+        await sql`UPDATE committees SET committee_vice_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
         headsAssigned++;
       }
     }
 
-    // ─── 4. Sweep dummies ────────────────────────────────────────────
-    // Anything that's still in members with no NID and no user account is
-    // a leftover from the original seed. Delete it cleanly.
-    const dummies = await sql`
-      DELETE FROM members
-      WHERE national_id IS NULL
-        AND member_id NOT IN (SELECT member_id FROM users WHERE member_id IS NOT NULL)
-      RETURNING member_id
-    `;
-
-    return {
-      created_committees: createdCommittees,
-      members_inserted:   inserted,
-      members_updated:    updated,
-      heads_assigned:     headsAssigned,
-      dummies_deleted:    dummies.length,
-      dummy_ids:          dummies.map(d => d.member_id),
-    };
-  },
-
-  // One-shot seeder. Refuses if users already exist (so it can't be re-run by
-  // accident or abused). Called by db/seed.js with the CSV text in the body.
-  'setup.bulkSeed': async ({ csv_text }) => {
-    if (!csv_text || typeof csv_text !== 'string') {
-      throw httpErr('Missing csv_text', 400);
-    }
-    const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users`;
-    if (count > 0) {
-      throw httpErr('Already seeded — refusing to re-run. Wipe `users` first if you really mean to re-seed.', 409);
-    }
-
-    const committeeNames = {
-      COM_001: 'لجنة العلاقات العامة',
-      COM_002: 'لجنة الفعاليات',
-      COM_003: 'لجنة الإعلام والتسويق',
-      COM_004: 'لجنة العائلات',
-      COM_005: 'أكاديمية الأصالة',
-      COM_006: 'لجنة الرياضة',
-      COM_007: 'لجنة الأكاديمية والمهنية',
-      COM_008: 'لجنة الموارد المالية',
-    };
-    for (const [id, name] of Object.entries(committeeNames)) {
-      await sql`
-        INSERT INTO committees (committee_id, committee_name, status)
-        VALUES (${id}, ${name}, 'Active')
-        ON CONFLICT (committee_id) DO NOTHING
-      `;
-    }
-
-    const lines = csv_text.split(/\r?\n/).filter(Boolean);
-    const headers = parseCsvLine(lines.shift());
-    const rows = lines.map((l) =>
-      Object.fromEntries(parseCsvLine(l).map((v, i) => [headers[i], v])));
-
-    let inserted = 0;
-    for (const r of rows) {
-      await sql`
-        INSERT INTO members (member_id, full_name, preferred_name, email, phone, gender,
-                             profile_photo_url, committee_id, club_role, status, join_date, total_hours)
-        VALUES (${r.member_id}, ${r.full_name}, ${r.preferred_name || null},
-                ${r.email || null}, ${r.phone || null}, ${r.gender || null},
-                ${r.profile_photo_url || null}, ${r.committee_id || null},
-                ${r.club_role || 'Member'}, ${r.status || 'Active'},
-                ${r.join_date || null}, ${parseFloat(r.total_hours) || 0})
-        ON CONFLICT (member_id) DO NOTHING
-      `;
-      inserted++;
-    }
-
-    await sql`
-      UPDATE committees c SET committee_head_member_id = m.member_id
-      FROM members m
-      WHERE m.committee_id = c.committee_id AND m.club_role = 'Committee Head'
-        AND c.committee_head_member_id IS NULL
-    `;
-    await sql`
-      UPDATE committees c SET committee_vice_head_member_id = m.member_id
-      FROM members m
-      WHERE m.committee_id = c.committee_id AND m.club_role = 'Committee Vice Head'
-        AND c.committee_vice_head_member_id IS NULL
-    `;
-
+    // ─── 4. Leadership user accounts ─────────────────────────────────
+    // Username derivation: try email-local-part first, fall back to NID. If
+    // neither is available or there's a collision, derive a slug from the
+    // member_id (last resort — should never trigger with real xlsx data).
     const leadership = await sql`
-      SELECT member_id, full_name, email, club_role, committee_id
+      SELECT member_id, full_name, email, national_id, club_role
       FROM members
       WHERE club_role IN ('President','Vice President','Deputy Vice President',
                           'Committee Head','Committee Vice Head')
-      ORDER BY club_role, full_name
+      ORDER BY
+        CASE club_role
+          WHEN 'President' THEN 1
+          WHEN 'Vice President' THEN 2
+          WHEN 'Deputy Vice President' THEN 3
+          WHEN 'Committee Head' THEN 4
+          WHEN 'Committee Vice Head' THEN 5
+        END,
+        full_name
     `;
 
+    const usernamesSeen = new Set();
     const accounts = [];
+    let superadminCount = 0;
     for (const m of leadership) {
-      const username = (m.email && m.email.includes('@'))
-        ? m.email.split('@')[0].toLowerCase()
-        : m.member_id.toLowerCase();
+      let candidate = (m.email && m.email.includes('@'))
+        ? m.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '')
+        : (m.national_id || `lead_${m.member_id.toLowerCase()}`);
+      // Collision: append `-2`, `-3`, etc.
+      let username = candidate, n = 2;
+      while (usernamesSeen.has(username)) { username = `${candidate}-${n++}`; }
+      usernamesSeen.add(username);
+
       const access = (m.club_role === 'President'
                    || m.club_role === 'Vice President'
                    || m.club_role === 'Deputy Vice President')
         ? 'superadmin' : 'head';
-      const tempPw = randomBytesB64Url(6);
+      if (access === 'superadmin') superadminCount++;
+
+      const tempPw = randomBytesB64Url(7);
       const hash = await bcrypt.hash(tempPw, 10);
       await sql`
         INSERT INTO users (username, password_hash, member_id, access_level)
         VALUES (${username}, ${hash}, ${m.member_id}, ${access})
       `;
-      accounts.push({ username, access, name: m.full_name, temp_password: tempPw });
+      accounts.push({
+        username, access, name: m.full_name, role: m.club_role, temp_password: tempPw,
+      });
+    }
+
+    // ─── 5. Dev/maintainer superadmin (optional) ─────────────────────
+    // Created with member_id = NULL — it's not a club member, just a
+    // separate-tier account for tech support and dev work. Username + password
+    // come straight from the payload; password is generated if omitted.
+    if (data.dev_admin && data.dev_admin.username) {
+      const devUsername = String(data.dev_admin.username).toLowerCase().trim();
+      const [clash] = await sql`SELECT id FROM users WHERE LOWER(username) = ${devUsername}`;
+      if (clash) throw httpErr(`dev_admin username "${devUsername}" collides with a leadership account — pick a different one`, 409);
+      const devPassword = data.dev_admin.password || randomBytesB64Url(7);
+      const devHash = await bcrypt.hash(devPassword, 10);
+      await sql`
+        INSERT INTO users (username, password_hash, member_id, access_level)
+        VALUES (${devUsername}, ${devHash}, NULL, 'superadmin')
+      `;
+      accounts.push({
+        username: devUsername, access: 'superadmin', name: '(dev/maintainer)',
+        role: 'dev', temp_password: devPassword,
+      });
+      superadminCount++;
+    }
+
+    // ─── 6. Safety check — at least one superadmin must exist ────────
+    // If this trips, something is wrong with the input (no presidency rows
+    // AND no dev_admin). Refuse to commit so the operator notices.
+    if (superadminCount === 0) {
+      throw httpErr('No superadmin account would be created — the xlsx contains no President/VP/DVP rows and no dev_admin was provided. Aborting to prevent lockout.', 500);
     }
 
     return {
-      committees: Object.keys(committeeNames).length,
+      created_committees: createdCommittees,
       members_inserted: inserted,
+      heads_assigned: headsAssigned,
       accounts,
     };
   },
 };
 
-// CSV + crypto helpers used only by setup.bulkSeed.
-function parseCsvLine(line) {
-  const out = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQ) {
-      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-      else if (ch === '"') inQ = false;
-      else cur += ch;
-    } else {
-      if (ch === '"') inQ = true;
-      else if (ch === ',') { out.push(cur); cur = ''; }
-      else cur += ch;
-    }
-  }
-  out.push(cur);
-  return out;
-}
-
+// Crypto helper — generates short URL-safe random strings (used for temp
+// passwords during seed and password reset).
 function randomBytesB64Url(n) {
   const arr = new Uint8Array(n);
   if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(arr);

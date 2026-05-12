@@ -8,7 +8,6 @@
     "seed": "node db/seed.js",
     "import:inspect": "node db/inspect-import.js",
     "import:preview": "node db/preview-import.js",
-    "import:members": "node db/import-members.js",
     "import:static-events": "node db/import-static-events.js",
     "admin:create": "node db/create-admin.js"
   },
