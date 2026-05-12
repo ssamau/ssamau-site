@@ -76,11 +76,15 @@ style-src-attr 'unsafe-inline'; \
 font-src 'self' https://fonts.gstatic.com; \
 img-src 'self' data: https:; \
 connect-src 'self' https://www.google-analytics.com; \
-frame-ancestors 'none'; \
+frame-src 'self' https://app.netlify.com; \
+frame-ancestors 'self' https://app.netlify.com https://*.netlify.app; \
 base-uri 'self'; \
 form-action 'self'; \
 object-src 'none'"""
     X-Content-Type-Options = "nosniff"
     Referrer-Policy        = "strict-origin-when-cross-origin"
     Permissions-Policy     = "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
-    X-Frame-Options        = "DENY"
+    # X-Frame-Options is the legacy companion of frame-ancestors. Leaving it
+    # unset because we explicitly need Netlify's app.netlify.com to be able to
+    # frame deploy previews — `frame-ancestors` above gives us the modern,
+    # per-origin allowlist that XFO can't express.
