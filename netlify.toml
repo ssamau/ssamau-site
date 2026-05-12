@@ -5,6 +5,11 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # Default is 10s. Bumped because setup.bulkSeed does a lot in one go (wipe +
+  # 98 member inserts + 20 bcrypt hashes + committee FK wiring). 26s is the
+  # max for synchronous functions on Netlify (anything longer needs a
+  # background function which doesn't return a response).
+  timeout = 26
   # esbuild's transitive-CJS resolver misses nested deps (xtend/mutable inside
   # pg's postgres-interval, lib/sign-stream inside jws, etc.). `included_files`
   # ships the project's entire node_modules into the function, so Node's

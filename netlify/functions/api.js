@@ -1494,7 +1494,10 @@ const handlers = {
       if (access === 'superadmin') superadminCount++;
 
       const tempPw = randomBytesB64Url(7);
-      const hash = await bcrypt.hash(tempPw, 10);
+      // Cost 6 for seed temp passwords — users change them on first login
+      // anyway, and cost 10 × 20 hashes blew past the 10s function timeout.
+      // users.create + users.resetPassword keep cost 10 for normal use.
+      const hash = await bcrypt.hash(tempPw, 6);
       await sql`
         INSERT INTO users (username, password_hash, member_id, access_level)
         VALUES (${username}, ${hash}, ${m.member_id}, ${access})
@@ -1513,7 +1516,7 @@ const handlers = {
       const [clash] = await sql`SELECT id FROM users WHERE LOWER(username) = ${devUsername}`;
       if (clash) throw httpErr(`dev_admin username "${devUsername}" collides with a leadership account — pick a different one`, 409);
       const devPassword = data.dev_admin.password || randomBytesB64Url(7);
-      const devHash = await bcrypt.hash(devPassword, 10);
+      const devHash = await bcrypt.hash(devPassword, 6);   // same rationale as leadership above
       await sql`
         INSERT INTO users (username, password_hash, member_id, access_level)
         VALUES (${devUsername}, ${devHash}, NULL, 'superadmin')
