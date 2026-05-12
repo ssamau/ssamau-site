@@ -1,0 +1,138 @@
+/* ═══════════════════════════════════════════════
+   SSAM — Login page
+   ─────────────────────────────────────────────── */
+
+html, body { height: 100%; }
+body {
+  background: linear-gradient(135deg, #0e3a1c 0%, #1A5C2E 50%, #0e3a1c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* Background pattern */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(184,147,42,.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(184,147,42,.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.login-card {
+  background: #fff; border-radius: 20px;
+  width: 100%; max-width: 420px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0,0,0,.35);
+}
+
+/* Header */
+.lc-header {
+  background: linear-gradient(135deg, #0e3a1c, #1A5C2E);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+.lc-logo {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid rgba(184,147,42,.5);
+  margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+}
+.lc-logo img { width: 90%; height: 90%; object-fit: contain; }
+.lc-title { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: .3rem; }
+.lc-sub   { font-size: .75rem; color: rgba(255,255,255,.5); }
+
+/* Form */
+.lc-body { padding: 2rem; }
+.lc-welcome { font-size: .82rem; color: #4b5563; text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
+
+.fg { margin-bottom: 1rem; }
+.fg label { display: block; font-size: .75rem; font-weight: 700; color: #374151; margin-bottom: .35rem; }
+.fg-icon-wrap { position: relative; }
+.fg-icon { position: absolute; right: .85rem; top: 50%; transform: translateY(-50%); font-size: .95rem; pointer-events: none; }
+.fg input {
+  width: 100%;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: .65rem 2.4rem .65rem .85rem;
+  font-size: .9rem;
+  font-family: 'Almarai', sans-serif;
+  direction: rtl;
+  outline: none;
+  transition: all .2s;
+  background: #f9fafb;
+}
+.fg input:focus { border-color: #1A5C2E; background: #fff; box-shadow: 0 0 0 3px rgba(26,92,46,.1); }
+
+.pw-toggle {
+  position: absolute; left: .85rem; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  font-size: .9rem; color: #9ca3af;
+  padding: .15rem;
+}
+.pw-toggle:hover { color: #1A5C2E; }
+
+.login-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #1A5C2E, #2a7a42);
+  color: #fff; border: none; border-radius: 10px;
+  padding: .8rem;
+  font-size: .95rem; font-weight: 800;
+  font-family: 'Almarai', sans-serif;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: .5rem;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+}
+.login-btn:hover    { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,92,46,.35); }
+.login-btn:active   { transform: translateY(0); }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+.error-msg {
+  background: #fef2f2;
+  border: 1.5px solid rgba(220,38,38,.2);
+  border-radius: 8px;
+  padding: .65rem .85rem;
+  font-size: .8rem; color: #dc2626; text-align: center;
+  margin-top: .85rem;
+  display: none;
+}
+.error-msg.show { display: block; }
+
+/* Footer */
+.lc-footer { padding: 1rem 2rem 1.5rem; text-align: center; }
+.lc-footer-txt { font-size: .68rem; color: #9ca3af; }
+.lc-version {
+  display: inline-block;
+  background: #f3f4f6; color: #6b7280;
+  font-size: .65rem; font-weight: 700;
+  padding: .18rem .5rem;
+  border-radius: 50px;
+  margin-top: .3rem;
+}
+
+/* Spinner */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.shake { animation: shake .4s ease; }
