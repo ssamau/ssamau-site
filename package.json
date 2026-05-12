@@ -5,12 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "import:inspect": "node db/inspect-import.js",
+    "import:preview": "node db/preview-import.js",
+    "import:members": "node db/import-members.js",
+    "import:static-events": "node db/import-static-events.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@netlify/database": "^1.0.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "xlsx": "^0.18.5"
   }
 }

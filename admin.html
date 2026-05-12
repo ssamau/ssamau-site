@@ -540,7 +540,7 @@ tr:hover td { background:#fafcfa; }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>رقم الهوية</th><th>البريد</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>الاسم</th><th>رقم الهوية</th><th>التواصل</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="members-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
@@ -888,7 +888,11 @@ tr:hover td { background:#fafcfa; }
       </div>
       <div class="fg-row">
         <div class="fg"><label>البريد الإلكتروني <span class="required">*</span></label><input id="m-email" type="email" dir="ltr" placeholder="ahmed@example.com"/></div>
-        <div class="fg"><label>الهاتف</label><input id="m-phone" dir="ltr" placeholder="+61 400 000 000"/></div>
+        <div class="fg"><label>الهاتف</label><input id="m-phone" dir="ltr" placeholder="+61400000000"/></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>واتس اب</label><input id="m-whatsapp" dir="ltr" placeholder="+966500000000"/></div>
+        <div class="fg"><label>تاريخ الميلاد</label><input id="m-dob" type="date"/></div>
       </div>
       <div class="fg-row">
         <div class="fg"><label>الجنس</label>
@@ -1711,20 +1715,31 @@ function renderMembers(members) {
     const nid = m.national_id
       ? `<span dir="ltr" style="font-family:Menlo,Consolas,monospace;font-size:.78rem">${esc(m.national_id)}</span>`
       : '<span style="color:var(--tm)">—</span>';
+    // Contact cell — stacks email + 📱 phone + 💬 whatsapp so admins see every
+    // way to reach a member without opening the edit modal. Phone and WhatsApp
+    // are intentionally separate (some members use a Saudi number for WhatsApp
+    // and an Australian number for calls — or vice versa).
+    const contactLines = [];
+    if (m.email)    contactLines.push(`<div style="direction:ltr;text-align:left">${esc(m.email)}</div>`);
+    if (m.phone)    contactLines.push(`<div style="direction:ltr;text-align:left;font-size:.74rem;color:var(--tm)">📱 ${esc(m.phone)}</div>`);
+    if (m.whatsapp) contactLines.push(`<div style="direction:ltr;text-align:left;font-size:.74rem;color:var(--tm)">💬 ${esc(m.whatsapp)}</div>`);
+    const contact = contactLines.length
+      ? contactLines.join('')
+      : '<span style="color:var(--tm)">—</span>';
     return `<tr>
       <td>
         <div style="font-weight:700">${esc(m.preferred_name || m.full_name)}</div>
         <div style="font-size:.72rem;color:var(--tm)">${esc(m.full_name)}</div>
       </td>
       <td>${nid}</td>
-      <td style="font-size:.78rem;direction:ltr;text-align:left">${esc(m.email) || '<span style="color:var(--tm)">—</span>'}</td>
+      <td style="font-size:.78rem">${contact}</td>
       <td>${tag(m.club_role, ROLE_COLORS[m.club_role] || 't-gr')}</td>
       <td>${com ? tag(com.committee_name, 't-b') : '<span style="color:var(--tm)">—</span>'}</td>
       <td><strong style="color:var(--g)">${m.total_hours || 0}</strong></td>
       <td>${tag(m.status, STATUS_COLORS[m.status] || 't-gr')}</td>
       <td>
         <button class="btn-icon edit" onclick="editMember('${m.member_id}')" title="تعديل">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('member','${m.member_id}',${JSON.stringify(m.full_name)})" title="حذف">🗑️</button>
+        <button class="btn-icon del" onclick="confirmDelete('member','${m.member_id}',${attrJson(m.full_name)})" title="حذف">🗑️</button>
         <button class="btn-icon" onclick="viewProfile('${m.member_id}')" title="ملف العضو">👤</button>
       </td>
     </tr>`;
@@ -1757,6 +1772,8 @@ async function saveMember() {
     national_id:      gv('m-national-id'),
     email:            gv('m-email'),
     phone:            gv('m-phone'),
+    whatsapp:         gv('m-whatsapp'),
+    date_of_birth:    gv('m-dob'),
     gender:           gv('m-gender'),
     profile_photo_url:gv('m-photo'),
     committee_id:     gv('m-committee-id'),
@@ -1789,6 +1806,8 @@ function editMember(id) {
   sv('m-national-id', m.national_id || '');
   sv('m-email', m.email);
   sv('m-phone', m.phone);
+  sv('m-whatsapp', m.whatsapp || '');
+  sv('m-dob', m.date_of_birth ? String(m.date_of_birth).slice(0, 10) : '');
   sv('m-gender', m.gender);
   sv('m-photo', m.profile_photo_url);
   sv('m-committee-id', m.committee_id);
@@ -1819,7 +1838,7 @@ async function loadAdvisors() {
     <td>${tag(a.status, STATUS_COLORS[a.status] || 't-gr')}</td>
     <td>
       <button class="btn-icon edit" onclick="editAdvisor('${a.advisor_id}')">✏️</button>
-      <button class="btn-icon del" onclick="confirmDelete('advisor','${a.advisor_id}',${JSON.stringify(a.full_name)})">🗑️</button>
+      <button class="btn-icon del" onclick="confirmDelete('advisor','${a.advisor_id}',${attrJson(a.full_name)})">🗑️</button>
     </td>
   </tr>`).join('');
 }
@@ -1878,7 +1897,7 @@ async function loadCommittees() {
       <td>${tag(c.status, STATUS_COLORS[c.status] || 't-gr')}</td>
       <td>
         <button class="btn-icon edit" onclick="editCommittee('${c.committee_id}')">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('committee','${c.committee_id}',${JSON.stringify(c.committee_name)})">🗑️</button>
+        <button class="btn-icon del" onclick="confirmDelete('committee','${c.committee_id}',${attrJson(c.committee_name)})">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -1943,7 +1962,7 @@ function renderProjects(projects) {
       <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
       <td>
         <button class="btn-icon edit" onclick="editProject('${p.project_id}')">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('project','${p.project_id}',${JSON.stringify(p.project_name)})">🗑️</button>
+        <button class="btn-icon del" onclick="confirmDelete('project','${p.project_id}',${attrJson(p.project_name)})">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -2204,6 +2223,7 @@ function openApplicationReview(applicationId) {
       }).join('، ')
     : '—';
   const phone = a.phone ? `${a.phone_country_code || ''} ${a.phone}`.trim() : '—';
+  const whatsapp = a.whatsapp ? `${a.whatsapp_country_code || ''} ${a.whatsapp}`.trim() : '';
   const scholarship = a.scholarship_entity === 'other'
     ? (a.scholarship_entity_other || 'أخرى')
     : (SCHOLARSHIP_LABELS[a.scholarship_entity] || a.scholarship_entity || '—');
@@ -2237,9 +2257,10 @@ function openApplicationReview(applicationId) {
     ])}
 
     ${block('التواصل', [
-      ['البريد',   a.email ? `<span dir="ltr">${esc(a.email)}</span>` : ''],
-      ['الجوال',  a.phone ? `<span dir="ltr">${esc(phone)}</span>` : ''],
-      ['العنوان', esc(a.address_melbourne)],
+      ['البريد',     a.email    ? `<span dir="ltr">${esc(a.email)}</span>` : ''],
+      ['الجوال',    a.phone    ? `<span dir="ltr">📱 ${esc(phone)}</span>` : ''],
+      ['واتس اب',  a.whatsapp ? `<span dir="ltr">💬 ${esc(whatsapp)}</span>` : ''],
+      ['العنوان',   esc(a.address_melbourne)],
     ])}
 
     ${block('الابتعاث والدراسة', [
@@ -3028,6 +3049,12 @@ document.querySelectorAll('.overlay').forEach(o =>
 const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 const sv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
 const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// Safe JSON for inlining inside an HTML attribute. `JSON.stringify(name)`
+// gives `"name"` — the literal double-quotes break onclick="..." parsing and
+// silently kill the handler. Replace them with the HTML entity so the
+// browser reconstructs the original JSON value when invoking the handler.
+const attrJson = v => JSON.stringify(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
 // Format any ISO/date string to a short local date. Returns '' for falsy/invalid.
 // Wrapped in <span dir="ltr"> so the page's RTL direction doesn't reorder

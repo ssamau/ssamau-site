@@ -171,6 +171,24 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
           </select>
           <input id="f-phone" type="tel" placeholder="4XX XXX XXX"/>
         </div>
+        <div class="hint">رقم التواصل الأساسي.</div>
+      </div>
+      <div class="fg">
+        <label>رقم واتس اب <span class="req">*</span></label>
+        <label class="confirm" style="padding:.55rem .75rem;margin-bottom:.5rem;font-size:.78rem;background:#f9fafb;border-color:#e5e7eb;color:#374151;align-items:center">
+          <input type="checkbox" id="f-wa-same" checked onchange="toggleWaSame()" style="margin-top:0"/>
+          <span>نفس رقم الجوال أعلاه</span>
+        </label>
+        <div id="f-wa-section" style="display:none">
+          <div class="phone-wrap">
+            <select id="f-wa-cc">
+              <option value="+966">🇸🇦 +966</option>
+              <option value="+61">🇦🇺 +61</option>
+            </select>
+            <input id="f-wa-number" type="tel" placeholder="5XX XXX XXX"/>
+          </div>
+          <div class="hint">للأعضاء الذين يستخدمون رقمًا سعوديًا للواتس اب ورقمًا أستراليًا للاتصال (أو العكس).</div>
+        </div>
       </div>
       <div class="fg">
         <label>البريد الإلكتروني <span class="req">*</span></label>
@@ -406,6 +424,11 @@ function toggleUniOther() {
   wrap.style.display = (gv('f-university') === 'other') ? '' : 'none';
 }
 
+function toggleWaSame() {
+  const same = document.getElementById('f-wa-same').checked;
+  document.getElementById('f-wa-section').style.display = same ? 'none' : '';
+}
+
 function updateSubmitState() {
   const ok = document.getElementById('f-confirm').checked;
   document.getElementById('submit-btn').disabled = !ok;
@@ -456,6 +479,12 @@ async function doSubmit() {
     address_melbourne:  gv('f-address'),
     phone_country_code: gv('f-phone-cc'),
     phone:              gv('f-phone'),
+    // WhatsApp: if "same as phone" is ticked, reuse the phone fields; else
+    // take the separately-entered WhatsApp number.
+    whatsapp_country_code:
+      document.getElementById('f-wa-same').checked ? gv('f-phone-cc') : gv('f-wa-cc'),
+    whatsapp:
+      document.getElementById('f-wa-same').checked ? gv('f-phone')   : gv('f-wa-number'),
     email:              gv('f-email'),
     // Sponsorship
     scholarship_entity:       radioVal('scholarship'),

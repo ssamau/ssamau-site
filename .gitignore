@@ -5,3 +5,7 @@ node_modules/
 .env
 .env.local
 deno.lock
+
+# Generated preview from `npm run import:inspect`. Contains PII
+# (national IDs, addresses, phones) from the leadership xlsx — never commit.
+db/import-preview.json

@@ -47,7 +47,7 @@ nav{position:fixed;top:0;right:0;left:0;z-index:200;background:rgba(255,255,255,
 .hero{min-height:100vh;background:linear-gradient(160deg,#0a2814,var(--gd) 40%,#1a5c2e 70%,#0d3318);display:flex;align-items:center;justify-content:center;padding:100px 2rem 4rem;position:relative;overflow:hidden;text-align:center;}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 25% 40%,rgba(184,147,42,.1),transparent 60%),radial-gradient(ellipse 40% 60% at 75% 65%,rgba(26,92,46,.2),transparent 55%);pointer-events:none;}
 .hero-inner{position:relative;z-index:1;max-width:720px;margin:0 auto;}
-.hero-logo{width:110px;height:110px;margin:0 auto 1.5rem;filter:drop-shadow(0 8px 28px rgba(0,0,0,.45));}
+.hero-logo{display:block;width:170px;height:170px;margin:0 auto 2rem;filter:drop-shadow(0 8px 28px rgba(0,0,0,.45));object-fit:contain;}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;background:rgba(184,147,42,.14);border:1px solid rgba(184,147,42,.28);color:rgba(201,160,50,.9);font-size:.73rem;font-weight:700;padding:.3rem .9rem;border-radius:50px;margin-bottom:1.4rem;}
 .hero h1{font-size:clamp(1.85rem,4.5vw,3.2rem);font-weight:800;color:#fff;line-height:1.2;margin-bottom:.35rem;}
 .hero h2{font-size:clamp(1rem,2vw,1.5rem);font-weight:400;color:rgba(255,255,255,.5);margin-bottom:.8rem;letter-spacing:.03em;}
@@ -2128,8 +2128,10 @@ function cDrwD() {
       if (members.length)    updateBoard(members);
       if (members.length && committees.length) updateCommittees(members, committees);
       if (advisors.length)   updateAdvisors(advisors);
-      // updateEvents disabled — events calendar is static HTML
-      // if (projects.length)   updateEvents(projects);
+      // Sync the upcoming-events grid with what admins create in admin.html.
+      // If the API call fails or returns no rows, the static fallback HTML
+      // stays as-is — updateEvents() early-returns on empty projects.
+      if (projects.length)   updateEvents(projects);
       if (projects.length)   renderRecentEvents(projects, members);
 
     }).catch(function(e) {
