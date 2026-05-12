@@ -1,0 +1,204 @@
+/* ═══════════════════════════════════════════════
+   SSAM — Public membership application form
+   ─────────────────────────────────────────────── */
+
+html, body {
+  background: linear-gradient(135deg, #0e3a1c 0%, #1A5C2E 50%, #0e3a1c 100%);
+  min-height: 100vh;
+}
+body {
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 2rem 1rem;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(184,147,42,.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(184,147,42,.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.card {
+  background: #fff; border-radius: 20px;
+  width: 100%; max-width: 760px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0,0,0,.35);
+  position: relative; z-index: 1;
+}
+
+/* Header */
+.head { background: linear-gradient(135deg, #0e3a1c, #1A5C2E); padding: 2.2rem 2rem; text-align: center; color: #fff; }
+.head .logo {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: #fff; border: 3px solid rgba(184,147,42,.5);
+  margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.head .logo img { width: 90%; height: 90%; object-fit: contain; }
+.head h1 { font-size: 1.2rem; font-weight: 800; margin-bottom: .3rem; }
+.head p  { font-size: .75rem; color: rgba(255,255,255,.65); }
+
+/* Form body */
+.body { padding: 1.5rem 2rem 2rem; }
+.body .intro { font-size: .86rem; color: #4b5563; line-height: 1.7; margin-bottom: 1.25rem; text-align: center; }
+
+.section { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1.5px solid #e5e7eb; }
+.section:first-of-type { margin-top: .5rem; padding-top: 0; border-top: none; }
+.section h3 { font-size: .92rem; color: #0e3a1c; font-weight: 800; margin-bottom: .85rem; display: flex; align-items: center; gap: .5rem; }
+.section h3 .num {
+  display: inline-flex; width: 24px; height: 24px;
+  align-items: center; justify-content: center;
+  background: #1A5C2E; color: #fff;
+  border-radius: 50%; font-size: .72rem;
+}
+
+/* Field group */
+.fg { margin-bottom: .95rem; }
+.fg label { display: block; font-size: .78rem; font-weight: 700; color: #374151; margin-bottom: .32rem; }
+.fg label .req { color: #dc2626; margin-right: .18rem; }
+.fg input, .fg select, .fg textarea {
+  width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px;
+  padding: .65rem .8rem; font-size: .88rem;
+  font-family: 'Almarai', sans-serif;
+  outline: none; background: #f9fafb;
+  transition: border-color .2s, background .2s;
+}
+.fg input, .fg textarea { direction: rtl; }
+.fg input[type=email], .fg input[type=date] { direction: ltr; text-align: right; }
+.fg input.ltr, .fg textarea.ltr { direction: ltr; text-align: left; }
+.fg input:focus, .fg select:focus, .fg textarea:focus {
+  border-color: #1A5C2E; background: #fff;
+  box-shadow: 0 0 0 3px rgba(26,92,46,.1);
+}
+.fg textarea { min-height: 80px; resize: vertical; }
+.fg .hint { font-size: .7rem; color: #6b7280; margin-top: .28rem; line-height: 1.5; }
+
+.fg-row  { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.fg-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+@media (max-width: 540px) { .fg-row, .fg-row3 { grid-template-columns: 1fr; } }
+
+/* Phone with country-code dropdown */
+.phone-wrap { display: grid; grid-template-columns: 90px 1fr; gap: .4rem; }
+.phone-wrap select { padding: .65rem .4rem; font-size: .8rem; text-align: center; direction: ltr; }
+.phone-wrap input  { direction: ltr; text-align: left; }
+
+/* Radio / checkbox option lists */
+.opts {
+  display: flex; flex-direction: column; gap: .4rem;
+  background: #f9fafb; border: 1.5px solid #e5e7eb;
+  border-radius: 10px; padding: .6rem .8rem;
+}
+.opts label {
+  display: flex; align-items: center; gap: .55rem;
+  font-size: .85rem; font-weight: 600; color: #374151;
+  cursor: pointer; padding: .25rem .15rem;
+  border-radius: 6px; transition: background .15s;
+}
+.opts label:hover { background: #fff; }
+.opts input { width: auto; margin: 0; accent-color: #1A5C2E; }
+.opts .other-input { margin-top: .3rem; padding-right: 1.55rem; }
+.opts .other-input input { font-size: .82rem; padding: .45rem .65rem; }
+
+/* Committees checklist (compact grid) */
+.committees { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .4rem; }
+.committees label {
+  display: flex; align-items: center; gap: .4rem;
+  background: #f9fafb; border: 1.5px solid #e5e7eb;
+  border-radius: 8px; padding: .5rem .7rem;
+  cursor: pointer; font-size: .8rem; font-weight: 600;
+  color: #374151; transition: all .15s;
+}
+.committees label:has(input:checked) { border-color: #1A5C2E; background: #e8f5ec; color: #0e3a1c; }
+.committees input { width: auto; margin: 0; accent-color: #1A5C2E; }
+
+/* CV upload "button" */
+.cv-btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: #f3f4f6; border: 1.5px dashed #9ca3af;
+  border-radius: 10px; padding: .7rem 1rem;
+  font-family: inherit; font-size: .85rem; color: #374151;
+  cursor: pointer; transition: all .15s;
+}
+.cv-btn:hover { border-color: #1A5C2E; color: #1A5C2E; background: #fff; }
+.cv-state { margin-top: .45rem; font-size: .75rem; color: #1A5C2E; font-weight: 600; display: none; }
+.cv-state.show { display: block; }
+.cv-state .clear { color: #dc2626; cursor: pointer; margin-right: .4rem; text-decoration: underline; font-weight: 700; }
+
+/* "WhatsApp same as phone" checkbox row — a non-error confirm block */
+.confirm-row {
+  padding: .55rem .75rem; margin-bottom: .5rem;
+  font-size: .78rem; background: #f9fafb;
+  border: 1.5px solid #e5e7eb; color: #374151;
+  align-items: center;
+}
+.confirm-row input { margin-top: 0; }
+
+/* Confirmation */
+.confirm {
+  display: flex; align-items: flex-start; gap: .65rem;
+  background: #fef9e7; border: 1.5px solid #f6c14f;
+  border-radius: 10px; padding: .9rem 1rem;
+  font-size: .82rem; color: #78350f; line-height: 1.6;
+}
+.confirm input { margin-top: .18rem; width: auto; accent-color: #1A5C2E; flex-shrink: 0; }
+
+.btn {
+  width: 100%;
+  background: linear-gradient(135deg, #1A5C2E, #2a7a42);
+  color: #fff; border: none; border-radius: 10px;
+  padding: .95rem; font-size: .95rem; font-weight: 800;
+  font-family: 'Almarai', sans-serif; cursor: pointer;
+  transition: transform .15s, box-shadow .2s, opacity .2s;
+  margin-top: 1.25rem;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,92,46,.35); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.msg { border-radius: 10px; padding: .85rem 1rem; font-size: .84rem; margin-top: 1rem; display: none; }
+.msg.show { display: block; }
+.msg.err  { background: #fef2f2; border: 1.5px solid rgba(220,38,38,.2); color: #dc2626; }
+
+/* Thank-you state */
+.thanks { text-align: center; padding: 2rem 1rem; }
+.thanks .icon { font-size: 3rem; margin-bottom: .6rem; }
+.thanks h2 { font-size: 1.2rem; color: #0e3a1c; margin-bottom: .6rem; }
+.thanks p  { font-size: .9rem; color: #4b5563; line-height: 1.7; margin-bottom: .4rem; }
+.thanks .ref {
+  display: inline-block; background: #f3f4f6; color: #374151;
+  font-family: Menlo, Consolas, monospace; font-size: .85rem;
+  padding: .4rem .8rem; border-radius: 6px; margin-top: .3rem;
+}
+.thanks a { color: #1A5C2E; font-weight: 700; text-decoration: none; }
+.thanks a:hover { text-decoration: underline; }
+
+.foot { padding: .85rem 2rem 1.2rem; text-align: center; color: #9ca3af; font-size: .7rem; }
+.foot a { color: #1A5C2E; text-decoration: none; font-weight: 700; }
+
+/* CV URL paste modal */
+.cv-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.5);
+  z-index: 99;
+  align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.cv-modal.open { display: flex; }
+.cv-modal .card { max-width: 440px; padding: 1.5rem; border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,.35); }
+.cv-modal h4 { font-size: .95rem; color: #0e3a1c; margin-bottom: .5rem; }
+.cv-modal p  { font-size: .78rem; color: #4b5563; margin-bottom: .85rem; line-height: 1.5; }
+.cv-modal input {
+  width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px;
+  padding: .65rem .8rem; font-size: .85rem; direction: ltr;
+}
+.cv-modal .acts { display: flex; gap: .5rem; margin-top: .85rem; }
+.cv-modal .acts button {
+  flex: 1; padding: .65rem; border-radius: 8px;
+  border: none; font-family: inherit;
+  font-weight: 700; font-size: .85rem; cursor: pointer;
+}
+.cv-modal .acts .ok     { background: #1A5C2E; color: #fff; }
+.cv-modal .acts .cancel { background: #f3f4f6; color: #374151; }
