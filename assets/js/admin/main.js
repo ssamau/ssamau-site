@@ -205,6 +205,29 @@ function showPage(page) {
     certificates:     () => { loadCerts(''); },
   };
   if (loaders[page]) loaders[page]();
+
+  // Mobile: auto-close the sidebar after a navigation so the user isn't
+  // looking at the menu they just tapped. No-op on desktop (toggle hidden).
+  closeSidebar();
+}
+
+// ── Mobile sidebar toggle ──────────────────────────────────────────────────
+// Desktop (>900px width) keeps the sidebar permanently visible via CSS — these
+// helpers only do anything on small screens, where .sidebar.open + .sb-backdrop.open
+// slide it in over a dim backdrop.
+function openSidebar() {
+  document.getElementById('sidebar')?.classList.add('open');
+  document.getElementById('sb-backdrop')?.classList.add('open');
+  document.getElementById('sb-toggle')?.setAttribute('aria-expanded', 'true');
+}
+function closeSidebar() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sb-backdrop')?.classList.remove('open');
+  document.getElementById('sb-toggle')?.setAttribute('aria-expanded', 'false');
+}
+function toggleSidebar() {
+  const open = document.getElementById('sidebar')?.classList.contains('open');
+  if (open) closeSidebar(); else openSidebar();
 }
 
 function refreshData() {
@@ -1880,6 +1903,15 @@ function closeModal(type) {
 document.querySelectorAll('.overlay').forEach(o =>
   o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
 );
+
+// Sidebar hamburger + backdrop wiring. Run on next tick so the DOM has the
+// elements (init() above defers loaders behind setTimeout — these are
+// instant).
+document.getElementById('sb-toggle')   ?.addEventListener('click', toggleSidebar);
+document.getElementById('sb-backdrop') ?.addEventListener('click', closeSidebar);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSidebar();
+});
 
 // ══════════════════════════════════════════
 // HELPERS

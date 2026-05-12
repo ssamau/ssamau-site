@@ -295,6 +295,30 @@ tr:hover td { background:#fafcfa; }
 /* ═══════════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════════ */
+/* Sidebar hamburger toggle (mobile only — hidden on desktop where the
+   sidebar is permanently visible). */
+.sb-toggle {
+  display: none;
+  background: none; border: none;
+  font-size: 1.4rem; line-height: 1; color: var(--gd);
+  padding: .35rem .6rem; margin-inline-end: .65rem;
+  cursor: pointer; border-radius: 8px;
+  transition: background .15s;
+}
+.sb-toggle:hover  { background: rgba(0,0,0,.05); }
+.sb-toggle:active { background: rgba(0,0,0,.1); }
+
+/* Dim backdrop behind the slid-in sidebar. Hidden by default; the JS
+   adds .open in lockstep with .sidebar.open. Clicking it closes the sidebar. */
+.sb-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 150;                /* below .sidebar (z-index 200) */
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s;
+}
+.sb-backdrop.open { opacity: 1; pointer-events: auto; }
+
 @media(max-width:900px) {
   .sidebar { transform:translateX(100%); }
   .sidebar.open { transform:translateX(0); }
@@ -302,6 +326,10 @@ tr:hover td { background:#fafcfa; }
   .stats-grid { grid-template-columns:1fr 1fr; }
   .dash-grid { grid-template-columns:1fr; }
   .profile-stats { grid-template-columns:1fr 1fr; }
+
+  /* Show the hamburger only at the same breakpoint where the sidebar
+     becomes hide-by-default. */
+  .sb-toggle { display: inline-flex; align-items: center; justify-content: center; }
 }
 @media(max-width:580px) {
   .stats-grid { grid-template-columns:1fr; }

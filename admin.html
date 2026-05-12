@@ -91,8 +91,12 @@
   </nav>
 </aside>
 
+<!-- Dim backdrop shown behind the sidebar on small screens. Click to close. -->
+<div class="sb-backdrop" id="sb-backdrop" aria-hidden="true"></div>
+
 <div class="main">
   <header class="topbar">
+    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
     <span class="topbar-title" id="page-title">Dashboard</span>
     <div class="topbar-right">
       <button class="btn btn-ol btn-sm" onclick="logout()" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
