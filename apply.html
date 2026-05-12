@@ -6,103 +6,8 @@
 <title>الانضمام إلى نادي الطلبة السعوديين في ملبورن</title>
 <meta name="description" content="نموذج الانضمام إلى نادي الطلبة السعوديين في ملبورن — Saudi Students Association Melbourne membership application."/>
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{font-family:'Almarai',sans-serif;background:linear-gradient(135deg,#0e3a1c 0%,#1A5C2E 50%,#0e3a1c 100%);min-height:100vh}
-body{display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem}
-body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 20% 30%,rgba(184,147,42,.08) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(184,147,42,.06) 0%,transparent 50%);pointer-events:none}
-
-.card{background:#fff;border-radius:20px;width:100%;max-width:760px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.35);position:relative;z-index:1}
-.head{background:linear-gradient(135deg,#0e3a1c,#1A5C2E);padding:2.2rem 2rem;text-align:center;color:#fff}
-.head .logo{width:80px;height:80px;border-radius:50%;background:#fff;border:3px solid rgba(184,147,42,.5);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.head .logo img{width:90%;height:90%;object-fit:contain}
-.head h1{font-size:1.2rem;font-weight:800;margin-bottom:.3rem}
-.head p{font-size:.75rem;color:rgba(255,255,255,.65)}
-
-.body{padding:1.5rem 2rem 2rem}
-.body .intro{font-size:.86rem;color:#4b5563;line-height:1.7;margin-bottom:1.25rem;text-align:center}
-
-.section{margin-top:1.25rem;padding-top:1.25rem;border-top:1.5px solid #e5e7eb}
-.section:first-of-type{margin-top:.5rem;padding-top:0;border-top:none}
-.section h3{font-size:.92rem;color:#0e3a1c;font-weight:800;margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
-.section h3 .num{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;background:#1A5C2E;color:#fff;border-radius:50%;font-size:.72rem}
-
-.fg{margin-bottom:.95rem}
-.fg label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:.32rem}
-.fg label .req{color:#dc2626;margin-right:.18rem}
-.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:.65rem .8rem;font-size:.88rem;font-family:'Almarai',sans-serif;outline:none;background:#f9fafb;transition:border-color .2s,background .2s}
-.fg input,.fg textarea{direction:rtl}
-.fg input[type=email],.fg input[type=date]{direction:ltr;text-align:right}
-.fg input.ltr,.fg textarea.ltr{direction:ltr;text-align:left}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1A5C2E;background:#fff;box-shadow:0 0 0 3px rgba(26,92,46,.1)}
-.fg textarea{min-height:80px;resize:vertical}
-.fg .hint{font-size:.7rem;color:#6b7280;margin-top:.28rem;line-height:1.5}
-.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
-.fg-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem}
-@media(max-width:540px){.fg-row,.fg-row3{grid-template-columns:1fr}}
-
-/* phone with country-code dropdown */
-.phone-wrap{display:grid;grid-template-columns:90px 1fr;gap:.4rem}
-.phone-wrap select{padding:.65rem .4rem;font-size:.8rem;text-align:center;direction:ltr}
-.phone-wrap input{direction:ltr;text-align:left}
-
-/* Radio / checkbox option lists */
-.opts{display:flex;flex-direction:column;gap:.4rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:.6rem .8rem}
-.opts label{display:flex;align-items:center;gap:.55rem;font-size:.85rem;font-weight:600;color:#374151;cursor:pointer;padding:.25rem .15rem;border-radius:6px;transition:background .15s}
-.opts label:hover{background:#fff}
-.opts input{width:auto;margin:0;accent-color:#1A5C2E}
-.opts .other-input{margin-top:.3rem;padding-right:1.55rem}
-.opts .other-input input{font-size:.82rem;padding:.45rem .65rem}
-
-/* Committees checklist (compact grid) */
-.committees{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.4rem}
-.committees label{display:flex;align-items:center;gap:.4rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;padding:.5rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#374151;transition:all .15s}
-.committees label:has(input:checked){border-color:#1A5C2E;background:#e8f5ec;color:#0e3a1c}
-.committees input{width:auto;margin:0;accent-color:#1A5C2E}
-
-/* CV upload "button" */
-.cv-btn{display:inline-flex;align-items:center;gap:.5rem;background:#f3f4f6;border:1.5px dashed #9ca3af;border-radius:10px;padding:.7rem 1rem;font-family:inherit;font-size:.85rem;color:#374151;cursor:pointer;transition:all .15s}
-.cv-btn:hover{border-color:#1A5C2E;color:#1A5C2E;background:#fff}
-.cv-state{margin-top:.45rem;font-size:.75rem;color:#1A5C2E;font-weight:600;display:none}
-.cv-state.show{display:block}
-.cv-state .clear{color:#dc2626;cursor:pointer;margin-right:.4rem;text-decoration:underline;font-weight:700}
-
-/* Confirmation */
-.confirm{display:flex;align-items:flex-start;gap:.65rem;background:#fef9e7;border:1.5px solid #f6c14f;border-radius:10px;padding:.9rem 1rem;font-size:.82rem;color:#78350f;line-height:1.6}
-.confirm input{margin-top:.18rem;width:auto;accent-color:#1A5C2E;flex-shrink:0}
-
-.btn{width:100%;background:linear-gradient(135deg,#1A5C2E,#2a7a42);color:#fff;border:none;border-radius:10px;padding:.95rem;font-size:.95rem;font-weight:800;font-family:'Almarai',sans-serif;cursor:pointer;transition:transform .15s,box-shadow .2s,opacity .2s;margin-top:1.25rem}
-.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,92,46,.35)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-
-.msg{border-radius:10px;padding:.85rem 1rem;font-size:.84rem;margin-top:1rem;display:none}
-.msg.show{display:block}
-.msg.err{background:#fef2f2;border:1.5px solid rgba(220,38,38,.2);color:#dc2626}
-
-/* Thank-you state */
-.thanks{text-align:center;padding:2rem 1rem}
-.thanks .icon{font-size:3rem;margin-bottom:.6rem}
-.thanks h2{font-size:1.2rem;color:#0e3a1c;margin-bottom:.6rem}
-.thanks p{font-size:.9rem;color:#4b5563;line-height:1.7;margin-bottom:.4rem}
-.thanks .ref{display:inline-block;background:#f3f4f6;color:#374151;font-family:Menlo,Consolas,monospace;font-size:.85rem;padding:.4rem .8rem;border-radius:6px;margin-top:.3rem}
-.thanks a{color:#1A5C2E;font-weight:700;text-decoration:none}
-.thanks a:hover{text-decoration:underline}
-
-.foot{padding:.85rem 2rem 1.2rem;text-align:center;color:#9ca3af;font-size:.7rem}
-.foot a{color:#1A5C2E;text-decoration:none;font-weight:700}
-
-/* Small "URL-paste" modal for the CV button */
-.cv-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;align-items:center;justify-content:center;padding:1rem}
-.cv-modal.open{display:flex}
-.cv-modal .card{max-width:440px;padding:1.5rem;border-radius:14px;box-shadow:0 25px 60px rgba(0,0,0,.35)}
-.cv-modal h4{font-size:.95rem;color:#0e3a1c;margin-bottom:.5rem}
-.cv-modal p{font-size:.78rem;color:#4b5563;margin-bottom:.85rem;line-height:1.5}
-.cv-modal input{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:.65rem .8rem;font-size:.85rem;direction:ltr}
-.cv-modal .acts{display:flex;gap:.5rem;margin-top:.85rem}
-.cv-modal .acts button{flex:1;padding:.65rem;border-radius:8px;border:none;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer}
-.cv-modal .acts .ok{background:#1A5C2E;color:#fff}
-.cv-modal .acts .cancel{background:#f3f4f6;color:#374151}
-</style>
+<link rel="stylesheet" href="assets/css/base.css"/>
+<link rel="stylesheet" href="assets/css/apply.css"/>
 </head>
 <body>
 
@@ -175,8 +80,8 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
       </div>
       <div class="fg">
         <label>رقم واتس اب <span class="req">*</span></label>
-        <label class="confirm" style="padding:.55rem .75rem;margin-bottom:.5rem;font-size:.78rem;background:#f9fafb;border-color:#e5e7eb;color:#374151;align-items:center">
-          <input type="checkbox" id="f-wa-same" checked onchange="toggleWaSame()" style="margin-top:0"/>
+        <label class="confirm confirm-row">
+          <input type="checkbox" id="f-wa-same" checked/>
           <span>نفس رقم الجوال أعلاه</span>
         </label>
         <div id="f-wa-section" style="display:none">
@@ -207,7 +112,7 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
         <label><input type="radio" name="scholarship" value="companion_student"/> مرافق دارس</label>
         <label><input type="radio" name="scholarship" value="self_funded"/> دارس على الحساب الخاص</label>
         <label><input type="radio" name="scholarship" value="companion_non_student"/> مرافق غير دارس</label>
-        <label><input type="radio" name="scholarship" value="other" onchange="toggleOther('scholarship')"/> أخرى</label>
+        <label><input type="radio" name="scholarship" value="other"/> أخرى</label>
         <div class="other-input" id="other-scholarship" style="display:none">
           <input id="f-scholarship-other" placeholder="حدّد جهة الابتعاث"/>
         </div>
@@ -236,7 +141,7 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
       </div>
       <div class="fg">
         <label>الجامعة <span class="req">*</span></label>
-        <select id="f-university" onchange="toggleUniOther()">
+        <select id="f-university">
           <option value="">— اختر —</option>
           <option value="melbourne">Melbourne University</option>
           <option value="monash">Monash University</option>
@@ -280,10 +185,10 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
       <h3><span class="num">5</span> عنك</h3>
       <div class="fg">
         <label>السيرة الذاتية (اختياري)</label>
-        <button type="button" class="cv-btn" onclick="openCvModal()">📎 إرفاق رابط السيرة الذاتية</button>
+        <button type="button" class="cv-btn">📎 إرفاق رابط السيرة الذاتية</button>
         <div class="cv-state" id="cv-state">
           ✅ تم الإرفاق: <span dir="ltr" id="cv-display">—</span>
-          <span class="clear" onclick="clearCv()">إزالة</span>
+          <span class="clear">إزالة</span>
         </div>
         <div class="hint">ارفع السيرة على Google Drive أو Dropbox واضغط الزر لإلصاق الرابط.</div>
       </div>
@@ -314,7 +219,7 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
           <label><input type="radio" name="referral" value="whatsapp"/> واتس اب</label>
           <label><input type="radio" name="referral" value="website"/> الموقع الإلكتروني للنادي</label>
           <label><input type="radio" name="referral" value="friend"/> عن طريق صديق / زميل</label>
-          <label><input type="radio" name="referral" value="other" onchange="toggleOther('referral')"/> أخرى</label>
+          <label><input type="radio" name="referral" value="other"/> أخرى</label>
           <div class="other-input" id="other-referral" style="display:none">
             <input id="f-referral-other" placeholder="حدّد"/>
           </div>
@@ -331,12 +236,12 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
     <div class="section">
       <h3><span class="num">7</span> الإقرار <span class="req">*</span></h3>
       <label class="confirm">
-        <input type="checkbox" id="f-confirm" onchange="updateSubmitState()"/>
+        <input type="checkbox" id="f-confirm"/>
         <span>أُقرّ بصحّة ودقّة المعلومات التي قمت بإدخالها في هذا النموذج، وأتعهّد بإبلاغ إدارة النادي في حال حدوث أي تغيير عليها.</span>
       </label>
     </div>
 
-    <button class="btn" id="submit-btn" onclick="doSubmit()" disabled>📨 إرسال الطلب</button>
+    <button class="btn" id="submit-btn" type="button" disabled>📨 إرسال الطلب</button>
     <div class="msg err" id="err-msg"></div>
   </div>
 
@@ -357,218 +262,18 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
 </div>
 
 <!-- CV URL paste modal -->
-<div class="cv-modal" id="cv-modal" onclick="if(event.target===this) closeCvModal()">
+<div class="cv-modal" id="cv-modal">
   <div class="card">
     <h4>📎 رابط السيرة الذاتية</h4>
     <p>ارفع ملفك على Google Drive أو Dropbox (أو أي مكان قابل للوصول) ثم الصق الرابط هنا.</p>
     <input id="cv-url-input" type="url" dir="ltr" placeholder="https://drive.google.com/..."/>
     <div class="acts">
-      <button class="cancel" onclick="closeCvModal()">إلغاء</button>
-      <button class="ok" onclick="saveCv()">حفظ الرابط</button>
+      <button class="cancel" type="button">إلغاء</button>
+      <button class="ok" type="button">حفظ الرابط</button>
     </div>
   </div>
 </div>
 
-<script>
-'use strict';
-const API = '/.netlify/functions/api';
-
-// ─── Committees (live + fallback) ────────────────────────────────────────────
-const FALLBACK_COMMITTEES = [
-  { committee_id: 'COM_001', committee_name: 'لجنة العلاقات العامة' },
-  { committee_id: 'COM_002', committee_name: 'لجنة الفعاليات' },
-  { committee_id: 'COM_003', committee_name: 'لجنة الإعلام والتسويق' },
-  { committee_id: 'COM_004', committee_name: 'لجنة العائلات' },
-  { committee_id: 'COM_005', committee_name: 'أكاديمية الأصالة' },
-  { committee_id: 'COM_006', committee_name: 'لجنة الرياضة' },
-  { committee_id: 'COM_007', committee_name: 'لجنة الأكاديمية والمهنية' },
-  { committee_id: 'COM_008', committee_name: 'لجنة الموارد المالية' },
-];
-function renderCommittees(list) {
-  document.getElementById('committees-grid').innerHTML = list.map(c =>
-    `<label><input type="checkbox" name="interest" value="${c.committee_id}"/> ${c.committee_name}</label>`
-  ).join('');
-}
-(async () => {
-  try {
-    const r = await fetch(API, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'getCommittees' }),
-    });
-    const j = await r.json();
-    renderCommittees((j && j.success && Array.isArray(j.data) && j.data.length) ? j.data : FALLBACK_COMMITTEES);
-  } catch { renderCommittees(FALLBACK_COMMITTEES); }
-})();
-
-// ─── Form helpers ────────────────────────────────────────────────────────────
-function gv(id) { return document.getElementById(id).value.trim(); }
-function showErr(msg) {
-  const el = document.getElementById('err-msg');
-  el.textContent = '❌ ' + msg;
-  el.classList.add('show');
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-function clearErr() { document.getElementById('err-msg').classList.remove('show'); }
-
-function toggleOther(group) {
-  const radios = document.querySelectorAll(`input[name=${group}]`);
-  const sel = Array.from(radios).find(r => r.checked);
-  const wrap = document.getElementById('other-' + group);
-  wrap.style.display = (sel && sel.value === 'other') ? '' : 'none';
-}
-document.querySelectorAll('input[name=scholarship]').forEach(r => r.addEventListener('change', () => toggleOther('scholarship')));
-document.querySelectorAll('input[name=referral]').forEach(r => r.addEventListener('change', () => toggleOther('referral')));
-
-function toggleUniOther() {
-  const wrap = document.getElementById('university-other-wrap');
-  wrap.style.display = (gv('f-university') === 'other') ? '' : 'none';
-}
-
-function toggleWaSame() {
-  const same = document.getElementById('f-wa-same').checked;
-  document.getElementById('f-wa-section').style.display = same ? 'none' : '';
-}
-
-function updateSubmitState() {
-  const ok = document.getElementById('f-confirm').checked;
-  document.getElementById('submit-btn').disabled = !ok;
-}
-
-// ─── CV paste modal ──────────────────────────────────────────────────────────
-let _cvUrl = '';
-function openCvModal() {
-  document.getElementById('cv-url-input').value = _cvUrl;
-  document.getElementById('cv-modal').classList.add('open');
-  setTimeout(() => document.getElementById('cv-url-input').focus(), 50);
-}
-function closeCvModal() { document.getElementById('cv-modal').classList.remove('open'); }
-function saveCv() {
-  const u = document.getElementById('cv-url-input').value.trim();
-  if (u && !/^https?:\/\//i.test(u)) { alert('الرجاء إدخال رابط صحيح (يبدأ بـ http أو https).'); return; }
-  _cvUrl = u;
-  const state = document.getElementById('cv-state');
-  if (u) {
-    state.classList.add('show');
-    document.getElementById('cv-display').textContent = u.length > 40 ? u.slice(0, 38) + '…' : u;
-  } else {
-    state.classList.remove('show');
-  }
-  closeCvModal();
-}
-function clearCv() { _cvUrl = ''; document.getElementById('cv-state').classList.remove('show'); }
-
-// ─── Submit ──────────────────────────────────────────────────────────────────
-function radioVal(name) {
-  const r = Array.from(document.querySelectorAll(`input[name=${name}]:checked`));
-  return r.length ? r[0].value : '';
-}
-
-async function doSubmit() {
-  clearErr();
-
-  const body = {
-    action: 'applications.submit',
-    // Identity
-    national_id:    gv('f-national-id'),
-    name_ar:        gv('f-name-ar'),
-    name_en:        gv('f-name-en'),
-    preferred_name: gv('f-preferred-name'),
-    gender:         gv('f-gender'),
-    date_of_birth:  gv('f-dob'),
-    // Contact
-    address_melbourne:  gv('f-address'),
-    phone_country_code: gv('f-phone-cc'),
-    phone:              gv('f-phone'),
-    // WhatsApp: if "same as phone" is ticked, reuse the phone fields; else
-    // take the separately-entered WhatsApp number.
-    whatsapp_country_code:
-      document.getElementById('f-wa-same').checked ? gv('f-phone-cc') : gv('f-wa-cc'),
-    whatsapp:
-      document.getElementById('f-wa-same').checked ? gv('f-phone')   : gv('f-wa-number'),
-    email:              gv('f-email'),
-    // Sponsorship
-    scholarship_entity:       radioVal('scholarship'),
-    scholarship_entity_other: gv('f-scholarship-other'),
-    // Study
-    study_level:                 gv('f-study-level'),
-    degree_field:                gv('f-degree-field'),
-    university:                  gv('f-university'),
-    university_other:            gv('f-university-other'),
-    study_started_window:        gv('f-study-started'),
-    expected_graduation_window:  gv('f-graduation'),
-    // About + interests
-    cv_url:         _cvUrl,
-    skills_hobbies: gv('f-skills'),
-    about_self:     gv('f-about'),
-    interests:      Array.from(document.querySelectorAll('input[name=interest]:checked')).map(i => i.value),
-    // Referral + suggestions
-    referral_source:       radioVal('referral'),
-    referral_source_other: gv('f-referral-other'),
-    suggestions:           gv('f-suggestions'),
-    // Confirmation
-    confirmation_accepted: document.getElementById('f-confirm').checked,
-  };
-
-  // Required-field validation matches the form's spec.
-  const required = [
-    ['national_id',         'رقم الهوية'],
-    ['name_ar',             'الاسم بالعربية'],
-    ['name_en',             'الاسم بالإنجليزية'],
-    ['gender',              'الجنس'],
-    ['date_of_birth',       'تاريخ الميلاد'],
-    ['address_melbourne',   'العنوان في ملبورن'],
-    ['phone',               'رقم الجوال'],
-    ['email',               'البريد الإلكتروني'],
-    ['scholarship_entity',  'جهة الابتعاث'],
-    ['study_level',         'المرحلة الدراسية'],
-    ['degree_field',        'التخصص'],
-    ['university',          'الجامعة'],
-    ['study_started_window','وقت بدء الدراسة'],
-    ['expected_graduation_window','تاريخ التخرج المتوقع'],
-    ['skills_hobbies',      'المهارات والهوايات'],
-    ['about_self',          'النبذة عن نفسك'],
-    ['referral_source',     'كيف علمت عن النادي'],
-    ['suggestions',         'الاقتراحات'],
-  ];
-  for (const [k, label] of required) {
-    if (!body[k]) { showErr(`الحقل مطلوب: ${label}`); return; }
-  }
-  if (body.scholarship_entity === 'other' && !body.scholarship_entity_other) {
-    showErr('فضلاً حدّد جهة الابتعاث في خانة "أخرى".'); return;
-  }
-  if (body.university === 'other' && !body.university_other) {
-    showErr('فضلاً اكتب اسم الجامعة.'); return;
-  }
-  if (body.referral_source === 'other' && !body.referral_source_other) {
-    showErr('فضلاً حدّد مصدر معرفتك بالنادي.'); return;
-  }
-  if (!body.confirmation_accepted) { showErr('يجب الموافقة على الإقرار.'); return; }
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الإرسال…';
-  try {
-    const r = await fetch(API, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json();
-    if (!j || !j.success) {
-      showErr((j && j.error) || 'تعذّر إرسال الطلب — حاول مجدداً');
-      btn.disabled = false;
-      btn.textContent = '📨 إرسال الطلب';
-      return;
-    }
-    document.getElementById('thanks-ref').textContent = (j.data && j.data.application_id) || '—';
-    document.getElementById('form-view').style.display = 'none';
-    document.getElementById('thanks-view').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } catch (e) {
-    showErr('تعذّر الاتصال بالخادم');
-    btn.disabled = false;
-    btn.textContent = '📨 إرسال الطلب';
-  }
-}
-</script>
+<script type="module" src="assets/js/apply.js"></script>
 </body>
 </html>

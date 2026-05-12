@@ -34,3 +34,57 @@
   from = "/api/*"
   to = "/.netlify/functions/api"
   status = 200
+
+# ─── Security headers ──────────────────────────────────────────────────────
+# Applied to every response Netlify serves. Tightens the surface for XSS,
+# clickjacking, MIME sniffing, and unwanted browser-feature access.
+#
+# CSP design notes (CSP3 — Chrome 75+, Safari 18+, Firefox 113+, fine for us):
+#   • script-src 'self' + script-src-elem 'self' blocks any <script> we didn't
+#     ship from this origin (or the gtag loader we explicitly allow). All four
+#     HTML pages have zero inline <script> blocks after the split branch —
+#     verified — so we don't need 'unsafe-inline' on script-src.
+#   • script-src-attr 'unsafe-inline' is a deliberate trade-off. ~195 inline
+#     onclick="..." attributes still live in the markup (legacy from the old
+#     all-in-one HTML files). Converting them to addEventListener would mean
+#     touching every render template — a 1500-line refactor that the SPA
+#     branch will do anyway as part of routing. CSP3's script-src-attr lets
+#     us isolate "inline event handlers allowed" from "inline <script> tags
+#     blocked", which kills the bigger attack vector (stored XSS via <script>
+#     injection) while keeping the migration cost sane.
+#   • style-src 'self' + Google Fonts CSS host. style-src-attr 'unsafe-inline'
+#     same rationale — ~285 inline style="..." attributes throughout.
+#   • connect-src includes google-analytics.com so gtag's beacon endpoint
+#     isn't blocked. Our own API is on the same origin so 'self' covers it.
+#   • frame-ancestors 'none' blocks the site from being framed (clickjacking).
+#
+# Other headers:
+#   X-Content-Type-Options nosniff — stops the browser from guessing types.
+#   Referrer-Policy strict-origin-when-cross-origin — minimal leak of paths
+#     to third-party servers.
+#   Permissions-Policy — explicitly deny powerful APIs we don't use.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = """default-src 'self'; \
+script-src 'self' https://www.googletagmanager.com; \
+script-src-elem 'self' https://www.googletagmanager.com; \
+script-src-attr 'unsafe-inline'; \
+style-src 'self' https://fonts.googleapis.com; \
+style-src-attr 'unsafe-inline'; \
+font-src 'self' https://fonts.gstatic.com; \
+img-src 'self' data: https:; \
+connect-src 'self' https://www.google-analytics.com; \
+frame-src 'self' https://app.netlify.com; \
+frame-ancestors 'self' https://app.netlify.com https://*.netlify.app; \
+base-uri 'self'; \
+form-action 'self'; \
+object-src 'none'"""
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Permissions-Policy     = "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+    # X-Frame-Options is the legacy companion of frame-ancestors. Leaving it
+    # unset because we explicitly need Netlify's app.netlify.com to be able to
+    # frame deploy previews — `frame-ancestors` above gives us the modern,
+    # per-origin allowlist that XFO can't express.
