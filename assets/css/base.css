@@ -6,23 +6,24 @@
 ═══════════════════════════════════════════════ */
 
 :root {
-  /* Brand greens */
+  /* Brand greens — these stay constant across light/dark because
+   * they're the SSAM identity colors. Surfaces around them adapt. */
   --g:   #1A5C2E;   /* primary */
   --gd:  #0e3a1c;   /* dark   */
   --gm:  #2a7a42;   /* mid    */
-  --gl:  #e8f5e9;   /* light  */
+  --gl:  #e8f5e9;   /* light tint (changed in dark mode below) */
 
   /* Brand gold */
   --go:  #B8932A;
   --gg:  #c9a032;
 
-  /* Surfaces & text */
-  --bg:  #f4f6f4;
-  --sf:  #ffffff;
-  --tx:  #111827;
-  --tl:  #4b5563;
-  --tm:  #9ca3af;
-  --bd:  #e5e7eb;
+  /* Surfaces & text — light defaults */
+  --bg:  #f4f6f4;   /* page background */
+  --sf:  #ffffff;   /* cards, modals, sidebar */
+  --tx:  #111827;   /* primary text */
+  --tl:  #4b5563;   /* secondary text */
+  --tm:  #9ca3af;   /* muted text */
+  --bd:  #e5e7eb;   /* borders */
 
   /* Status colors (paired bg/border for badges + banners) */
   --dn:  #dc2626;  --dnb: #fef2f2;
@@ -39,6 +40,64 @@
 
   --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
   --shadow-md: 0 4px 16px rgba(0,0,0,.1);
+}
+
+/* ─── Dark mode ───────────────────────────────────────────────────
+ * Honors prefers-color-scheme: dark — the OS-level setting users
+ * pick in System Settings → Appearance (macOS) / Settings → Display
+ * (iOS/Android/Windows). No manual toggle in-app; if the OS is
+ * dark, we're dark. (A future "force light" toggle could be added
+ * by setting `color-scheme: light` on the html element.)
+ *
+ * Strategy: override only the surface/text custom properties on
+ * :root. Everything downstream uses var(--bg) / var(--sf) / var(--tx)
+ * / etc. so we don't need to touch any individual rule. The brand
+ * green stays the same hue but the tinted backgrounds (--gl + status
+ * --dnb/--scb/--wnb/--blb/--pub) shift to dark-mode versions tuned
+ * for legibility on dark surfaces.
+ *
+ * Shadows go bigger + softer in dark mode because the contrast
+ * against a dark background is much weaker than against white. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Surfaces */
+    --bg:  #0f1410;   /* page bg — dark green-tinted black */
+    --sf:  #1a2018;   /* cards, modals */
+    --tx:  #e5e7eb;   /* primary text */
+    --tl:  #9ca3af;   /* secondary text (was --tm in light) */
+    --tm:  #6b7280;   /* muted text */
+    --bd:  #2a312c;   /* borders — subtle on dark bg */
+
+    /* Brand green's light tint flips to a darker shade. Light .gl
+     * was used as a hover background on light tables; in dark mode
+     * it becomes a subtle green wash that's still visible on --sf. */
+    --gl:  #18342a;
+
+    /* Status badge backgrounds — light-mode versions are
+     * near-white tints; dark-mode versions are subtle deep tints
+     * tuned so the colored text/icons still pop. */
+    --dnb: #2a1414;
+    --scb: #122a18;
+    --wnb: #2a2010;
+    --blb: #14202a;
+    --pub: #1e1430;
+
+    --shadow:    0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 6px 24px rgba(0,0,0,.6);
+  }
+
+  /* Tell the browser which color-schemes the page supports so
+   * built-in form controls + scrollbars also adapt. */
+  html { color-scheme: dark; }
+
+  /* Scrollbar thumb gets lighter on dark backgrounds. */
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
+
+  /* Hand-tuned exceptions for elements that hardcoded color values
+   * outside the variable system. Long-term these should migrate to
+   * variables; for now we patch the worst cases here. */
+  .tag.t-gr  { background: #2a2a2a; color: #aaa; }
+  .skip-link { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
