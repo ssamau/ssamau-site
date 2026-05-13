@@ -531,15 +531,90 @@ function updateAdvisors(advisors) {
   }).join('');
 }
 
+// Category → header colour + EN label. Mirrors the curated static cards.
+// "Main event" gets gold + a flagship badge in the renderer below.
+const EVENT_CATEGORY_META = {
+  'مجتمعي':              { color: 'green', en: 'Community' },
+  'تكامل':                { color: 'green', en: 'Integration' },
+  'أكاديمي':             { color: 'blue',  en: 'Academic' },
+  'فعالية رئيسية':       { color: 'gold',  en: 'Main Event', flagship: true },
+  'مراسم رسمية':         { color: 'gold',  en: 'Ceremony' },
+  'مبادرة دعم الطلاب': { color: 'blue',  en: 'Student Support' },
+  'اجتماعي':             { color: 'green', en: 'Social' },
+  'رياضي':               { color: 'green', en: 'Sports' },
+};
+
+// Parse the convention used by db/import-static-events.js descriptions:
+//   Line 1: English title  (optionally with "· ⭐ الفعالية الرئيسية" for flagship)
+//   Line 2: "الفئة: <category> · الحضور المتوقع: <range>"  (·-separated; either part may be absent)
+//   Line 3: blank
+//   Line 4+: Arabic description
+// Returns {} if the description doesn't follow the convention — the caller
+// then falls back to dumping the raw text into the description slot.
+function parseEventDescription(desc) {
+  if (!desc) return {};
+  const lines = String(desc).split('\n').map((l) => l.trim());
+
+  // Line 1 — English title (+ optional flagship marker)
+  const rawLine1 = lines[0] || '';
+  const isFlagshipMarker = /⭐|الفعالية الرئيسية|main event/i.test(rawLine1);
+  const nameEn = rawLine1.split('·')[0].replace(/⭐.*$/, '').trim();
+
+  // Line 2 — category + optional attendance range, separated by "·"
+  const line2 = lines[1] || '';
+  let categoryAr = '';
+  let attendanceRange = '';
+  const m = line2.match(/^الفئة:\s*(.+)$/);
+  if (m) {
+    // Split on " · " (Arabic uses ·) — first part is category, second (if any)
+    // is the attendance range line
+    const parts = m[1].split(/\s*·\s*/);
+    categoryAr = (parts[0] || '').trim();
+    for (let i = 1; i < parts.length; i++) {
+      const a = parts[i].match(/الحضور المتوقع:?\s*(.+)/);
+      if (a) attendanceRange = a[1].trim();
+    }
+  }
+
+  // Line 4+ — Arabic description (skip the blank line 3)
+  const descAr = lines.slice(3).join(' ').replace(/\s+/g, ' ').trim();
+
+  return {
+    nameEn,
+    categoryAr,
+    attendanceRange,
+    descAr,
+    isFlagship: isFlagshipMarker || (EVENT_CATEGORY_META[categoryAr] || {}).flagship === true,
+  };
+}
+
 function updateEvents(projects) {
   if (!projects || !projects.length) return;
 
   const now = new Date();
+  // Upcoming = not cancelled, not completed, AND either no date set (so it's
+  // a "coming soon" event) OR a future date. Sort dated events by date,
+  // dateless ones land at the end with a "قريباً" header.
   const upcoming = projects
-    .filter((p) => p.project_status !== 'Cancelled' && new Date(p.event_date) >= now)
-    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+    .filter((p) => {
+      if (p.project_status === 'Cancelled' || p.project_status === 'Completed') return false;
+      if (!p.event_date) return true;
+      return new Date(p.event_date) >= now;
+    })
+    .sort((a, b) => {
+      // Push dateless to the end of the upcoming list.
+      if (!a.event_date && !b.event_date) return 0;
+      if (!a.event_date) return 1;
+      if (!b.event_date) return -1;
+      return new Date(a.event_date) - new Date(b.event_date);
+    });
+  // Past = explicitly completed, or had a date that's now in the past.
+  // Don't sweep dateless events into Past (they go to Upcoming above).
   const past = projects
-    .filter((p) => p.project_status === 'Completed' || new Date(p.event_date) < now)
+    .filter((p) => {
+      if (!p.event_date) return false;
+      return p.project_status === 'Completed' || new Date(p.event_date) < now;
+    })
     .sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
 
   const tabs = document.querySelectorAll('.ev-tbtn .ev-cnt');
@@ -551,28 +626,70 @@ function updateEvents(projects) {
     if (upGrid) {
       upGrid.innerHTML = upcoming.map((p) => {
         const d = p.event_date ? new Date(p.event_date) : null;
-        const monthAr = d ? d.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' }) : '';
-        const monthEn = d ? d.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' }) : '';
+        // Use 'ar' (generic Arabic) instead of 'ar-SA' so the year renders
+        // in Latin digits (2026, not ٢٠٢٦) — matches the brand and the
+        // static cards. `calendar: 'gregory'` keeps Gregorian month names
+        // (Saudi locale default is Hijri, which would mismatch event_date).
+        const monthAr = d ? d.toLocaleDateString('ar', { month: 'long', year: 'numeric', calendar: 'gregory' }) : 'قريباً';
+        const monthEn = d ? d.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' }) : 'Coming Soon';
+
+        const parsed = parseEventDescription(p.project_description);
+        const meta   = EVENT_CATEGORY_META[parsed.categoryAr] || { color: 'green', en: '' };
+        // Visible text values — prefer parsed structured pieces, fall back to
+        // raw description if the convention wasn't followed.
+        const descAr = parsed.descAr || p.project_description || '';
+        const descEn = parsed.nameEn ? '' : '';   // EN description not stored separately yet
+        const tagAr  = parsed.categoryAr || (p.project_type === 'Event' ? 'فعالية' : 'مشروع');
+        const tagEn  = meta.en           || (p.project_type === 'Event' ? 'Event'  : 'Project');
+
+        const flagshipBadge = parsed.isFlagship
+          ? '<div class="ev-badge" data-ar>الفعالية الرئيسية</div><div class="ev-badge" data-en style="display:none">Main Event</div>'
+          : '';
+
+        const attendanceRow = parsed.attendanceRange
+          ? '<div class="ev-meta-row"><div class="ev-dot"></div>' +
+              esc(parsed.attendanceRange) + ' <span data-ar>حضور</span><span data-en style="display:none">attendees</span>' +
+            '</div>'
+          : '';
+
+        const nameEnRow = parsed.nameEn
+          ? '<div class="ev-name-en">' + esc(parsed.nameEn) + '</div>'
+          : '';
+
         return '<div class="ev-card">' +
-          '<div class="ev-hdr green">' +
-            '<div class="ev-month">' + monthAr + '</div>' +
-            '<div class="ev-month-en">' + monthEn + '</div>' +
-            '<div class="ev-name">' + (p.project_name || '') + '</div>' +
+          '<div class="ev-hdr ' + meta.color + '">' +
+            flagshipBadge +
+            '<div class="ev-month">' + esc(monthAr) + '</div>' +
+            '<div class="ev-month-en">' + esc(monthEn) + '</div>' +
+            '<div class="ev-name">' + esc(p.project_name || '') + '</div>' +
+            nameEnRow +
           '</div>' +
           '<div class="ev-body">' +
             '<div class="ev-meta">' +
-              '<div class="ev-meta-row"><div class="ev-dot"></div>' + (p.location || 'Melbourne, Victoria') + '</div>' +
+              '<div class="ev-meta-row"><div class="ev-dot"></div>' + esc(p.location || 'Melbourne, Victoria') + '</div>' +
+              attendanceRow +
             '</div>' +
-            '<div class="ev-desc" data-ar>' + (p.project_description || '') + '</div>' +
+            '<div class="ev-desc" data-ar>' + esc(descAr) + '</div>' +
+            (descEn ? '<div class="ev-desc" data-en style="display:none">' + esc(descEn) + '</div>' : '') +
             '<div class="ev-foot">' +
-              '<span class="ev-tag" data-ar>' + (p.project_type || '') + '</span>' +
-              '<span class="ev-btn-disabled"><span class="ar-only i">التسجيل قريباً</span></span>' +
+              '<span class="ev-tag" data-ar>' + esc(tagAr) + '</span>' +
+              '<span class="ev-tag" data-en style="display:none">' + esc(tagEn) + '</span>' +
+              '<span class="ev-btn-disabled"><span class="ar-only i">التسجيل قريباً</span><span class="en-only i">Coming Soon</span></span>' +
             '</div>' +
           '</div></div>';
       }).join('');
     }
   }
   // Past events stay as the static HTML — no DB write needed.
+}
+
+// Local HTML escape — used so a description carrying < or & doesn't blow up
+// the rendered card. Same shape as lib/dom.js's esc but inlined to keep the
+// public-page module self-contained.
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function renderRecentEvents(projects, members) {
