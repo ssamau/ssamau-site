@@ -239,6 +239,15 @@ function showPage(page) {
     return;
   }
 
+  // ensureProjects = lazy-load DB.projects if a tab needs it for its
+  // dropdowns but the user navigated straight here without visiting
+  // the Projects tab first. Surfaced as the "group attendance modal
+  // shows no projects" bug — DB.projects was empty so the populate
+  // step had nothing to fill the dropdowns with.
+  const ensureProjects = async () => {
+    if (!DB.projects.length) await loadProjects();
+  };
+
   const loaders = {
     dashboard:        loadDashboard,
     members:          loadMembers,
@@ -247,10 +256,10 @@ function showPage(page) {
     advisors:         loadAdvisors,
     committees:       loadCommittees,
     projects:         loadProjects,
-    participants:     () => { populateProjectSelects(); loadParticipants(); },
-    opportunities:    () => { populateProjectSelects(); loadOpportunities(); },
-    attendance:       () => { populateProjectSelects(); loadAttendance(); },
-    hours:            loadHours,
+    participants:     async () => { await ensureProjects(); populateProjectSelects(); loadParticipants(); },
+    opportunities:    async () => { await ensureProjects(); populateProjectSelects(); loadOpportunities(); },
+    attendance:       async () => { await ensureProjects(); populateProjectSelects(); loadAttendance(); },
+    hours:            async () => { await ensureProjects(); loadHours(); },
     profile:          loadProfileSelect,
     'project-detail': () => {},
     interest:         loadInterestAll,
@@ -303,6 +312,12 @@ async function refreshData() {
     // here so we know when the fetch is actually done. Kept in sync
     // with the map inside showPage(); both are exhaustive listings of
     // tab-id → loader function.
+    // Hitting refresh on a tab with project-dependent dropdowns: refetch
+    // projects first so a newly-added project anywhere else in the system
+    // shows up in this tab's filters/pickers after a refresh.
+    const refreshNeedsProjects = ['participants','opportunities','attendance','hours'];
+    if (refreshNeedsProjects.includes(page)) await loadProjects();
+
     const loaders = {
       dashboard:        loadDashboard,
       members:          loadMembers,
@@ -1952,9 +1967,13 @@ function populateProjectSelects() {
   const options = DB.projects.map(p =>
     `<option value="${p.project_id}">${esc(p.project_name)}</option>`
   ).join('');
+  // batt-prj = bulk attendance modal's project picker. Missing it
+  // here was why the modal opened with empty options — flagged as the
+  // "group attendance doesn't show projects" bug.
   ['participants-project-filter','attendance-project-filter','hours-project-filter',
    'opportunities-project-filter',
-   'par-project','att-project','hrs-project','opp-project'
+   'par-project','att-project','hrs-project','opp-project',
+   'batt-prj'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -2013,8 +2032,10 @@ function confirmDelete(type, id, name) {
 // ══════════════════════════════════════════
 function openModal(type) {
   document.getElementById('ov-' + type).classList.add('open');
-  // Pre-populate selects
-  if (['member','participant','project','attendance','hours','opportunity'].includes(type)) {
+  // Pre-populate selects. `bulk-att` added — the modal's project
+  // picker (batt-prj) needs to be refreshed when the modal opens so
+  // that newly-created projects appear without a full page reload.
+  if (['member','participant','project','attendance','hours','opportunity','bulk-att'].includes(type)) {
     populateMemberSelects();
     populateProjectSelects();
     populateCommitteeSelects();
