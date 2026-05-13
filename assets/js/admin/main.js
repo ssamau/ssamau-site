@@ -971,7 +971,13 @@ async function sendPasswordResetEmail(id, username, email) {
     `سيتلقى ${username} رسالة بريد فيها رابط؛ بالضغط عليه يقوم بتعيين كلمة مرور جديدة بنفسه.`
   );
   if (!ok) return;
-  const res = await api('users.sendPasswordReset', { id });
+  // Tell the Edge Function which origin the reset email's link should
+  // come back to — important so that a reset triggered from the
+  // deploy preview routes the user back to the preview, not prod.
+  // Supabase still validates this against the project's Redirect URLs
+  // allowlist before honoring it.
+  const redirectTo = window.location.origin + '/reset-password.html';
+  const res = await api('users.sendPasswordReset', { id, redirectTo });
   if (res && res.success) {
     toast(`📧 تم إرسال الرابط إلى ${email}`);
   }

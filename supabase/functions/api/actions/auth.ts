@@ -385,20 +385,24 @@ const usersSendPasswordReset: Handler = async (body, user) => {
     throw httpErr('Forbidden', 403);
   }
 
-  // Fire the Supabase Auth recovery email. The "Origin" header isn't
-  // available here (Edge Function context), so we pin the redirect URL
-  // to the canonical production site. Reset links from a deploy preview
-  // would route the user to prod anyway — which is the correct UX (they
-  // shouldn't end up changing their password against an ephemeral URL).
+  // Fire the Supabase Auth recovery email. `redirectTo` is taken from
+  // the request body (the frontend passes window.location.origin +
+  // '/reset-password.html'), with a hard fallback to prod for safety
+  // if the client forgot to send it. We don't need to sanity-check the
+  // URL here: Supabase validates it against the project's Redirect
+  // URLs allowlist (Authentication → URL Configuration), and silently
+  // falls back to Site URL on a mismatch. That allowlist is the
+  // security boundary, not us.
+  const redirectTo = (body.redirectTo as string | undefined)?.trim()
+    || 'https://ssamau.com/reset-password.html';
+
   const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { error } = await admin.auth.resetPasswordForEmail(target.auth_email, {
-    redirectTo: 'https://ssamau.com/reset-password.html',
-  });
+  const { error } = await admin.auth.resetPasswordForEmail(target.auth_email, { redirectTo });
   if (error) throw httpErr(`Supabase: ${error.message}`, 500);
 
   return {
