@@ -369,13 +369,29 @@ tr:hover td { background:#fafcfa; }
  * desktop table layout where there's actually horizontal room.
  */
 @media(max-width:640px) {
-  .table-wrap { overflow-x: visible; }
-  .table-wrap table { display: block; }
+  /* Constrain the whole container chain to viewport width. The default
+   * <table> behaviour is to grow to fit content — even with display:block —
+   * which is what caused long names + multi-line cells (the Name column
+   * has bold preferred_name + small full_name secondary) to push past the
+   * card edge. width:100% + max-width:100% + box-sizing:border-box on
+   * every level pins everything down. */
+  .table-wrap {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+  .table-wrap table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
   .table-wrap table thead { display: none; }
   .table-wrap table tbody,
   .table-wrap table tr {
     display: block;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .table-wrap table tr {
     margin: 0 0 .75rem 0;
@@ -397,6 +413,18 @@ tr:hover td { background:#fafcfa; }
     padding: .55rem 0;
     border-bottom: 1px dashed #f0f0f0;
     gap: .4rem;
+    /* Long unbreakable strings (emails, NIDs) wrap mid-character if
+     * needed. Arabic names with spaces wrap on word boundaries
+     * naturally. */
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  /* Children of the td (the actual value HTML — divs, spans, badges,
+   * buttons) need min-width:0 too. Default flex min-width is `auto`
+   * which equals content width and prevents wrapping below that. */
+  .table-wrap table td > * {
+    min-width: 0;
+    max-width: 100%;
   }
   /* Last cell in each card doesn't need a trailing rule. */
   .table-wrap table tr td:last-child { border-bottom: none; }
