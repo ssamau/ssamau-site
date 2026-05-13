@@ -376,25 +376,33 @@ tr:hover td { background:#fafcfa; }
 
   .table-wrap table td {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     text-align: end;
     padding: .55rem 0;
     border-bottom: 1px dashed #f0f0f0;
-    gap: .75rem;
+    gap: .4rem;
   }
   /* Last cell in each card doesn't need a trailing rule. */
   .table-wrap table tr td:last-child { border-bottom: none; }
 
   /* The actual key/value labelling — content comes from data-label,
-   * which JS sets to the column header text. */
+   * which JS sets to the column header text.
+   *
+   * margin-inline-end:auto is the magic: it absorbs all remaining
+   * flex space after the label, which (combined with the flex row
+   * defaulting to no extra justification) pushes every subsequent
+   * child to the inline-end (= left in RTL). That clusters buttons
+   * tightly together with the `gap` between them, instead of the
+   * old `justify-content:space-between` which fanned them out
+   * across the whole row width. */
   .table-wrap table td::before {
     content: attr(data-label);
     font-weight: 700;
     font-size: .7rem;
     color: var(--tl);
     flex-shrink: 0;
-    max-width: 45%;
+    margin-inline-end: auto;
     text-align: start;
   }
 
@@ -408,14 +416,6 @@ tr:hover td { background:#fafcfa; }
     color: var(--tm);
   }
   .table-wrap table tr.empty-row td::before { content: none; }
-
-  /* Action-column cells often hold multiple icon buttons. Let them
-   * wrap if needed instead of squeezing — they're easier to tap that
-   * way. The buttons themselves already have decent hit targets from
-   * the .btn-icon class. */
-  .table-wrap table td:last-child > * {
-    flex-wrap: wrap;
-  }
 }
 
 
