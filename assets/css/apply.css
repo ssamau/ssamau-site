@@ -176,6 +176,18 @@ body::before {
 
 .foot { padding: .85rem 2rem 1.2rem; text-align: center; color: #9ca3af; font-size: .7rem; }
 .foot a { color: #1A5C2E; text-decoration: none; font-weight: 700; }
+/* Back-to-home escape hatch for users who landed on the apply form but
+   decided not to fill it. Without this they're stuck without typing the
+   URL or hitting browser back (which fails on first-page-loads). */
+.foot-back {
+  display: inline-block;
+  font-size: .78rem;
+  padding: .35rem .9rem;
+  border-radius: 50px;
+  border: 1.5px solid rgba(26,92,46,.2);
+  transition: all .15s;
+}
+.foot-back:hover { background: #e8f5e9; }
 
 /* CV URL paste modal */
 .cv-modal {
