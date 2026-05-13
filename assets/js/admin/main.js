@@ -17,6 +17,7 @@
 // addEventListener bindings; at that point the re-export block is removed.
 
 import { callApi as _callApi } from '../lib/api.js';
+import { getSession, clearSession, isLoggedIn } from '../lib/auth.js';
 
 // Drop-in for the original local callApi — same signature, same envelope
 // flattening (lib/api.js does it). Keeps every call site below unchanged.
@@ -27,25 +28,27 @@ const API_URL = '/.netlify/functions/api';
 // ================================================================
 //  AUTH GUARD — checks login session before loading dashboard
 // ================================================================
-(function() {
+// Goes through lib/auth.js so both halves of "is this user logged in" stay
+// in lockstep. Earlier this guard only looked at `ssam_session` and the
+// logout helper only cleared `ssam_session`, leaving `ssam_token` behind —
+// login.html's isLoggedIn() reads the token, so logout caused a redirect
+// loop (login.html sees token → bounce to admin → admin sees no session →
+// bounce to login → …). Mobile users couldn't escape it without closing
+// the tab. clearSession() now wipes both keys atomically.
+(function () {
   'use strict';
-  const session = sessionStorage.getItem('ssam_session');
-  if (!session) {
+  const user = getSession();
+  if (!user || !isLoggedIn()) {
+    clearSession();
     window.location.href = 'login.html';
     return;
   }
-  try {
-    const user = JSON.parse(session);
-    window.CURRENT_USER = user;
-  } catch(e) {
-    sessionStorage.removeItem('ssam_session');
-    window.location.href = 'login.html';
-  }
+  window.CURRENT_USER = user;
 })();
 
 function logout() {
   if (confirm('هل تريد تسجيل الخروج؟')) {
-    sessionStorage.removeItem('ssam_session');
+    clearSession();
     window.location.href = 'login.html';
   }
 }
