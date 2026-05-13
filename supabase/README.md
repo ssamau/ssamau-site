@@ -55,16 +55,25 @@ the deploy at the project ref.
 
 ## Rollback procedure (post-cutover)
 
-Production runs on Supabase after the cutover commit lands on main. The
-`legacy-neon` branch on origin is the pre-cutover state, kept warm as a
-fallback. If Supabase fails:
+Production runs on Supabase after merge commit `8fad4b9` (tagged
+`v2-supabase-stack`) landed on main. The pre-cutover state lives at
+the previous main commit `966e827` (tagged `v1-neon-stack`, also the
+HEAD of the `legacy-neon` branch on origin). Netlify's own deploy
+history keeps that build live — every Netlify deploy is independently
+addressable via "Publish deploy" indefinitely.
 
-1. Netlify dashboard → Deploys → "Publish deploy" on the last
-   `legacy-neon` deploy (its preview URL stays alive).
-2. The Neon DB still has all data (don't delete it).
-3. Netlify env vars for `NETLIFY_DATABASE_URL` + `JWT_SECRET` stay set
-   in the project settings — no re-typing needed.
-4. Total rollback time: ~30s. The DNS doesn't change.
+If Supabase fails:
 
-The tag `v1-neon-stack` on `main` is the canonical commit you can also
-`git revert` against if you'd rather do it in git instead of Netlify UI.
+1. Netlify dashboard → Deploys → find the deploy at commit `966e827c`
+   (it's the one immediately before the cutover merge `8fad4b9`).
+   Click "Publish deploy".
+2. The Neon DB still has all data — Netlify DB integration was never
+   deleted. The Netlify Functions in that deploy still read/write to it.
+3. Netlify env vars for `JWT_SECRET` stay set in the project settings.
+   `NETLIFY_DATABASE_URL` is auto-injected by the integration, no
+   action needed.
+4. Total rollback time: ~30 seconds. DNS doesn't change.
+
+If you'd rather do it in git than the Netlify UI:
+`git revert -m 1 8fad4b9` reverts the merge commit, push to main,
+Netlify rebuilds at the prior state.
