@@ -92,15 +92,23 @@ export async function verifyToken(authHeader: string | null): Promise<LegacyJwtP
 }
 
 // ─── bcrypt (legacy login flow, transient) ──────────────────────────────
-// Deno's bcrypt is a pure-JS port — slow but correct, fine for the
-// handful of admin logins per day during the transition. Once Supabase
-// Auth takes over, this import goes too.
+// Deno's bcrypt is a pure-JS port. Use the *Sync* variants:
+// - bcrypt.compare()/hash() spin up a Web Worker for CPU offload, but
+//   Supabase Edge Functions don't expose the Worker constructor — calling
+//   them returns `Worker is not defined` at runtime.
+// - bcrypt.compareSync()/hashSync() run on the main thread. Slower for
+//   parallel calls but we're doing one login at a time, so it's fine.
+//
+// The Node-side `bcryptjs` hashes have `$2b$06$...` prefix (rounds=6).
+// Deno bcrypt understands `$2a`/`$2b`/`$2y` interchangeably so the
+// hashes round-trip without re-hashing. Once Supabase Auth takes over,
+// this whole block is deleted.
 export async function bcryptHash(plain: string, rounds = 10): Promise<string> {
-  return await bcrypt.hash(plain, await bcrypt.genSalt(rounds));
+  return bcrypt.hashSync(plain, bcrypt.genSaltSync(rounds));
 }
 
 export async function bcryptCompare(plain: string, hash: string): Promise<boolean> {
-  return await bcrypt.compare(plain, hash);
+  return bcrypt.compareSync(plain, hash);
 }
 
 // ─── Role guards (port of netlify/functions/_auth.js) ───────────────────
