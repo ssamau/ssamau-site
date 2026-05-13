@@ -9,13 +9,16 @@
     "import:inspect": "node db/inspect-import.js",
     "import:preview": "node db/preview-import.js",
     "import:static-events": "node db/import-static-events.js",
-    "admin:create": "node db/create-admin.js"
+    "admin:create": "node db/create-admin.js",
+    "auth:backfill": "node db/auth-backfill.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@netlify/database": "^1.0.0",
+    "@supabase/supabase-js": "^2.105.4",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.2",
+    "postgres": "^3.4.9",
     "xlsx": "^0.18.5",
     "xtend": "^4.0.2"
   }

@@ -16,17 +16,19 @@
 
 import { clearSession, getToken } from './auth.js';
 
-// Supabase Edge Function — replaces /.netlify/functions/api after the
-// migration. Same wire-protocol (action-dispatch POST, JWT in the
-// Authorization header), only the URL changes.
-export const API_URL = 'https://pfibxvwiulwiiuwerawe.supabase.co/functions/v1/api';
+// Supabase project URL + Edge Function endpoint. Same project hosts
+// both — /functions/v1/api is our custom Edge Function (action
+// dispatcher, replaces /.netlify/functions/api after the migration);
+// /auth/v1/* is Supabase's built-in Auth API used by lib/auth.js for
+// sign-in + password reset.
+export const SUPABASE_URL = 'https://pfibxvwiulwiiuwerawe.supabase.co';
+export const API_URL      = SUPABASE_URL + '/functions/v1/api';
 
 // Supabase project anon key. PUBLIC — safe to commit + ship to the browser.
 // This is not a secret; it identifies the project. Real auth is the Bearer
-// JWT in `Authorization` (verified inside the Edge Function), or — after
-// the Supabase Auth migration commit — a Supabase-issued session token
-// gated by RLS policies.
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmaWJ4dndpdWx3aWl1d2VyYXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODI2NzEsImV4cCI6MjA5NDE1ODY3MX0.A0_w-iQQK-ozDiRWBS62ho_THvxEhzHWO-zgBcvfk78';
+// JWT in `Authorization` (verified inside the Edge Function or by Supabase
+// Auth), with RLS policies as the long-term security boundary.
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmaWJ4dndpdWx3aWl1d2VyYXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODI2NzEsImV4cCI6MjA5NDE1ODY3MX0.A0_w-iQQK-ozDiRWBS62ho_THvxEhzHWO-zgBcvfk78';
 
 export async function callApi(action, params = {}) {
   const token   = getToken();

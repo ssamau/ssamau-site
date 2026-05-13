@@ -17,7 +17,7 @@
 // addEventListener bindings; at that point the re-export block is removed.
 
 import { callApi as _callApi } from '../lib/api.js';
-import { getSession, clearSession, isLoggedIn } from '../lib/auth.js';
+import { getSession, clearSession, isLoggedIn, signOut } from '../lib/auth.js';
 
 // Drop-in for the original local callApi — same signature, same envelope
 // flattening (lib/api.js does it). Keeps every call site below unchanged.
@@ -56,11 +56,14 @@ function _requireAuthOrRedirect() {
 _requireAuthOrRedirect();
 window.addEventListener('pageshow', _requireAuthOrRedirect);
 
-function logout() {
-  if (confirm('هل تريد تسجيل الخروج؟')) {
-    clearSession();
-    window.location.href = 'login.html';
-  }
+async function logout() {
+  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  // signOut() handles both auth paths: Supabase users get their
+  // refresh token revoked server-side; legacy users just have their
+  // local state cleared (HS256 tokens can't be revoked). Either way
+  // clearSession runs at the end so we always exit to a clean state.
+  await signOut();
+  window.location.href = 'login.html';
 }
 
 
@@ -820,13 +823,23 @@ function renderAccountRow(a) {
   //   account exists + head      → reset only (and not on heads/superadmins)
   //   no account + superadmin    → ➕ quick-create account for this member
   //   no account + head          → no actions; head asks admin to create
+  //
+  // Two password-reset variants depending on auth_user_id:
+  //   migrated account (Supabase Auth, auth_user_id present) → 📧 sends
+  //     a Supabase recovery email; admin doesn't see the new password.
+  //   legacy account (auth_user_id null) → 🔑 mints a temp password
+  //     server-side and shows it once to the admin (existing flow).
   const actions = [];
   if (hasAccount) {
     if (isAdmin) {
       actions.push(`<button class="btn-icon edit" title="تعديل" onclick="editAccount(${a.id})">✏️</button>`);
     }
     if (isAdmin || (a.access_level !== 'superadmin' && a.access_level !== 'head')) {
-      actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور" onclick="resetAccountPassword(${a.id}, ${attrJson(a.username)})">🔑</button>`);
+      if (a.auth_user_id) {
+        actions.push(`<button class="btn-icon" title="إرسال رابط إعادة تعيين كلمة المرور" onclick="sendPasswordResetEmail(${a.id}, ${attrJson(a.username)}, ${attrJson(a.auth_email || '')})">📧</button>`);
+      } else {
+        actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور (إنشاء كلمة مؤقتة)" onclick="resetAccountPassword(${a.id}, ${attrJson(a.username)})">🔑</button>`);
+      }
     }
     if (isAdmin && !isSelf) {
       actions.push(`<button class="btn-icon del" title="حذف" onclick="confirmDeleteAccount(${a.id}, ${attrJson(a.username)})">🗑️</button>`);
@@ -940,6 +953,33 @@ async function resetAccountPassword(id, username) {
     document.getElementById('pw-shown-value').textContent = res.data.temp_password;
     document.getElementById('pw-shown-username').textContent = res.data.username;
     openModal('pw-shown');
+  }
+}
+
+// Supabase Auth-side password reset. Distinct from resetAccountPassword
+// (above) which mints a temp password the admin reads off the screen
+// and communicates manually. This one tells Supabase Auth to email the
+// user a recovery link; the user clicks it, lands on reset-password.html,
+// and sets their own password. Admin never sees the new password.
+//
+// The button is only shown for migrated users (auth_user_id present);
+// renderAccountRow above branches on that.
+async function sendPasswordResetEmail(id, username, email) {
+  if (!email) { toast('لا يوجد بريد إلكتروني مرتبط بهذا الحساب', 'twarn'); return; }
+  const ok = confirm(
+    `إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}\n\n` +
+    `سيتلقى ${username} رسالة بريد فيها رابط؛ بالضغط عليه يقوم بتعيين كلمة مرور جديدة بنفسه.`
+  );
+  if (!ok) return;
+  // Tell the Edge Function which origin the reset email's link should
+  // come back to — important so that a reset triggered from the
+  // deploy preview routes the user back to the preview, not prod.
+  // Supabase still validates this against the project's Redirect URLs
+  // allowlist before honoring it.
+  const redirectTo = window.location.origin + '/reset-password.html';
+  const res = await api('users.sendPasswordReset', { id, redirectTo });
+  if (res && res.success) {
+    toast(`📧 تم إرسال الرابط إلى ${email}`);
   }
 }
 
@@ -2634,7 +2674,7 @@ Object.assign(window, {
   saveOpportunity, editOpportunity, loadOpportunities, confirmDeleteOpportunity, onOppRolePreset, openOpportunityAssignments, addAssignmentMember, addAssignmentVolunteer, removeAssignment,
 
   // ── Accounts (users) ─────────────────────────
-  saveAccount, editAccount, openAccountModal, openAccountModalForMember, resetAccountPassword, confirmDeleteAccount, generateAccountPw,
+  saveAccount, editAccount, openAccountModal, openAccountModalForMember, resetAccountPassword, sendPasswordResetEmail, confirmDeleteAccount, generateAccountPw,
 
   // ── Modal helpers ────────────────────────────
   openModalWithPrj, confirmDelete,

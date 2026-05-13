@@ -16,7 +16,7 @@
 // esm.sh / deno.land — no node_modules.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { verifyToken, PUBLIC_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
+import { resolveUserContext, PUBLIC_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
 
 // Action modules. Each one exports a `Record<string, Handler>` keyed by
 // the same action names the frontend uses (`getMembers`, `users.create`,
@@ -119,11 +119,13 @@ serve(async (req) => {
   if (!handler) return fail(`Unknown action: ${action}`, 404);
 
   // Auth gate. Public actions are dispatched anonymously; everything
-  // else requires a valid legacy JWT (until the Supabase Auth migration
-  // commit later in this branch swaps it for Supabase-issued tokens).
-  let user: Awaited<ReturnType<typeof verifyToken>> = null;
+  // else requires either a Supabase Auth JWT (migrated accounts) or a
+  // legacy HS256 JWT (the four unmigrated leadership accounts).
+  // `resolveUserContext` tries Supabase first, falls back to legacy —
+  // handlers receive a unified UserContext regardless of provenance.
+  let user: Awaited<ReturnType<typeof resolveUserContext>> = null;
   if (!PUBLIC_ACTIONS.has(action)) {
-    user = await verifyToken(req.headers.get('authorization'));
+    user = await resolveUserContext(req.headers.get('authorization'));
     if (!user) return fail('Unauthorized', 401);
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
       return fail('Forbidden — superadmin only', 403);

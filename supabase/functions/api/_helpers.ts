@@ -14,6 +14,8 @@
 
 import { SignJWT, jwtVerify } from 'https://esm.sh/jose@5.6.3';
 import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { sql } from './_sql.ts';
 
 // ─── shortId ────────────────────────────────────────────────────────────
 // URL-safe 32-char alphabet (no easily-confused chars: 0/O/1/I dropped).
@@ -91,6 +93,119 @@ export async function verifyToken(authHeader: string | null): Promise<LegacyJwtP
   }
 }
 
+// ─── Supabase Auth token verification ───────────────────────────────────
+// Verifies a Supabase-issued JWT by asking the Supabase Auth API to
+// decode it. Using `auth.getUser(token)` over verifying the JWT locally
+// costs one network round-trip (~30ms) per authed request, but means
+// we don't need to mirror the project's JWT secret here or track key
+// rotation — Supabase owns that lifecycle.
+//
+// If performance becomes a concern, swap this for a local `jose.jwtVerify`
+// against `SUPABASE_JWT_SECRET` (auto-injected into Edge Functions).
+const SUPABASE_URL      = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+
+export interface SupabaseAuthUser {
+  id: string;             // UUID — matches public.users.auth_user_id
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+}
+
+export async function verifySupabaseToken(authHeader: string | null): Promise<SupabaseAuthUser | null> {
+  if (!authHeader || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const m = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  const token = m[1];
+  try {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await client.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return {
+      id:            data.user.id,
+      email:         data.user.email ?? undefined,
+      user_metadata: data.user.user_metadata ?? {},
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Unified UserContext (post-auth, used by every handler) ─────────────
+// Whichever auth path succeeded — Supabase JWT or legacy HS256 — we
+// flatten the result to this shape. The handlers in actions/*.ts read
+// `user.id` (public.users.id integer, used for FK references),
+// `user.access`, `user.member_id`, `user.committee_id` regardless of
+// how the request was authenticated.
+//
+// `auth_provider` lets handlers branch behaviour if they need to (e.g.
+// users.resetPassword should refuse to overwrite the bcrypt hash for
+// Supabase-managed accounts — that's a Supabase Auth flow now).
+export interface UserContext {
+  id: number;                          // public.users.id
+  username: string;
+  access: string;
+  member_id: string | null;
+  committee_id: string | null;
+  auth_provider: 'supabase' | 'legacy';
+  email: string | null;                // auth.users.email for Supabase, null for legacy
+  auth_user_id: string | null;         // UUID for Supabase, null for legacy
+}
+
+// Resolves an incoming Authorization header to a UserContext, trying the
+// Supabase path first (the long-term path) and falling back to the
+// legacy HS256 path (the 4 unmigrated leadership accounts). Returns
+// null if both paths fail — the dispatcher renders 401 from there.
+export async function resolveUserContext(authHeader: string | null): Promise<UserContext | null> {
+  // Path 1: Supabase JWT. Almost every authed request after migration.
+  const supaUser = await verifySupabaseToken(authHeader);
+  if (supaUser) {
+    const rows = await sql`
+      SELECT u.id, u.username, u.access_level, u.member_id, m.committee_id
+      FROM public.users u
+      LEFT JOIN public.members m ON m.member_id = u.member_id
+      WHERE u.auth_user_id = ${supaUser.id}
+      LIMIT 1
+    ` as Array<{ id: number; username: string; access_level: string; member_id: string | null; committee_id: string | null }>;
+    const row = rows[0];
+    if (!row) {
+      // Supabase user exists but no public.users mapping. Shouldn't
+      // happen in normal flow — would mean someone signed up via
+      // supabase-js directly without us creating the public.users row.
+      // Treat as auth failure rather than a crash.
+      return null;
+    }
+    return {
+      id:            row.id,
+      username:      row.username,
+      access:        row.access_level,
+      member_id:     row.member_id,
+      committee_id:  row.committee_id,
+      auth_provider: 'supabase',
+      email:         supaUser.email ?? null,
+      auth_user_id:  supaUser.id,
+    };
+  }
+
+  // Path 2: Legacy HS256 JWT — the 4 unmigrated accounts.
+  const legacyPayload = await verifyToken(authHeader);
+  if (legacyPayload) {
+    return {
+      id:            legacyPayload.id,
+      username:      legacyPayload.username,
+      access:        legacyPayload.access,
+      member_id:     legacyPayload.member_id,
+      committee_id:  legacyPayload.committee_id,
+      auth_provider: 'legacy',
+      email:         null,
+      auth_user_id:  null,
+    };
+  }
+
+  return null;
+}
+
 // ─── bcrypt (legacy login flow, transient) ──────────────────────────────
 // Deno's bcrypt is a pure-JS port. Use the *Sync* variants:
 // - bcrypt.compare()/hash() spin up a Web Worker for CPU offload, but
@@ -112,11 +227,14 @@ export async function bcryptCompare(plain: string, hash: string): Promise<boolea
 }
 
 // ─── Role guards (port of netlify/functions/_auth.js) ───────────────────
-export function requireAuth(user: LegacyJwtPayload | null): asserts user is LegacyJwtPayload {
+// Take UserContext (the unified post-auth shape) rather than the legacy
+// JWT payload — the dispatcher resolves both auth paths to UserContext
+// before invoking the handler, so guards don't care which path ran.
+export function requireAuth(user: UserContext | null): asserts user is UserContext {
   if (!user) throw httpErr('Unauthorized', 401);
 }
 
-export function requireSuperadmin(user: LegacyJwtPayload | null): asserts user is LegacyJwtPayload {
+export function requireSuperadmin(user: UserContext | null): asserts user is UserContext {
   requireAuth(user);
   if (user.access !== 'superadmin') {
     throw httpErr('Forbidden — superadmin only', 403);
@@ -124,7 +242,7 @@ export function requireSuperadmin(user: LegacyJwtPayload | null): asserts user i
 }
 
 // `head` is allowed to write within their own committee; `superadmin` everywhere.
-export function requireAdminScope(user: LegacyJwtPayload | null, committeeId: string | null | undefined): void {
+export function requireAdminScope(user: UserContext | null, committeeId: string | null | undefined): void {
   requireAuth(user);
   if (user.access === 'superadmin') return;
   if (user.access === 'head') {
@@ -139,6 +257,7 @@ export function requireAdminScope(user: LegacyJwtPayload | null, committeeId: st
 // so the Edge Function deploy has zero cross-folder dependencies.
 export const PUBLIC_ACTIONS = new Set<string>([
   'auth',
+  'auth.resolveIdentifier',
   'getMembers', 'getCommittees', 'getAdvisors', 'getProjects',
   'certs.verify',
   'setup.bulkSeed',
@@ -158,5 +277,5 @@ export const SUPERADMIN_ACTIONS = new Set<string>([
 // ─── Handler type ───────────────────────────────────────────────────────
 export type Handler = (
   body: Record<string, unknown>,
-  user: LegacyJwtPayload | null,
+  user: UserContext | null,
 ) => Promise<unknown>;
