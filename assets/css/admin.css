@@ -151,6 +151,21 @@ tr:hover td { background:#fafcfa; }
 .btn-r { background:var(--dnb); color:var(--dn); border:1px solid rgba(220,38,38,.2); }
 .btn-r:hover { background:var(--dn); color:#fff; }
 .btn-sm { padding:.28rem .6rem; font-size:.74rem; border-radius:6px; }
+
+/* Refresh button spin. The 🔄 emoji is wrapped in <span class="refresh-icon">
+ * so we can rotate just the icon, not the whole button (rotating a
+ * button with its text label looks unhinged).
+ *
+ * inline-block is required for `transform: rotate(…)` to apply —
+ * inline elements can't be transformed. */
+.refresh-icon { display: inline-block; }
+#refresh-btn.refreshing { opacity: .7; cursor: wait; }
+#refresh-btn.refreshing .refresh-icon {
+  animation: ssam-spin 0.7s linear infinite;
+}
+@keyframes ssam-spin {
+  to { transform: rotate(360deg); }
+}
 .btn-icon { padding:.3rem .38rem; border-radius:6px; background:transparent; border:1px solid var(--bd); cursor:pointer; font-size:.88rem; transition:all .13s; }
 .btn-icon:hover { background:var(--bd); }
 .btn-icon.edit:hover { background:var(--gl); border-color:var(--g); }

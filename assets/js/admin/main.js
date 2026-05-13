@@ -283,11 +283,50 @@ function toggleSidebar() {
   if (open) closeSidebar(); else openSidebar();
 }
 
-function refreshData() {
+async function refreshData() {
   const active = document.querySelector('.page.active');
-  if (active) {
-    const page = active.id.replace('page-', '');
-    showPage(page);
+  if (!active) return;
+  const page = active.id.replace('page-', '');
+  const btn = document.getElementById('refresh-btn');
+
+  // Visual feedback: spin the 🔄 icon and disable the button so a
+  // panicky double-tap doesn't fire two fetches. Without this the
+  // refresh felt broken — data silently re-fetched in <1s and the
+  // table re-rendered identically (if nothing changed server-side),
+  // so the user had no way to know anything happened.
+  btn?.classList.add('refreshing');
+  if (btn) btn.disabled = true;
+
+  try {
+    // showPage was sync, doesn't return the loader's promise — so we
+    // can't await it cleanly. Reach into the same loader map directly
+    // here so we know when the fetch is actually done. Kept in sync
+    // with the map inside showPage(); both are exhaustive listings of
+    // tab-id → loader function.
+    const loaders = {
+      dashboard:        loadDashboard,
+      members:          loadMembers,
+      applications:     loadApplications,
+      accounts:         loadAccounts,
+      advisors:         loadAdvisors,
+      committees:       loadCommittees,
+      projects:         loadProjects,
+      participants:     async () => { populateProjectSelects(); await loadParticipants(); },
+      opportunities:    async () => { populateProjectSelects(); await loadOpportunities(); },
+      attendance:       async () => { populateProjectSelects(); await loadAttendance(); },
+      hours:            loadHours,
+      profile:          loadProfileSelect,
+      interest:         loadInterestAll,
+      emails:           async () => { await loadThanks(''); },
+      certificates:     async () => { await loadCerts(''); },
+    };
+    if (loaders[page]) await loaders[page]();
+    toast('✅ تم التحديث');
+  } catch (e) {
+    toast('فشل التحديث: ' + (e?.message || 'unknown'), 'terr');
+  } finally {
+    btn?.classList.remove('refreshing');
+    if (btn) btn.disabled = false;
   }
 }
 
