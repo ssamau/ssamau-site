@@ -96,24 +96,26 @@ window.MBS_LIST = [
 
 // Fallback governance data — overwritten by the API on every page load if it
 // responds. Kept here so the public homepage still renders something sensible
-// when the API is unreachable. Synced with the production DB (May 2026) so
-// names + assignments match reality on first paint; any future drift is
-// healed automatically by updateCommittees() below clearing stale slots.
+// when the API is unreachable. Sourced from the xlsx (بيانات اللجان.xlsx).
 //
-// Important: a committee Vice-Head is a distinct role from a club Deputy
-// Vice-President. Don't list board members (President / VP / DVP) in the
-// `depAr` slot here — those belong on the Board card, not under a committee.
+// Important rule (from xlsx structure): a club VP or DVP who is also
+// assigned to a committee IS the vice-head of that committee. The two
+// roles aren't mutually exclusive — the same person can sit on the board
+// AND lead/co-lead a committee. Examples below: حنان الزهراني is a club
+// DVP AND vice of Communications; أسيل العواد is a club DVP AND vice of
+// Finance. Reflecting this here so the static page matches the xlsx truth
+// while the DB catches up.
 window.COMS_DATA = [
-  { id: 'events',    ic: '🎪', ar: 'لجنة الفعاليات',                en: 'Events Committee',     hAr: 'حنين الرحيلي',      hEn: 'Haneen Al-Rohaily',     depAr: 'انمار بريسالي', depEn: 'Anmar Beresaly', cm: 'لجنة الفعاليات' },
-  { id: 'student',   ic: '🎓', ar: 'لجنة شؤون الطلبة',              en: 'Student Affairs',      hAr: 'أمجد ابراهيم',      hEn: 'Amjad Ibrahim',         depAr: 'فاطمة الحداد',  depEn: 'Fatima Al-Haddad', cm: 'لجنة شؤون الطلبة' },
-  { id: 'sports',    ic: '⚽', ar: 'لجنة الأنشطة الرياضية',         en: 'Sports & Recreation',  hAr: 'محمد الغامدي',      hEn: 'Mohammed Al-Ghamdi',    depAr: null,            depEn: null,                cm: 'لجنة الأنشطة الرياضية' },
-  { id: 'academic',  ic: '🔬', ar: 'لجنة البرامج العلمية والمهنية', en: 'Academic Programs',    hAr: 'أحمد الرويلي',      hEn: 'Ahmed Al-Ruwaili',      depAr: null,            depEn: null,                cm: 'لجنة البرامج العلمية والمهنية' },
-  { id: 'media',     ic: '📡', ar: 'لجنة الاتصال المؤسسي',          en: 'Communications',       hAr: 'عبدالرحمن الحربي',  hEn: 'Abdulrahman Al-Harbi',  depAr: null,            depEn: null,                cm: 'لجنة الاتصال المؤسسي' },
-  { id: 'logistics', ic: '📦', ar: 'اللجنة اللوجستية',              en: 'Logistics',            hAr: 'سعد الشريف',        hEn: 'Saad Al-Sharif',        depAr: null,            depEn: null,                cm: 'اللجنة اللوجستية' },
-  { id: 'finance',   ic: '💰', ar: 'اللجنة المالية',                en: 'Finance',              hAr: 'محمد حكمي',         hEn: 'Mohammed Hakami',       depAr: null,            depEn: null,                cm: 'اللجنة المالية' },
-  { id: 'quality',   ic: '📊', ar: 'لجنة التقييم والجودة',          en: 'Quality & Evaluation', hAr: 'مروة الحربي',       hEn: 'Marwa Al-Harbi',        depAr: null,            depEn: null,                cm: 'لجنة التقييم والجودة' },
-  { id: 'academy',   ic: '📚', ar: 'أكاديمية الأصالة',              en: 'Asalah Academy',       hAr: 'سارة المطيري',      hEn: 'Sara Al-Mutairi',       depAr: null,            depEn: null,                cm: 'أكاديمية الأصالة' },
-  { id: 'mirfa',     ic: '⚓', ar: 'مبادرة مرفأ',                   en: 'Mirfa Initiative',     hAr: null,                hEn: null,                    depAr: null,            depEn: null,                cm: 'مبادرة مرفأ' },
+  { id: 'events',    ic: '🎪', ar: 'لجنة الفعاليات',                en: 'Events Committee',     hAr: 'حنين الرحيلي',      hEn: 'Haneen Al-Rohaily',     depAr: 'انمار بريسالي', depEn: 'Anmar Beresaly',     cm: 'لجنة الفعاليات' },
+  { id: 'student',   ic: '🎓', ar: 'لجنة شؤون الطلبة',              en: 'Student Affairs',      hAr: 'أمجد أبو الخير',    hEn: 'Amjad Abu Al-Khayr',    depAr: 'فاطمة الحداد',  depEn: 'Fatima Al-Haddad',   cm: 'لجنة شؤون الطلبة' },
+  { id: 'sports',    ic: '⚽', ar: 'لجنة الأنشطة الرياضية',         en: 'Sports & Recreation',  hAr: 'محمد الغامدي',      hEn: 'Mohammed Al-Ghamdi',    depAr: 'ريما الغانمي',  depEn: 'Reema Al-Ghanmi',    cm: 'لجنة الأنشطة الرياضية' },
+  { id: 'academic',  ic: '🔬', ar: 'لجنة البرامج العلمية والمهنية', en: 'Academic Programs',    hAr: 'أحمد الرويلي',      hEn: 'Ahmed Al-Ruwaili',      depAr: 'جمانه الغامدي', depEn: 'Jumanah Al-Ghamdi',  cm: 'لجنة البرامج العلمية والمهنية' },
+  { id: 'media',     ic: '📡', ar: 'لجنة الاتصال المؤسسي',          en: 'Communications',       hAr: 'عبدالرحمن الحربي',  hEn: 'Abdulrahman Al-Harbi',  depAr: 'حنان الزهراني', depEn: 'Hanan Al-Zahrani',   cm: 'لجنة الاتصال المؤسسي' },
+  { id: 'logistics', ic: '📦', ar: 'اللجنة اللوجستية',              en: 'Logistics',            hAr: 'سعد الشريف',        hEn: 'Saad Al-Sharif',        depAr: null,            depEn: null,                 cm: 'اللجنة اللوجستية' },
+  { id: 'finance',   ic: '💰', ar: 'اللجنة المالية',                en: 'Finance',              hAr: 'محمد حكمي',         hEn: 'Mohammed Hakami',       depAr: 'أسيل العواد',   depEn: 'Aseel Al-Awad',      cm: 'اللجنة المالية' },
+  { id: 'quality',   ic: '📊', ar: 'لجنة التقييم والجودة',          en: 'Quality & Evaluation', hAr: 'مروة الحربي',       hEn: 'Marwa Al-Harbi',        depAr: null,            depEn: null,                 cm: 'لجنة التقييم والجودة' },
+  { id: 'academy',   ic: '📚', ar: 'أكاديمية الأصالة',              en: 'Asalah Academy',       hAr: 'سارة المطيري',      hEn: 'Sara Al-Mutairi',       depAr: null,            depEn: null,                 cm: 'أكاديمية الأصالة' },
+  { id: 'mirfa',     ic: '⚓', ar: 'مبادرة مرفأ',                   en: 'Mirfa Initiative',     hAr: null,                hEn: null,                    depAr: null,            depEn: null,                 cm: 'مبادرة مرفأ' },
 ];
 
 // ── COMMITTEE TABS ──────────────────────────────────────────────────────────
@@ -463,23 +465,22 @@ function updateCommittees(members, committees) {
 
     const headMember = members.find((m) => m.member_id === com.committee_head_member_id);
     const viceMember = members.find((m) => m.member_id === com.committee_vice_head_member_id);
+
+    // Live DB is authoritative WHEN it has data. When it returns null for a
+    // role, we fall back to whatever the static HTML / COMS_DATA already
+    // says — i.e. the xlsx-sourced fallback wins over a DB silence. This
+    // matters because the schema only stores one head + one vice per
+    // committee, but the xlsx assigns club VPs/DVPs as committee vices too
+    // and those aren't always reflected in the DB yet (separate re-seed
+    // task). Once the DB catches up, the static fallback becomes a no-op.
     const chdEl = card.querySelector('.chd');
-    if (chdEl) {
-      if (headMember) {
-        chdEl.textContent = headMember.full_name;
-        chdEl.style.color = 'var(--go)';
-      } else {
-        // No head in DB — clear stale static text so we don't show a name
-        // for someone who no longer holds the role.
-        chdEl.textContent = '';
-      }
+    if (chdEl && headMember) {
+      chdEl.textContent = headMember.full_name;
+      chdEl.style.color = 'var(--go)';
     }
     const cdepEl = card.querySelector('.cdep');
-    if (cdepEl) {
-      // Critical: always clear when there's no vice in the DB. Without this,
-      // a static fallback that lists someone (e.g. a club VP who is not
-      // actually a committee vice) shows on every page load.
-      cdepEl.textContent = viceMember ? ('نائب: ' + viceMember.full_name) : '';
+    if (cdepEl && viceMember) {
+      cdepEl.textContent = 'نائب: ' + viceMember.full_name;
     }
 
     // Patch COMS_DATA so the drawer (opened via oDrw) shows live heads.
@@ -489,12 +490,8 @@ function updateCommittees(members, committees) {
       if (match) {
         const cEntry = window.COMS_DATA.find((x) => x.id === match[1]);
         if (cEntry) {
-          // Mirror the patcher's clear-on-empty behaviour so the drawer
-          // doesn't keep stale names from the fallback either.
-          cEntry.hAr = headMember ? headMember.full_name : null;
-          cEntry.hEn = headMember ? headMember.full_name : null;
-          cEntry.depAr = viceMember ? viceMember.full_name : null;
-          cEntry.depEn = viceMember ? viceMember.full_name : null;
+          if (headMember) { cEntry.hAr = headMember.full_name; cEntry.hEn = headMember.full_name; }
+          if (viceMember) { cEntry.depAr = viceMember.full_name; cEntry.depEn = viceMember.full_name; }
         }
       }
     }
