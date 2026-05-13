@@ -1,63 +1,54 @@
 // SSAM API — Supabase Edge Function port of netlify/functions/api.js.
 //
-// Single endpoint, action-dispatch pattern. Mirrors the Netlify Functions
-// version one-to-one so the frontend (`assets/js/lib/api.js`) keeps making
-// the same POST body shape — only the URL changes. The 40 actions land in
-// supabase/functions/api/actions/*.ts in subsequent commits; this scaffold
-// is the request envelope, auth gate, and dispatcher.
+// Single endpoint, action-dispatch pattern. The frontend POSTs
+// `{ action, ...params }` and gets back `{ success, data }` or
+// `{ success: false, error }`. The wire-protocol matches the Netlify
+// Functions version exactly so `assets/js/lib/api.js` only needs its
+// base URL bumped after this lands.
 //
-// Runtime: Deno (Supabase Edge Functions). All deps come from JSR / esm.sh
-// per Supabase's recommended import style — no node_modules.
+// Architecture:
+//   _sql.ts           — postgres.js client + tagged-template sql.
+//   _helpers.ts       — bcrypt, jose-based JWT, role guards, shortId.
+//   actions/*.ts      — handlers, grouped one module per domain.
+//   index.ts (this)   — request envelope, auth gate, action map merge.
+//
+// Runtime: Deno (Supabase Edge Functions). All deps come from JSR /
+// esm.sh / deno.land — no node_modules.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { verifyToken, PUBLIC_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
 
-// ─── ENV ────────────────────────────────────────────────────────────────
-// Set automatically by Supabase for every Edge Function deployment. We never
-// hard-code these — the function adapts to whichever project it's deployed
-// into, which is convenient when staging vs prod live in different projects.
-const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-// Custom legacy JWT secret — kept transiently so the existing admin/login
-// flow keeps working while we still use the `public.users` table. The auth
-// migration commit later in this branch swaps this out for Supabase Auth
-// (magic-link) and the user/JWT plumbing goes away.
-const LEGACY_JWT_SECRET = Deno.env.get('JWT_SECRET') ?? '';
+// Action modules. Each one exports a `Record<string, Handler>` keyed by
+// the same action names the frontend uses (`getMembers`, `users.create`,
+// `applications.submit`, etc.). Order doesn't matter — Object.assign
+// flattens them into one lookup table.
+import { authActions }          from './actions/auth.ts';
+import { membersActions }       from './actions/members.ts';
+import { advisorsActions }      from './actions/advisors.ts';
+import { committeesActions }    from './actions/committees.ts';
+import { projectsActions }      from './actions/projects.ts';
+import { participantsActions }  from './actions/participants.ts';
+import { attendanceActions }    from './actions/attendance.ts';
+import { hoursActions }         from './actions/hours.ts';
+import { interestActions }      from './actions/interest.ts';
+import { thanksActions }        from './actions/thanks.ts';
+import { certsActions }         from './actions/certs.ts';
+import { dashboardActions }     from './actions/dashboard.ts';
+import { opportunitiesActions } from './actions/opportunities.ts';
+import { assignmentsActions }   from './actions/assignments.ts';
+import { applicationsActions }  from './actions/applications.ts';
+import { setupActions }         from './actions/setup.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────
-// The frontend is served from a different origin (ssamau.com) than the
-// function (functions.supabase.co), so we need proper CORS — Supabase
-// recommends responding to OPTIONS preflights with these.
+// Frontend (ssamau.com) and the function (functions.supabase.co) are
+// different origins, so respond to OPTIONS preflights with these.
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-// ─── Public (no-auth) actions ───────────────────────────────────────────
-// Same allowlist shape as netlify/functions/_auth.js. Everything else
-// requires a Bearer JWT validated against LEGACY_JWT_SECRET (or, post
-// auth-migration, a Supabase Auth token).
-const PUBLIC_ACTIONS = new Set([
-  'auth',
-  'getMembers', 'getCommittees', 'getAdvisors', 'getProjects',
-  'certs.verify',
-  'setup.bulkSeed',
-  'applications.submit',
-]);
-
-const SUPERADMIN_ACTIONS = new Set([
-  'createProject', 'deleteProject',
-  'createAdvisor', 'updateAdvisor', 'deleteAdvisor',
-  'createCommittee', 'updateCommittee', 'deleteCommittee',
-  'deleteMember',
-  'setup.seedMembers',
-  'hours.finalApprove',
-  'users.create', 'users.update', 'users.delete',
-]);
-
-// ─── Helpers ────────────────────────────────────────────────────────────
+// ─── Response helpers ───────────────────────────────────────────────────
 function ok(data: unknown) {
   return new Response(JSON.stringify({ success: true, data }), {
     status: 200,
@@ -73,54 +64,37 @@ function fail(error: string | Error, status = 400) {
   });
 }
 
-// Service-role client — bypasses RLS. Used by every action below; once we
-// layer RLS policies on top we'll create a per-request anon client with the
-// caller's JWT instead for SELECTs. For writes the service-role is
-// appropriate (we do scope checks in JS based on the decoded JWT).
-function adminClient(): SupabaseClient {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-// JWT verify against the legacy HS256 secret. Returns the decoded payload
-// or null. Same shape the Netlify _auth.js verifyToken() returned:
-//   { id, username, access, member_id, committee_id, iat, exp }
-async function verifyLegacyJwt(authHeader: string | null): Promise<Record<string, unknown> | null> {
-  if (!authHeader) return null;
-  const m = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const token = m[1];
-  if (!LEGACY_JWT_SECRET) return null;
-  try {
-    const { jwtVerify } = await import('https://esm.sh/jose@5.6.3');
-    const key = new TextEncoder().encode(LEGACY_JWT_SECRET);
-    const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] });
-    return payload as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Action registry ────────────────────────────────────────────────────
-// Each action handler gets the parsed body + the decoded user (or null for
-// PUBLIC_ACTIONS). The registry is small for now — subsequent commits port
-// the remaining 35+ actions from netlify/functions/api.js.
-type Handler = (body: Record<string, unknown>, user: Record<string, unknown> | null) => Promise<unknown>;
-
+// Flatten every action module's exports into a single lookup table. A
+// duplicate key from two modules would silently overwrite — we trust the
+// names are unique because they originate from netlify/functions/api.js
+// (which also uses one flat object). The Bash diff in commit notes
+// confirmed all 66 names are unique across modules.
 const actions: Record<string, Handler> = {
-  // Smoke-test endpoint — handy for confirming the function is live.
+  // Smoke-test endpoint — handy for confirming the function is live and
+  // its DB connection is healthy. Not in PUBLIC_ACTIONS, so callers need
+  // a valid JWT — that's fine, only ops uses it.
   'healthcheck': async () => ({
     ok: true,
     time: new Date().toISOString(),
     runtime: 'supabase-edge',
   }),
-
-  // The 40 production actions land here as separate handler files imported
-  // above. Stubbed for now so the dispatcher can be tested in isolation:
-  // 'getMembers':       members.getMembers,
-  // 'createMember':     members.createMember,
-  // ...
+  ...authActions,
+  ...membersActions,
+  ...advisorsActions,
+  ...committeesActions,
+  ...projectsActions,
+  ...participantsActions,
+  ...attendanceActions,
+  ...hoursActions,
+  ...interestActions,
+  ...thanksActions,
+  ...certsActions,
+  ...dashboardActions,
+  ...opportunitiesActions,
+  ...assignmentsActions,
+  ...applicationsActions,
+  ...setupActions,
 };
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────
@@ -144,11 +118,12 @@ serve(async (req) => {
   const handler = actions[action];
   if (!handler) return fail(`Unknown action: ${action}`, 404);
 
-  // Auth gate. Public actions are dispatched anonymously; everything else
-  // requires a valid legacy JWT (until the Supabase Auth migration lands).
-  let user: Record<string, unknown> | null = null;
+  // Auth gate. Public actions are dispatched anonymously; everything
+  // else requires a valid legacy JWT (until the Supabase Auth migration
+  // commit later in this branch swaps it for Supabase-issued tokens).
+  let user: Awaited<ReturnType<typeof verifyToken>> = null;
   if (!PUBLIC_ACTIONS.has(action)) {
-    user = await verifyLegacyJwt(req.headers.get('authorization'));
+    user = await verifyToken(req.headers.get('authorization'));
     if (!user) return fail('Unauthorized', 401);
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
       return fail('Forbidden — superadmin only', 403);
