@@ -23,7 +23,10 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+# Match the linked project's Postgres version. Supabase provisions PG17 on
+# new projects (May 2026 onwards); old PG15 default in the CLI template
+# caused the link warning we hit on first run.
+major_version = 17
 
 [studio]
 enabled = true
@@ -72,11 +75,14 @@ enable_confirmations = true
 enable_signup = false
 enable_confirmations = false
 
-# Edge Functions deployed from supabase/functions/<name>/ go here.
-# Configuration per-function (timeout, etc) is added once we start writing
-# them — keeping this block minimal until then.
-[functions]
-# Every function gets its own subdirectory under supabase/functions/.
-# Verify JWT by default; turn off explicitly for public-facing ones (the
-# applications.submit endpoint, certs.verify, etc.).
-verify_jwt = true
+# Edge Functions live under supabase/functions/<name>/. The CLI expects a
+# [functions.<name>] block per function, not a top-level default.
+#
+# verify_jwt = false because our `api` function does its own JWT
+# verification (custom HS256 against the legacy public.users table for
+# now, then Supabase Auth tokens after the auth-migration commit). If
+# Supabase enforced its own JWT gate on top, callers without a
+# Supabase-issued token would 401 before our handler ever runs — that
+# blocks the existing admin login flow during the transition.
+[functions.api]
+verify_jwt = false
