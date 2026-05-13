@@ -40,6 +40,7 @@ if (!accessToken || flowType !== 'recovery') {
 // ─── Wire handlers ──────────────────────────────────────────────────
 $('#submit-btn')?.addEventListener('click', doSubmit);
 $('#pw-eye1')   ?.addEventListener('click', () => togglePw('#pw1', '#pw-eye1'));
+$('#pw-eye2')   ?.addEventListener('click', () => togglePw('#pw2', '#pw-eye2'));
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSubmit(); });
 
 // ─── Submit ─────────────────────────────────────────────────────────
