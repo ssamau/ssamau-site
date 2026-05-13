@@ -35,16 +35,27 @@ const API_URL = '/.netlify/functions/api';
 // loop (login.html sees token → bounce to admin → admin sees no session →
 // bounce to login → …). Mobile users couldn't escape it without closing
 // the tab. clearSession() now wipes both keys atomically.
-(function () {
-  'use strict';
+//
+// We also re-run this on `pageshow` to catch the browser's back/forward
+// cache: after logout the user is on /login.html, but pressing Back
+// restores the admin page from bfcache WITHOUT re-executing this script,
+// so the page renders even though the session is cleared. The pageshow
+// handler fires on bfcache restore (event.persisted === true), kicks the
+// user back to login, and stops the "ghost admin" state where a logged-
+// out user sees stale data until they touch something that 401s.
+function _requireAuthOrRedirect() {
   const user = getSession();
   if (!user || !isLoggedIn()) {
     clearSession();
-    window.location.href = 'login.html';
-    return;
+    window.location.replace('login.html');  // replace, not href, so back
+                                            // doesn't reopen admin again
+    return false;
   }
   window.CURRENT_USER = user;
-})();
+  return true;
+}
+_requireAuthOrRedirect();
+window.addEventListener('pageshow', _requireAuthOrRedirect);
 
 function logout() {
   if (confirm('هل تريد تسجيل الخروج؟')) {
