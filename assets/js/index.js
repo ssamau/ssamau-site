@@ -418,7 +418,16 @@ function updateBoard(members) {
   const roleAr = { President: 'رئيس النادي السعودي في ملبورن', 'Vice President': 'نائب الرئيس', 'Deputy Vice President': 'نائبة الرئيس' };
   const roleEn = { President: 'President of SSAM',             'Vice President': 'Vice President',  'Deputy Vice President': 'Deputy VP' };
 
-  const board = members.filter((m) => roles.indexOf(m.club_role) !== -1);
+  // Per the xlsx rule (clarified by user): a club VP/DVP who also has a
+  // committee assignment is THAT COMMITTEE'S vice-head, not a board member.
+  // The board (مجلس الإدارة) is just the 3 people with no committee_id:
+  // the President + the VPs/DVPs who serve purely at the club level.
+  // Without this filter, after the API patch the board page balloons from
+  // the correct 3 cards to 8 (every VP/DVP including those embedded in a
+  // committee), which was the bug visible in prod.
+  const board = members.filter((m) =>
+    roles.indexOf(m.club_role) !== -1 && !m.committee_id
+  );
   if (!board.length) return;
 
   const grid = document.querySelector('#tp-board .bgrid');
