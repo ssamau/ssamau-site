@@ -110,6 +110,26 @@ body::before {
 /* Footer */
 .lc-footer { padding: 1rem 2rem 1.5rem; text-align: center; }
 .lc-footer-txt { font-size: .68rem; color: #9ca3af; }
+/* Back-to-home escape hatch. Without it, a user who lands on /login.html and
+   decides not to sign in can't get back to the public page short of typing
+   the URL or hitting browser back (which doesn't always work, e.g. when
+   /login.html is the first page they opened). */
+.lc-back {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #1A5C2E;
+  text-decoration: none;
+  padding: .35rem .8rem;
+  margin-bottom: .65rem;
+  border-radius: 50px;
+  border: 1.5px solid transparent;
+  transition: all .15s;
+}
+.lc-back:hover {
+  background: #e8f5e9;
+  border-color: rgba(26, 92, 46, .2);
+}
 .lc-version {
   display: inline-block;
   background: #f3f4f6; color: #6b7280;
