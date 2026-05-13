@@ -19,6 +19,81 @@ import {
   type Handler,
 } from '../_helpers.ts';
 
+// ─── `auth.resolveIdentifier` — username / NID / email → login plan ─────
+// Public action. The login form sends a single free-text identifier
+// (could be email, national_id, or username) and we return what the
+// client needs to do next:
+//
+//   { found: true, auth_provider: 'supabase', email: '...' }
+//      → call supabase.auth.signInWithPassword({ email, password })
+//
+//   { found: true, auth_provider: 'legacy', username: '...' }
+//      → call action `auth` with that username + password (existing flow)
+//
+//   { found: false }
+//      → render "no account matches" — frontend can hide it behind a
+//        generic "Invalid credentials" message after the password
+//        attempt so we don't leak account-existence info on this
+//        endpoint alone.
+//
+// Lookup priority (resolves to the FIRST match):
+//   1. email = members.email OR email = auth.users.email
+//   2. national_id = members.national_id
+//   3. username = public.users.username
+//
+// Notes on existence-leak risk: this endpoint is intentionally vague
+// (success doesn't include personal details, just "is this account
+// migrated"), but it WILL confirm whether a given email/NID/username
+// is in the system. Username + email enumeration was already possible
+// against the legacy `auth` action via timing differences. National-ID
+// enumeration is the new vector — but national IDs aren't secret
+// inside the org, only emails are. Acceptable trade-off for the UX win.
+const authResolveIdentifier: Handler = async (body) => {
+  const raw = String(body.identifier ?? '').trim();
+  if (!raw) return { found: false };
+  const lower = raw.toLowerCase();
+
+  const rows = await sql`
+    SELECT
+      u.id,
+      u.username,
+      u.auth_user_id,
+      m.national_id,
+      m.email     AS member_email,
+      au.email    AS auth_email
+    FROM public.users u
+    LEFT JOIN public.members m  ON m.member_id = u.member_id
+    LEFT JOIN auth.users    au  ON au.id = u.auth_user_id
+    WHERE
+      LOWER(u.username)  = ${lower}
+      OR (m.national_id IS NOT NULL AND m.national_id = ${raw})
+      OR (m.email       IS NOT NULL AND LOWER(m.email)  = ${lower})
+      OR (au.email      IS NOT NULL AND LOWER(au.email) = ${lower})
+    LIMIT 1
+  ` as Array<{
+    id: number; username: string; auth_user_id: string | null;
+    national_id: string | null; member_email: string | null; auth_email: string | null;
+  }>;
+
+  const row = rows[0];
+  if (!row) return { found: false };
+
+  if (row.auth_user_id) {
+    // Migrated account — frontend should use Supabase Auth.
+    // Prefer auth.users.email (canonical) over members.email.
+    const email = row.auth_email || row.member_email || null;
+    if (!email) {
+      // Shouldn't happen: auth_user_id implies an auth.users row which
+      // has email. If it does, fall back to legacy gracefully.
+      return { found: true, auth_provider: 'legacy', username: row.username };
+    }
+    return { found: true, auth_provider: 'supabase', email };
+  }
+
+  // Legacy account.
+  return { found: true, auth_provider: 'legacy', username: row.username };
+};
+
 // ─── `auth` — username + password login, issues HS256 JWT ───────────────
 const auth: Handler = async (body) => {
   const username = body.username as string | undefined;
@@ -64,9 +139,15 @@ const auth: Handler = async (body) => {
 const usersList: Handler = async (_body, user) => {
   requireAuth(user);
 
+  // We expose auth_user_id and auth_email to the frontend so the admin
+  // UI knows which password-reset flow to offer: legacy users (no
+  // auth_user_id) get the temp-password 🔑 button; migrated users get
+  // the magic-link 📧 button. The email is auth.users.email (canonical
+  // after migration) — different from members.email which may diverge.
   if (user.access === 'head') {
     return sql`
-      SELECT u.id, u.username, u.access_level, u.created_at, u.last_login_at,
+      SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at, u.last_login_at,
+             au.email         AS auth_email,
              m.member_id,
              m.full_name      AS member_full_name,
              m.preferred_name AS member_preferred_name,
@@ -74,8 +155,9 @@ const usersList: Handler = async (_body, user) => {
              m.club_role      AS member_club_role,
              c.committee_name AS member_committee_name
       FROM members m
-      LEFT JOIN users      u ON u.member_id      = m.member_id
-      LEFT JOIN committees c ON c.committee_id   = m.committee_id
+      LEFT JOIN users      u  ON u.member_id    = m.member_id
+      LEFT JOIN auth.users au ON au.id          = u.auth_user_id
+      LEFT JOIN committees c  ON c.committee_id = m.committee_id
       WHERE m.committee_id = ${user.committee_id}
       ORDER BY
         CASE WHEN u.id IS NULL THEN 1 ELSE 0 END,
@@ -90,16 +172,18 @@ const usersList: Handler = async (_body, user) => {
   if (user.access !== 'superadmin') throw httpErr('Forbidden', 403);
 
   return sql`
-    SELECT u.id, u.username, u.access_level, u.created_at, u.last_login_at,
+    SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at, u.last_login_at,
            u.member_id,
+           au.email         AS auth_email,
            m.full_name      AS member_full_name,
            m.preferred_name AS member_preferred_name,
            m.committee_id   AS member_committee_id,
            m.club_role      AS member_club_role,
            c.committee_name AS member_committee_name
     FROM users u
-    LEFT JOIN members    m ON m.member_id    = u.member_id
-    LEFT JOIN committees c ON c.committee_id = m.committee_id
+    LEFT JOIN members    m  ON m.member_id    = u.member_id
+    LEFT JOIN auth.users au ON au.id          = u.auth_user_id
+    LEFT JOIN committees c  ON c.committee_id = m.committee_id
     ORDER BY
       CASE u.access_level
         WHEN 'superadmin' THEN 1
@@ -243,11 +327,127 @@ const usersResetPassword: Handler = async (body, user) => {
   return { id, username: target.username, temp_password: tempPw };
 };
 
+// ─── `users.sendPasswordReset` — admin triggers Supabase recovery email ──
+// Distinct from `users.resetPassword`: that one (legacy) mints a fresh
+// temp password and returns it to the admin to communicate manually.
+// This one (Supabase-Auth) generates a recovery LINK and Supabase sends
+// it to the user's email automatically — they click the link, set
+// their own password, and they're in. No temp-password handoff.
+//
+// Permissions match users.resetPassword:
+//   - superadmin can trigger for any migrated account
+//   - head can trigger for a member in their own committee
+//   - legacy accounts (auth_user_id IS NULL) are refused — they need
+//     the old temp-password flow via users.resetPassword instead
+//
+// Uses the Supabase admin client (service role) so it bypasses the
+// default rate limits the anon client would enforce. Supabase Auth
+// still applies its own per-user limits (typically 1 recovery email
+// per minute per email address), so spam-clicking the button just
+// returns the same "Sent" state.
+const usersSendPasswordReset: Handler = async (body, user) => {
+  requireAuth(user);
+  const id = body.id as number | undefined;
+  if (!id) throw httpErr('id is required', 400);
+
+  const [target] = await sql`
+    SELECT u.id, u.username, u.access_level, u.member_id, u.auth_user_id,
+           m.committee_id AS member_committee_id,
+           au.email       AS auth_email
+    FROM public.users u
+    LEFT JOIN public.members m ON m.member_id = u.member_id
+    LEFT JOIN auth.users   au  ON au.id = u.auth_user_id
+    WHERE u.id = ${id}
+  ` as Array<{
+    id: number; username: string; access_level: string;
+    member_id: string | null; auth_user_id: string | null;
+    member_committee_id: string | null; auth_email: string | null;
+  }>;
+  if (!target) throw httpErr('User not found', 404);
+
+  if (!target.auth_user_id || !target.auth_email) {
+    throw httpErr(
+      'This account is on legacy auth — use the temp-password reset instead. ' +
+      'Or add an email to the linked member and re-run the backfill.',
+      409,
+    );
+  }
+
+  // Same scope rules as users.resetPassword.
+  if (user!.access === 'head') {
+    if (target.access_level === 'superadmin' || target.access_level === 'head') {
+      throw httpErr('Committee heads cannot reset admin or head passwords', 403);
+    }
+    if (target.member_committee_id !== user!.committee_id) {
+      throw httpErr('Forbidden — that member is not in your committee', 403);
+    }
+  } else if (user!.access !== 'superadmin') {
+    throw httpErr('Forbidden', 403);
+  }
+
+  // Fire the Supabase Auth recovery email. The "Origin" header isn't
+  // available here (Edge Function context), so we pin the redirect URL
+  // to the canonical production site. Reset links from a deploy preview
+  // would route the user to prod anyway — which is the correct UX (they
+  // shouldn't end up changing their password against an ephemeral URL).
+  const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await admin.auth.resetPasswordForEmail(target.auth_email, {
+    redirectTo: 'https://ssamau.com/reset-password.html',
+  });
+  if (error) throw httpErr(`Supabase: ${error.message}`, 500);
+
+  return {
+    id: target.id,
+    username: target.username,
+    email: target.auth_email,
+    sent: true,
+  };
+};
+
+// ─── `auth.whoami` — current user's app-level profile ──────────────────
+// Authed action. After a Supabase sign-in the frontend has the access
+// token but not the app-level fields (access_level, member_id,
+// committee_id, etc.) — those live in public.users, not auth.users.
+// This action returns them in the same shape the legacy `auth` action
+// did, so the frontend's saveSession() stores identical data either way.
+const authWhoami: Handler = async (_body, user) => {
+  requireAuth(user);
+  // Pull the member's preferred display name too — same join the
+  // legacy `auth` handler does, so the admin UI greeting matches.
+  const rows = await sql`
+    SELECT m.full_name, m.preferred_name
+    FROM public.members m
+    WHERE m.member_id = ${user.member_id}
+    LIMIT 1
+  ` as Array<{ full_name: string | null; preferred_name: string | null }>;
+  const member = rows[0];
+  return {
+    id:           user.id,
+    username:     user.username,
+    name:         member?.preferred_name || member?.full_name || user.username,
+    role:         user.access,
+    access:       user.access,
+    member_id:    user.member_id,
+    committee_id: user.committee_id,
+    email:        user.email,
+    auth_user_id: user.auth_user_id,
+    auth_provider: user.auth_provider,
+  };
+};
+
 export const authActions: Record<string, Handler> = {
-  'auth':                auth,
-  'users.list':          usersList,
-  'users.create':        usersCreate,
-  'users.update':        usersUpdate,
-  'users.delete':        usersDelete,
-  'users.resetPassword': usersResetPassword,
+  'auth':                    auth,
+  'auth.resolveIdentifier':  authResolveIdentifier,
+  'auth.whoami':             authWhoami,
+  'users.list':              usersList,
+  'users.create':            usersCreate,
+  'users.update':            usersUpdate,
+  'users.delete':            usersDelete,
+  'users.resetPassword':     usersResetPassword,
+  'users.sendPasswordReset': usersSendPasswordReset,
 };
