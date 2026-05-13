@@ -23,6 +23,43 @@ import { getSession, clearSession, isLoggedIn, signOut } from '../lib/auth.js';
 // flattening (lib/api.js does it). Keeps every call site below unchanged.
 async function callApi(action, params = {}) { return _callApi(action, params); }
 
+// ── Mobile table-to-card auto-labeller ──────────────────────────────
+// At <640px wide the admin tables collapse to a card stack (see the
+// @media block at the bottom of assets/css/admin.css). The CSS uses
+// `content: attr(data-label)` to render each cell's column header as
+// a label above its value. This function walks every .table-wrap
+// table, reads `<thead> <th>` text, and stamps it onto each <tbody>
+// <td> as data-label — without touching the renderXxxRow() string
+// builders elsewhere in this file. Run on DOM-ready + via a
+// MutationObserver so dynamically-rendered tables (every API load)
+// get re-labelled automatically.
+//
+// Cells with a `colspan` (e.g. the "loading…" empty-row) are skipped
+// so they don't get a misleading label.
+function applyTableLabels(root = document) {
+  root.querySelectorAll('.table-wrap table').forEach(table => {
+    const headers = Array.from(table.querySelectorAll('thead th'))
+      .map(th => th.textContent.trim());
+    if (!headers.length) return;
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      Array.from(tr.children).forEach((td, i) => {
+        if (td.hasAttribute('colspan')) return;
+        if (headers[i]) td.setAttribute('data-label', headers[i]);
+      });
+    });
+  });
+}
+const _tableLabelObserver = new MutationObserver(() => applyTableLabels());
+window.addEventListener('DOMContentLoaded', () => {
+  applyTableLabels();
+  // Observe every tbody for changes; the renderXxxRow() functions
+  // generally do one big tbody.innerHTML swap per load, so we fire
+  // once per render, not once per row.
+  document.querySelectorAll('.table-wrap table tbody').forEach(tbody => {
+    _tableLabelObserver.observe(tbody, { childList: true, subtree: false });
+  });
+});
+
 
 // ================================================================
 //  AUTH GUARD — checks login session before loading dashboard
