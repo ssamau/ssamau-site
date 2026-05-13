@@ -17,10 +17,28 @@
 // / `clearSession()` helpers below, so call sites in admin/main.js
 // don't need to know which path is active.
 //
-// sessionStorage is the storage layer for both today; the spa-and-pwa
-// branch moves to localStorage so mobile webview process kills don't
-// wipe sessions. We keep `ssam_last_user` (no secrets) in localStorage
-// already so it survives across sessions for UX.
+// localStorage is the storage layer for both, switched from
+// sessionStorage in the spa-and-pwa branch. The reason: mobile
+// WebView (which Capacitor uses for the iOS + Android wrap) suspends
+// the renderer process when the app backgrounds, and on resume the
+// sessionStorage namespace is empty — users get force-logged-out
+// every time they switch apps. With localStorage the session
+// survives suspends + cold launches, which is what users expect from
+// a "real" native app.
+//
+// The XSS risk that originally justified sessionStorage is mitigated
+// by the CSP we landed on Branch 1 (script-src 'self' + GTM only,
+// no `unsafe-inline` for <script> elements) and tightened further
+// later in this branch by dropping 'unsafe-inline' from
+// script-src-attr too.
+//
+// `ssam_last_user` was already in localStorage from earlier; nothing
+// changes for it.
+//
+// Migration of existing in-flight sessions: the very first time a
+// user loads the new code, they'll see no session (it's still in
+// sessionStorage from before). They'll have to log in once. That's
+// fine — for the 22 leadership users this is a one-time blip.
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './api.js';
 
@@ -32,12 +50,12 @@ const LAST_USER          = 'ssam_last_user';
 // ─── Reads ──────────────────────────────────────────────────────────
 
 function readSupabaseSession() {
-  try { return JSON.parse(sessionStorage.getItem(SUP_SESSION_KEY) || 'null'); }
+  try { return JSON.parse(localStorage.getItem(SUP_SESSION_KEY) || 'null'); }
   catch { return null; }
 }
 
 function readLegacySession() {
-  try { return JSON.parse(sessionStorage.getItem(LEGACY_SESSION_KEY) || 'null'); }
+  try { return JSON.parse(localStorage.getItem(LEGACY_SESSION_KEY) || 'null'); }
   catch { return null; }
 }
 
@@ -67,7 +85,7 @@ export function getToken() {
     // Expired — fall through. The api client will get 401 and call
     // clearSession() which removes this key.
   }
-  return sessionStorage.getItem(LEGACY_TOKEN_KEY) || '';
+  return localStorage.getItem(LEGACY_TOKEN_KEY) || '';
 }
 
 // Pre-fill helper for the login form. Stores whatever the user last
@@ -102,7 +120,7 @@ export function saveSupabaseSession(authResponse, userProfile) {
       loginAt:        new Date().toISOString(),
     },
   };
-  sessionStorage.setItem(SUP_SESSION_KEY, JSON.stringify(stored));
+  localStorage.setItem(SUP_SESSION_KEY, JSON.stringify(stored));
   // Persist the identifier the user successfully signed in with — could
   // be email, NID, or username (login.js passes whichever they typed).
   if (stored.user.username) localStorage.setItem(LAST_USER, stored.user.username);
@@ -121,16 +139,16 @@ export function saveSession(user, token) {
     token,
     loginAt:      new Date().toISOString(),
   };
-  sessionStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify(session));
-  sessionStorage.setItem(LEGACY_TOKEN_KEY, token);
+  localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify(session));
+  localStorage.setItem(LEGACY_TOKEN_KEY, token);
   if (user.username) localStorage.setItem(LAST_USER, user.username);
 }
 
 // Clears every auth artefact. Called by signOut + api.js on 401.
 export function clearSession() {
-  sessionStorage.removeItem(SUP_SESSION_KEY);
-  sessionStorage.removeItem(LEGACY_SESSION_KEY);
-  sessionStorage.removeItem(LEGACY_TOKEN_KEY);
+  localStorage.removeItem(SUP_SESSION_KEY);
+  localStorage.removeItem(LEGACY_SESSION_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
 // Sign out. For Supabase sessions, fire the /auth/v1/logout endpoint to
