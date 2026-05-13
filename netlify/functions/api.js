@@ -1470,7 +1470,26 @@ const handlers = {
       const memberIdByXlsxRow = data.member_id_by_xlsx_row || {};
 
       // ─── 4a. Committee head / vice-head FK wiring ─────────────────
+      // xlsx rule: a club President/VP/DVP who is ALSO assigned to a
+      // committee is that committee's head/vice. So someone whose
+      // club_role is "Deputy Vice President" and whose committee_id is
+      // Communications is Communications' vice-head, not just a board
+      // member. Without this, the bulkSeed left the vice slot null for
+      // four committees and the public homepage ended up showing 8 board
+      // members instead of 3.
+      //
+      // Precedence on conflicts: a literal "Committee Head" / "Committee
+      // Vice Head" role wins over a club VP/DVP coincidence — both should
+      // resolve to the same person anyway, but if the xlsx disagrees with
+      // itself the explicit committee role is the source of truth.
+      const HEAD_ROLES = new Set(['Committee Head', 'President']);
+      const VICE_ROLES = new Set(['Committee Vice Head', 'Vice President', 'Deputy Vice President']);
+
       let headsAssigned = 0;
+      const headAssigned = new Set();   // committee_ids that already got a head this batch
+      const viceAssigned = new Set();   // ditto for vice
+
+      // First pass: explicit Committee Head / Committee Vice Head wins.
       for (const r of rows) {
         const committeeId = r.new_committee_name
           ? committeeIdByName[r.new_committee_name] || null
@@ -1480,11 +1499,40 @@ const handlers = {
         if (!memberId) continue;
         if (r.club_role === 'Committee Head') {
           await sql`UPDATE committees SET committee_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
+          headAssigned.add(committeeId);
           headsAssigned++;
         } else if (r.club_role === 'Committee Vice Head') {
           await sql`UPDATE committees SET committee_vice_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
+          viceAssigned.add(committeeId);
           headsAssigned++;
         }
+      }
+
+      // Second pass: club President / VPs / DVPs who have a committee
+      // assignment AND whose committee doesn't already have a head/vice
+      // set by the first pass. This is what the user means by "anyone
+      // with a committee + president role is the head of that committee,
+      // anyone with a committee + vice role is its vice."
+      for (const r of rows) {
+        const committeeId = r.new_committee_name
+          ? committeeIdByName[r.new_committee_name] || null
+          : (r.committee_id || null);
+        if (!committeeId) continue;
+        const memberId = memberIdByXlsxRow[r._xlsx_row];
+        if (!memberId) continue;
+        if (HEAD_ROLES.has(r.club_role) && !headAssigned.has(committeeId)) {
+          await sql`UPDATE committees SET committee_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
+          headAssigned.add(committeeId);
+          headsAssigned++;
+        } else if (VICE_ROLES.has(r.club_role) && !viceAssigned.has(committeeId)) {
+          await sql`UPDATE committees SET committee_vice_head_member_id = ${memberId} WHERE committee_id = ${committeeId}`;
+          viceAssigned.add(committeeId);
+          headsAssigned++;
+        }
+        // Schema only stores one vice per committee, so subsequent VP/DVPs
+        // for the same committee (e.g. Communications has both Hanan and
+        // Ryan in the xlsx) are dropped silently. Multi-vice support is a
+        // schema follow-up.
       }
 
       // ─── 4b. Leadership user accounts ─────────────────────────────
