@@ -44,14 +44,19 @@
 #     ship from this origin (or the gtag loader we explicitly allow). All four
 #     HTML pages have zero inline <script> blocks after the split branch —
 #     verified — so we don't need 'unsafe-inline' on script-src.
-#   • script-src-attr 'unsafe-inline' is a deliberate trade-off. ~195 inline
-#     onclick="..." attributes still live in the markup (legacy from the old
-#     all-in-one HTML files). Converting them to addEventListener would mean
-#     touching every render template — a 1500-line refactor that the SPA
-#     branch will do anyway as part of routing. CSP3's script-src-attr lets
-#     us isolate "inline event handlers allowed" from "inline <script> tags
-#     blocked", which kills the bigger attack vector (stored XSS via <script>
-#     injection) while keeping the migration cost sane.
+#   • script-src-attr 'self' (was 'unsafe-inline' until commit 6 of the
+#     spa-and-pwa branch). The previous setting was a deliberate temporary
+#     loophole for the ~150 inline onclick="..." attributes the admin markup
+#     used to carry — converting each one to addEventListener would have meant
+#     touching every render template, which is exactly what commit 5 of this
+#     branch did (replaced them all with data-action delegation via a single
+#     document-level dispatcher in assets/js/admin/dispatch.js). Once the
+#     inline handlers were gone, the CSP exception became dead weight that
+#     would have re-opened the stored-XSS vector on the next markup
+#     regression — so this commit closes it. `'self'` here is functionally
+#     equivalent to 'none' for inline handlers (inline attributes can never
+#     be same-origin); the keyword is just the minimum strict form that
+#     parses correctly across browsers.
 #   • style-src 'self' + Google Fonts CSS host. style-src-attr 'unsafe-inline'
 #     same rationale — ~285 inline style="..." attributes throughout.
 #   • connect-src includes google-analytics.com so gtag's beacon endpoint
@@ -73,7 +78,7 @@
     Content-Security-Policy = """default-src 'self'; \
 script-src 'self' https://www.googletagmanager.com; \
 script-src-elem 'self' https://www.googletagmanager.com; \
-script-src-attr 'unsafe-inline'; \
+script-src-attr 'self'; \
 style-src 'self' https://fonts.googleapis.com; \
 style-src-attr 'unsafe-inline'; \
 font-src 'self' https://fonts.gstatic.com; \
