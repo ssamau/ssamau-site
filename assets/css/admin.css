@@ -347,9 +347,42 @@ tr:hover td { background:#fafcfa; }
   .sb-toggle { display: inline-flex; align-items: center; justify-content: center; }
 }
 @media(max-width:580px) {
-  .stats-grid { grid-template-columns:1fr; }
+  /* Dashboard stat cards: stay 2x2 instead of collapsing to 1-col.
+   * Was 1-col but that meant 4 cards × ~120px each = 480px of scroll
+   * before you saw anything else. 2x2 halves that, and the cards are
+   * small enough (icon + number + label) to still read well at half
+   * width on a 375px iPhone. */
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  /* Form rows (modal inputs) — multi-column inputs collapse to single
+   * column so labels don't get truncated. fg-row3 was already in this
+   * block; fg-row joined it. */
   .fg-row, .fg-row3 { grid-template-columns:1fr; }
-  .profile-stats { grid-template-columns:1fr 1fr; }
+  /* Project KPI tiles + summary rows: 2-col at this width. The 880px
+   * breakpoint already handled the desktop→tablet drop; this one
+   * keeps them 2x2 instead of crashing to a single tall column. */
+  .proj-kpis, .sum-row { grid-template-columns:1fr 1fr; }
+  /* Bigger touch targets for icon buttons (Apple HIG = 44pt minimum,
+   * the spec for accessible touch. Default .btn-icon is ~28px which
+   * is too small to tap reliably on a phone). Apply only at this
+   * breakpoint so desktop tables stay information-dense. */
+  .btn-icon {
+    min-width: 36px;
+    min-height: 36px;
+    padding: .4rem .55rem;
+  }
+  /* Modal content: full-width minus a slim margin instead of the
+   * 520px cap that leaves awkward gutters on narrow phones. */
+  .overlay { padding: .5rem; }
+  .modal { max-height: 95vh; }
+  /* Filter+button rows in card-head wrap nicely (they already had
+   * flex-wrap, but their children were too wide — give selects+inputs
+   * a sane min-width so they shrink rather than overflowing the row). */
+  .card-head-right { width: 100%; }
+  .card-head-right > * { flex: 1 1 auto; min-width: 0; }
+  /* Topbar at narrow widths: shrink the connection-status pill +
+   * align-items so the 5 elements (hamburger / title / status /
+   * logout / refresh) compete more gracefully. */
+  .api-status { font-size: .65rem; padding: .25rem .5rem; }
 }
 
 /* ── Mobile tables: card stack under 640px ───────────────────────────
