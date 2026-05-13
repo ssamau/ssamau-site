@@ -41,7 +41,7 @@ export async function loadAttendance(projectId) {
       <td>${fmtDate(a.attendance_date) || '—'}</td>
       <td>${checker ? esc(checker.preferred_name || checker.full_name) : '—'}</td>
       <td>
-        <button class="btn-icon del" onclick="confirmDelete('attendance','${a.attendance_id}','سجل الحضور هذا')">🗑️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="attendance" data-id="${a.attendance_id}" data-name="سجل الحضور هذا">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -101,7 +101,7 @@ export async function loadBulkAttGrid(pid) {
     const cls = cs === 'Present' ? 'present' : cs === 'Absent' ? 'absent' : cs === 'Late' ? 'late' : cs === 'Excused' ? 'excused' : '';
     return `<div class="att-card ${cls}"
       data-mid="${p.member_id || ''}" data-ve="${p.volunteer_email || ''}" data-tp="${p.participant_type}"
-      onclick="cycleAttStatus(this)">
+      data-action="cycleAttStatus">
       <div class="att-av">${nm.charAt(0)}</div>
       <div><div class="att-nm">${nm}</div><div class="att-st">${cs || '—'}</div></div>
     </div>`;

@@ -38,8 +38,8 @@ export async function loadCommittees() {
       <td><span class="tag t-b">${count} عضو</span></td>
       <td>${tag(c.status, STATUS_COLORS[c.status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon edit" onclick="editCommittee('${c.committee_id}')">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('committee','${c.committee_id}',${attrJson(c.committee_name)})">🗑️</button>
+        <button class="btn-icon edit" data-action="editCommittee" data-id="${c.committee_id}">✏️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="committee" data-id="${c.committee_id}" data-name=${attrJson(c.committee_name)}>🗑️</button>
       </td>
     </tr>`;
   }).join('');

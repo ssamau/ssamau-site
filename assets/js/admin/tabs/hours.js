@@ -59,15 +59,15 @@ export function renderHoursRow(h) {
 
   const actions = [];
   if (status === 'Draft' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="اعتماد أولي" onclick="primaryApproveHours(${h.hours_id})">✅</button>`);
-    actions.push(`<button class="btn-icon" title="رفض" onclick="rejectHours(${h.hours_id})">❌</button>`);
+    actions.push(`<button class="btn-icon" title="اعتماد أولي" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
   } else if (status === 'PrimaryApproved' && isAdmin) {
-    actions.push(`<button class="btn-icon" title="اعتماد نهائي" onclick="finalApproveHours(${h.hours_id})">✅</button>`);
-    actions.push(`<button class="btn-icon" title="رفض" onclick="rejectHours(${h.hours_id})">❌</button>`);
+    actions.push(`<button class="btn-icon" title="اعتماد نهائي" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
   } else if (status === 'FinalApproved' && isAdmin) {
-    actions.push(`<button class="btn-icon" title="رفض / استرجاع" onclick="rejectHours(${h.hours_id})">↩️</button>`);
+    actions.push(`<button class="btn-icon" title="رفض / استرجاع" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
   }
-  actions.push(`<button class="btn-icon del" onclick="confirmDelete('hours','${h.hours_id}','هذا السجل')">🗑️</button>`);
+  actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="هذا السجل">🗑️</button>`);
 
   const approverHint = h.primary_approver_name
     ? `<div style="font-size:.65rem;color:var(--tm);margin-top:.15rem">أولي: ${esc(h.primary_approver_name)}${h.final_approver_name ? ` · نهائي: ${esc(h.final_approver_name)}` : ''}</div>`

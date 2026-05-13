@@ -30,7 +30,7 @@ export async function loadCerts(pid) {
       <td><strong style="color:var(--g)">${c.hours || 0}</strong></td>
       <td><code style="font-size:.7rem;background:#f3f4f6;padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block">${esc(c.verify_code)}</code></td>
       <td style="font-size:.71rem;color:var(--tm)">${String(c.issued_at || '').split('T')[0] || '—'}</td>
-      <td><button class="btn-icon" onclick="previewCertCard(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="معاينة">👁️</button></td>
+      <td><button class="btn-icon" data-action="previewCertCard" data-card="${JSON.stringify(c).replace(/"/g,'&quot;')}" title="معاينة">👁️</button></td>
     </tr>`;
   }).join('');
 }

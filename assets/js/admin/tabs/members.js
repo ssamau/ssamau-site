@@ -62,9 +62,9 @@ export function renderMembers(members) {
       <td><strong style="color:var(--g)">${m.total_hours || 0}</strong></td>
       <td>${tag(m.status, STATUS_COLORS[m.status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon edit" onclick="editMember('${m.member_id}')" title="تعديل">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('member','${m.member_id}',${attrJson(m.full_name)})" title="حذف">🗑️</button>
-        <button class="btn-icon" onclick="viewProfile('${m.member_id}')" title="ملف العضو">👤</button>
+        <button class="btn-icon edit" data-action="editMember" data-id="${m.member_id}" title="تعديل">✏️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="member" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="حذف">🗑️</button>
+        <button class="btn-icon" data-action="viewProfile" data-id="${m.member_id}" title="ملف العضو">👤</button>
       </td>
     </tr>`;
   }).join('');

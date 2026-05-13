@@ -41,7 +41,7 @@ export async function loadParticipants(projectId) {
       <td><span class="tag t-gr">${esc(p.availability_type)}</span></td>
       <td>${p.outstanding_flag === 'true' || p.outstanding_flag === true ? '⭐' : '—'}</td>
       <td>
-        <button class="btn-icon del" onclick="confirmDelete('participant','${p.participant_id}','هذا المشارك')">🗑️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="participant" data-id="${p.participant_id}" data-name="هذا المشارك">🗑️</button>
       </td>
     </tr>`;
   }).join('');

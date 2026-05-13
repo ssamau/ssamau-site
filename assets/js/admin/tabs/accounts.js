@@ -109,20 +109,20 @@ export function renderAccountRow(a) {
   const actions = [];
   if (hasAccount) {
     if (isAdmin) {
-      actions.push(`<button class="btn-icon edit" title="تعديل" onclick="editAccount(${a.id})">✏️</button>`);
+      actions.push(`<button class="btn-icon edit" title="تعديل" data-action="editAccount" data-id="${a.id}">✏️</button>`);
     }
     if (isAdmin || (a.access_level !== 'superadmin' && a.access_level !== 'head')) {
       if (a.auth_user_id) {
-        actions.push(`<button class="btn-icon" title="إرسال رابط إعادة تعيين كلمة المرور" onclick="sendPasswordResetEmail(${a.id}, ${attrJson(a.username)}, ${attrJson(a.auth_email || '')})">📧</button>`);
+        actions.push(`<button class="btn-icon" title="إرسال رابط إعادة تعيين كلمة المرور" data-action="sendPasswordResetEmail" data-id="${a.id}" data-username=${attrJson(a.username)} data-email=${attrJson(a.auth_email || '')}>📧</button>`);
       } else {
-        actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور (إنشاء كلمة مؤقتة)" onclick="resetAccountPassword(${a.id}, ${attrJson(a.username)})">🔑</button>`);
+        actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور (إنشاء كلمة مؤقتة)" data-action="resetAccountPassword" data-id="${a.id}" data-username=${attrJson(a.username)}>🔑</button>`);
       }
     }
     if (isAdmin && !isSelf) {
-      actions.push(`<button class="btn-icon del" title="حذف" onclick="confirmDeleteAccount(${a.id}, ${attrJson(a.username)})">🗑️</button>`);
+      actions.push(`<button class="btn-icon del" title="حذف" data-action="confirmDeleteAccount" data-id="${a.id}" data-username=${attrJson(a.username)}>🗑️</button>`);
     }
   } else if (isAdmin) {
-    actions.push(`<button class="btn-icon" title="إنشاء حساب لهذا العضو" onclick="openAccountModalForMember(${attrJson(a.member_id)})">➕</button>`);
+    actions.push(`<button class="btn-icon" title="إنشاء حساب لهذا العضو" data-action="openAccountModalForMember" data-id=${attrJson(a.member_id)}>➕</button>`);
   }
 
   // Slightly fade no-account rows so the eye lands on the actionable ones.

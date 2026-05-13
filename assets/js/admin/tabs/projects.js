@@ -48,8 +48,8 @@ export function renderProjects(projects) {
       <td>${mgr ? esc(mgr.preferred_name || mgr.full_name) : '<span style="color:var(--tm)">—</span>'}</td>
       <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon edit" onclick="editProject('${p.project_id}')">✏️</button>
-        <button class="btn-icon del" onclick="confirmDelete('project','${p.project_id}',${attrJson(p.project_name)})">🗑️</button>
+        <button class="btn-icon edit" data-action="editProject" data-id="${p.project_id}">✏️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="project" data-id="${p.project_id}" data-name=${attrJson(p.project_name)}>🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -141,11 +141,11 @@ export async function viewProjectDetail(pid) {
         ${tag(p.project_status, STATUS_COLORS[p.project_status]||'t-gr')}
         ${p.proposal_file_url?`<a href="${p.proposal_file_url}" target="_blank" class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)">📄 المقترح</a>`:''}
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          onclick="openModalWithPrj('bulk-att','batt-prj','${p.project_id}')">⚡ حضور جماعي</button>
+          data-action="openModalWithPrj" data-modal="bulk-att" data-selector="batt-prj" data-project-id="${p.project_id}">⚡ حضور جماعي</button>
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          onclick="openModalWithPrj('bulk-thanks','bthx-prj','${p.project_id}')">💌 شكر</button>
+          data-action="openModalWithPrj" data-modal="bulk-thanks" data-selector="bthx-prj" data-project-id="${p.project_id}">💌 شكر</button>
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          onclick="openModalWithPrj('bulk-certs','bcert-prj','${p.project_id}')">🏅 شهادات</button>
+          data-action="openModalWithPrj" data-modal="bulk-certs" data-selector="bcert-prj" data-project-id="${p.project_id}">🏅 شهادات</button>
       </div>
     </div>
     <div class="proj-kpis">

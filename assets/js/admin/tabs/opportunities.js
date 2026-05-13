@@ -70,9 +70,9 @@ export function renderOpportunities(items) {
       <td style="font-size:.8rem">${att}</td>
       <td>${tag(statusLabel, STATUS_COLORS[o.status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon" title="إدارة المسندين" onclick="openOpportunityAssignments('${o.opportunity_id}')">👥</button>
-        <button class="btn-icon edit" onclick="editOpportunity('${o.opportunity_id}')">✏️</button>
-        <button class="btn-icon del" onclick="confirmDeleteOpportunity('${o.opportunity_id}','${esc(o.role_name).replace(/'/g, "\\'")}')">🗑️</button>
+        <button class="btn-icon" title="إدارة المسندين" data-action="openOpportunityAssignments" data-id="${o.opportunity_id}">👥</button>
+        <button class="btn-icon edit" data-action="editOpportunity" data-id="${o.opportunity_id}">✏️</button>
+        <button class="btn-icon del" data-action="confirmDeleteOpportunity" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -200,8 +200,8 @@ export function renderAssignments(items) {
     ).join('');
     return `<tr>
       <td>${name}</td>
-      <td><select onchange="markAttendance(${a.assignment_id}, this.value)">${opts}</select></td>
-      <td><button class="btn-icon del" onclick="removeAssignment(${a.assignment_id})">🗑️</button></td>
+      <td><select data-action="markAttendance" data-id="${a.assignment_id}">${opts}</select></td>
+      <td><button class="btn-icon del" data-action="removeAssignment" data-id="${a.assignment_id}">🗑️</button></td>
     </tr>`;
   }).join('');
 }

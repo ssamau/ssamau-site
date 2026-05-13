@@ -27,8 +27,8 @@ export async function loadAdvisors() {
     <td style="direction:ltr;font-size:.78rem">${esc(a.phone) || '—'}</td>
     <td>${tag(a.status, STATUS_COLORS[a.status] || 't-gr')}</td>
     <td>
-      <button class="btn-icon edit" onclick="editAdvisor('${a.advisor_id}')">✏️</button>
-      <button class="btn-icon del" onclick="confirmDelete('advisor','${a.advisor_id}',${attrJson(a.full_name)})">🗑️</button>
+      <button class="btn-icon edit" data-action="editAdvisor" data-id="${a.advisor_id}">✏️</button>
+      <button class="btn-icon del" data-action="confirmDelete" data-type="advisor" data-id="${a.advisor_id}" data-name=${attrJson(a.full_name)}>🗑️</button>
     </td>
   </tr>`).join('');
 }

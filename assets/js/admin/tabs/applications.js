@@ -134,7 +134,7 @@ export function renderApplicationRow(a) {
     <td>${tag(statusLabel, APP_STATUS_COLOR[a.status] || 't-gr')}</td>
     <td>${fmtDate(a.created_at)}</td>
     <td>
-      <button class="btn-icon" title="${isFinal ? 'عرض' : 'مراجعة'}" onclick="openApplicationReview('${esc(a.application_id)}')">${isFinal ? '👁️' : '✏️'}</button>
+      <button class="btn-icon" title="${isFinal ? 'عرض' : 'مراجعة'}" data-action="openApplicationReview" data-id="${esc(a.application_id)}">${isFinal ? '👁️' : '✏️'}</button>
     </td>
   </tr>`;
 }

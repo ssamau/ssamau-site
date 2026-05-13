@@ -32,6 +32,7 @@ import {
 import {
   showPage, closeSidebar, toggleSidebar, setLoaders,
 } from './router.js';
+import { setHandlers, setupDispatch } from './dispatch.js';
 
 // ── Per-tab modules ────────────────────────────────────────────────────────
 import { loadDashboard } from './tabs/dashboard.js';
@@ -262,59 +263,92 @@ window.addEventListener('load', () => {
 });
 
 
-// ─── Inline-handler re-exports ──────────────────────────────────────────────
-// admin.html still uses onclick="foo()" attributes throughout. ES modules are
-// module-scoped, so handlers declared in this file aren't visible to inline
-// HTML attributes unless we attach them to window. This block does that for
-// every name reachable from a current inline handler — sourced by grepping
-// admin.html for `on(click|change|submit|input|keydown|load)="<name>("`.
+// ─── Delegated event-handler dispatch ──────────────────────────────────────
+// Replaces the previous Object.assign(window, {...}) shim. admin.html and
+// every tab module's renderXxxRow function now emit `data-action="..."` +
+// associated `data-*` attributes instead of inline `onclick="foo()"`. The
+// dispatcher in assets/js/admin/dispatch.js owns delegated listeners on
+// document; the map below tells it how to translate each data-action key
+// into a call to the underlying handler function.
 //
-// Temporary scaffolding: the strict-CSP commit later in this branch removes
-// the inline onclick="..." attributes from the markup and replaces them with
-// addEventListener bindings, at which point this Object.assign goes away.
-Object.assign(window, {
-  // ── Generic / shared ─────────────────────────
-  showPage, openModal, closeModal, refreshData, logout, filterTable, copyShownPw,
+// Each wrapper takes `(el, event)` where `el` is the dispatched element
+// (with the data-action). Wrappers exist purely to extract args from
+// `el.dataset` / `el.value` — the underlying handlers (editMember,
+// confirmDelete, etc.) keep their existing signatures so they're still
+// callable directly from JS code paths (e.g. one tab calling another's
+// load function).
+setHandlers({
+  // ── No-arg ──────────────────────────────────────────────────────
+  refreshData, logout, copyShownPw, generateAccountPw,
+  saveAccount, saveAdvisor, saveAttendance, saveBulkAttendance,
+  saveBulkCerts, saveBulkThanks, saveCommittee, saveHours, saveInterest,
+  saveMember, saveOpportunity, saveParticipant, saveProject, saveThanks,
+  addAssignmentMember, addAssignmentVolunteer,
+  appAccept, appAssignCommittee, appReject, appRequestInterview,
+  issueCert, verifyCert,
+  onHrsAssignmentChange, onHrsOpportunityChange, onOppRolePreset,
+  toggleAttFields, toggleHrsFields, toggleParticipantFields,
+  loadApplications, loadOpportunities,
+  openAccountModal,
 
-  // ── Members ──────────────────────────────────
-  saveMember, editMember, filterMembersByRole, filterMembersByStatus, viewProfile, loadMemberProfile,
+  // ── Hardcoded-string args via data-attribute ────────────────────
+  closeModal:       (el) => closeModal(el.dataset.modal),
+  openModal:        (el) => openModal(el.dataset.modal),
+  showPage:         (el) => showPage(el.dataset.page),
+  switchCertTab:    (el) => switchCertTab(el.dataset.tab),
+  markAllAtt:       (el) => markAllAtt(el.dataset.status),
 
-  // ── Advisors ─────────────────────────────────
-  saveAdvisor, editAdvisor,
+  // ── this.value (on inputs / selects) ────────────────────────────
+  filterMembersByRole:    (el) => filterMembersByRole(el.value),
+  filterMembersByStatus:  (el) => filterMembersByStatus(el.value),
+  filterProjectsByStatus: (el) => filterProjectsByStatus(el.value),
+  loadAttendance:         (el) => loadAttendance(el.value),
+  loadBulkAttGrid:        (el) => loadBulkAttGrid(el.value),
+  loadCerts:              (el) => loadCerts(el.value),
+  loadHours:              (el) => loadHours(el.value),
+  loadInterest:           (el) => loadInterest(el.value),
+  loadMemberProfile:      (el) => loadMemberProfile(el.value),
+  loadParticipants:       (el) => loadParticipants(el.value),
+  loadThanks:             (el) => loadThanks(el.value),
 
-  // ── Committees ───────────────────────────────
-  saveCommittee, editCommittee,
+  // ── Search inputs (target tbody id + live value) ────────────────
+  filterTable:      (el) => filterTable(el.dataset.target, el.value),
 
-  // ── Projects ─────────────────────────────────
-  saveProject, editProject, filterProjectsByStatus,
+  // ── Single dynamic ID (string) ──────────────────────────────────
+  editAdvisor:                 (el) => editAdvisor(el.dataset.id),
+  editCommittee:               (el) => editCommittee(el.dataset.id),
+  editMember:                  (el) => editMember(el.dataset.id),
+  editOpportunity:             (el) => editOpportunity(el.dataset.id),
+  editProject:                 (el) => editProject(el.dataset.id),
+  openApplicationReview:       (el) => openApplicationReview(el.dataset.id),
+  openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
+  viewProfile:                 (el) => viewProfile(el.dataset.id),
+  openAccountModalForMember:   (el) => openAccountModalForMember(el.dataset.id),
 
-  // ── Participants ─────────────────────────────
-  saveParticipant, loadParticipants, toggleParticipantFields,
+  // ── Single dynamic ID (numeric) ─────────────────────────────────
+  editAccount:           (el) => editAccount(Number(el.dataset.id)),
+  finalApproveHours:     (el) => finalApproveHours(Number(el.dataset.id)),
+  primaryApproveHours:   (el) => primaryApproveHours(Number(el.dataset.id)),
+  rejectHours:           (el) => rejectHours(Number(el.dataset.id)),
+  removeAssignment:      (el) => removeAssignment(Number(el.dataset.id)),
 
-  // ── Attendance ───────────────────────────────
-  saveAttendance, loadAttendance, loadBulkAttGrid, saveBulkAttendance, markAttendance, markAllAtt, cycleAttStatus, toggleAttFields,
+  // ── Multi-arg ────────────────────────────────────────────────────
+  confirmDelete:           (el) => confirmDelete(el.dataset.type, el.dataset.id, el.dataset.name),
+  confirmDeleteAccount:    (el) => confirmDeleteAccount(Number(el.dataset.id), el.dataset.username),
+  confirmDeleteOpportunity:(el) => confirmDeleteOpportunity(el.dataset.id, el.dataset.role),
+  resetAccountPassword:    (el) => resetAccountPassword(Number(el.dataset.id), el.dataset.username),
+  sendPasswordResetEmail:  (el) => sendPasswordResetEmail(Number(el.dataset.id), el.dataset.username, el.dataset.email),
+  openModalWithPrj:        (el) => openModalWithPrj(el.dataset.modal, el.dataset.selector, el.dataset.projectId),
 
-  // ── Hours ────────────────────────────────────
-  saveHours, loadHours, toggleHrsFields, onHrsAssignmentChange, onHrsOpportunityChange, primaryApproveHours, finalApproveHours, rejectHours,
+  // ── Pass the element itself ─────────────────────────────────────
+  cycleAttStatus:   (el) => cycleAttStatus(el),
 
-  // ── Interest ─────────────────────────────────
-  saveInterest, loadInterest,
+  // ── Element + value combo ───────────────────────────────────────
+  markAttendance:   (el) => markAttendance(Number(el.dataset.id), el.value),
 
-  // ── Thanks ───────────────────────────────────
-  saveThanks, saveBulkThanks, loadThanks,
-
-  // ── Certificates ─────────────────────────────
-  issueCert, loadCerts, saveBulkCerts, switchCertTab, previewCertCard, verifyCert,
-
-  // ── Applications ─────────────────────────────
-  loadApplications, openApplicationReview, appAccept, appReject, appRequestInterview, appAssignCommittee,
-
-  // ── Opportunities ────────────────────────────
-  saveOpportunity, editOpportunity, loadOpportunities, confirmDeleteOpportunity, onOppRolePreset, openOpportunityAssignments, addAssignmentMember, addAssignmentVolunteer, removeAssignment,
-
-  // ── Accounts (users) ─────────────────────────
-  saveAccount, editAccount, openAccountModal, openAccountModalForMember, resetAccountPassword, sendPasswordResetEmail, confirmDeleteAccount, generateAccountPw,
-
-  // ── Modal helpers ────────────────────────────
-  openModalWithPrj, confirmDelete,
+  // ── JSON-encoded payload ────────────────────────────────────────
+  // previewCertCard takes a whole certificate row — we stash the full
+  // record as JSON in data-card so the handler unpacks it on click.
+  previewCertCard:  (el) => previewCertCard(JSON.parse(el.dataset.card)),
 });
+setupDispatch();
