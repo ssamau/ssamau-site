@@ -26,7 +26,15 @@ nav{position:fixed;top:0;right:0;left:0;z-index:200;background:rgba(255,255,255,
 .nav-hamburger{display:none;background:none;border:none;color:var(--gd);font-size:1.3rem;cursor:pointer;padding:.25rem;}
 .mobile-nav{display:none;position:fixed;top:68px;right:0;left:0;background:#fff;z-index:199;padding:1rem 1.5rem;flex-direction:column;gap:.75rem;border-bottom:1px solid var(--bd);box-shadow:0 8px 24px rgba(0,0,0,.08);}
 .mobile-nav.open{display:flex;}
-.mobile-nav a{color:var(--tl);font-size:.9rem;font-weight:600;text-decoration:none;padding:.5rem 0;border-bottom:1px solid var(--bd);}
+.mobile-nav a{color:var(--tl);font-size:.9rem;font-weight:600;text-decoration:none;padding:.5rem 0;border-bottom:1px solid var(--bd);display:block;}
+/* toggleLang() flips data-en/data-ar elements to display:inline globally;
+   force display:block back on drawer anchors so each link renders as a
+   full-width row with its border and padding intact. Anchored to `body`
+   instead of `:not(.en-lang)` directly — the latter would match the <html>
+   element too (which never has the class) and incorrectly trigger in EN mode. */
+.mobile-nav a[data-ar], .mobile-nav a[data-en]{display:none;}
+body:not(.en-lang) .mobile-nav a[data-ar]{display:block !important;}
+body.en-lang .mobile-nav a[data-en]{display:block !important;}
 
 /* ── HERO ── */
 .hero{min-height:100vh;background:linear-gradient(160deg,#0a2814,var(--gd) 40%,#1a5c2e 70%,#0d3318);display:flex;align-items:center;justify-content:center;padding:100px 2rem 4rem;position:relative;overflow:hidden;text-align:center;}
