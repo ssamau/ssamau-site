@@ -55,7 +55,10 @@
 #   • style-src 'self' + Google Fonts CSS host. style-src-attr 'unsafe-inline'
 #     same rationale — ~285 inline style="..." attributes throughout.
 #   • connect-src includes google-analytics.com so gtag's beacon endpoint
-#     isn't blocked. Our own API is on the same origin so 'self' covers it.
+#     isn't blocked, and the Supabase project domain since the API is now
+#     a Supabase Edge Function (different origin from the static site).
+#     `*.supabase.co` would be safer but our single project's hostname is
+#     fine and tighter.
 #   • frame-ancestors 'none' blocks the site from being framed (clickjacking).
 #
 # Other headers:
@@ -75,7 +78,7 @@ style-src 'self' https://fonts.googleapis.com; \
 style-src-attr 'unsafe-inline'; \
 font-src 'self' https://fonts.gstatic.com; \
 img-src 'self' data: https:; \
-connect-src 'self' https://www.google-analytics.com; \
+connect-src 'self' https://www.google-analytics.com https://pfibxvwiulwiiuwerawe.supabase.co; \
 frame-src 'self' https://app.netlify.com; \
 frame-ancestors 'self' https://app.netlify.com https://*.netlify.app; \
 base-uri 'self'; \

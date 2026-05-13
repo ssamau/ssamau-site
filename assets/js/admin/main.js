@@ -22,7 +22,6 @@ import { getSession, clearSession, isLoggedIn } from '../lib/auth.js';
 // Drop-in for the original local callApi — same signature, same envelope
 // flattening (lib/api.js does it). Keeps every call site below unchanged.
 async function callApi(action, params = {}) { return _callApi(action, params); }
-const API_URL = '/.netlify/functions/api';
 
 
 // ================================================================

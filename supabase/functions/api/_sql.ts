@@ -25,11 +25,14 @@
 // time of writing) — esm.sh is the same upstream Porsager/postgres.
 import postgres from 'https://esm.sh/postgres@3.4.5';
 
-const DB_URL = Deno.env.get('SUPABASE_DB_URL');
+// Note: NOT `SUPABASE_DB_URL` — Supabase reserves the SUPABASE_ prefix
+// for its own auto-injected secrets and refuses to let you set one with
+// `supabase secrets set`. So we use `DB_URL` as our own namespace.
+const DB_URL = Deno.env.get('DB_URL');
 if (!DB_URL) {
   // Loud failure at module load — better than a confusing 500 on first
   // request when a handler tries to query.
-  throw new Error('SUPABASE_DB_URL env var is required (run `supabase secrets set SUPABASE_DB_URL=...`).');
+  throw new Error('DB_URL env var is required (run `supabase secrets set DB_URL=...`).');
 }
 
 // One client per Edge Function instance. The pooler handles the rest.
