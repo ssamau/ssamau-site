@@ -47,11 +47,16 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
     return false;
   }
 
+  // tls:true when port is 465 (implicit TLS — Gmail's SMTPS endpoint)
+  // tls:false when port is 587 (STARTTLS — upgraded from plaintext).
+  // denomailer auto-handles the protocol per the flag, but we infer
+  // from the port to avoid relying on an extra env var.
+  const useTls = SMTP_PORT === 465;
   const client = new SMTPClient({
     connection: {
       hostname: SMTP_HOST,
       port:     SMTP_PORT,
-      tls:      false,         // STARTTLS on 587 is upgraded from plaintext
+      tls:      useTls,
       auth: { username: SMTP_USER, password: SMTP_PASS },
     },
   });
@@ -64,6 +69,7 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
       content: opts.text ?? stripHtml(opts.html),
       html:    opts.html,
     });
+    console.log(`[email] sent ok: subject="${opts.subject}" to=${Array.isArray(opts.to) ? opts.to.join(',') : opts.to}`);
     return true;
   } catch (err) {
     // Log but don't throw — callers (like applications.submit) should
