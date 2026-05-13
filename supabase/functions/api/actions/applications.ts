@@ -93,6 +93,70 @@ const applicationsSubmit: Handler = async (body) => {
   return { application_id: id };
 };
 
+// Translation tables — keep these in sync with apply.html's <select>
+// options. The form posts the raw value (e.g. `khadem_alharamain`),
+// the DB stores the raw value, and the admin sees the friendly label
+// in the email. We deliberately DON'T translate in the DB because the
+// raw enum is what the admin UI filters on; rendering is a view concern.
+//
+// Gender values are exceptions — the form posts the already-Arabic
+// label directly (`value="ذكر"` etc., see apply.html), so the value
+// usually IS the label. We still maintain a fallback table because
+// some test/legacy data has English codes (`male`/`female`).
+const SCHOLARSHIP_LABELS_AR: Record<string, string> = {
+  khadem_alharamain:    'برنامج خادم الحرمين الشريفين للابتعاث',
+  job_sponsored:        'الابتعاث الوظيفي (حكومي / عسكري)',
+  private_sector:       'ابتعاث الشركات والقطاع الخاص',
+  cultural_tourism:     'الابتعاث الثقافي والسياحي',
+  companion_student:    'مرافق دارس',
+  self_funded:          'دارس على الحساب الخاص',
+  companion_non_student:'مرافق غير دارس',
+  other:                'أخرى',
+};
+const UNIVERSITY_LABELS: Record<string, string> = {
+  melbourne:  'Melbourne University',
+  monash:     'Monash University',
+  rmit:       'RMIT University',
+  deakin:     'Deakin University',
+  latrobe:    'La Trobe University',
+  swinburne:  'Swinburne University',
+  victoria:   'Victoria University',
+  acu:        'Australian Catholic University',
+  other:      'أخرى',
+};
+const STUDY_LEVEL_LABELS_AR: Record<string, string> = {
+  PhD:      'دكتوراه',
+  Masters:  'ماجستير',
+  Bachelor: 'بكالوريوس',
+  Diploma:  'دبلوم',
+  Language: 'دراسة لغة',
+};
+const STUDY_STARTED_LABELS_AR: Record<string, string> = {
+  '<6mo':   'أقل من 6 أشهر',
+  '6mo-1y': 'من 6 أشهر إلى سنة',
+  '>1y':    'أكثر من سنة',
+};
+const GRADUATION_LABELS_AR: Record<string, string> = {
+  Jul2027: 'يوليو 2027',
+  Dec2027: 'ديسمبر 2027',
+  '2028+': '2028 أو لاحقاً',
+};
+const GENDER_LABELS_AR: Record<string, string> = {
+  male:   'ذكر',
+  female: 'أنثى',
+  // form sends 'ذكر' / 'أنثى' directly — these fall through the
+  // `?? raw` path in t() unchanged.
+};
+
+// Tiny translator with a sensible fallback: if the value isn't in the
+// table (e.g. an old enum value or stray test data), show the raw key
+// rather than `—` so the admin sees something to grep.
+function t(table: Record<string, string>, value: unknown): string {
+  if (value == null || value === '') return '—';
+  const v = String(value);
+  return table[v] ?? v;
+}
+
 // Compose + send the new-application notification. Pulled into its
 // own function so the submit handler stays readable, and so future
 // notifications (e.g. on application accept/reject) can reuse the
@@ -102,7 +166,25 @@ async function notifyNewApplication(applicationId: string, data: Record<string, 
   const nameEn = String(data.name_en || '');
   const subject = `📥 طلب عضوية جديد — ${nameAr}`;
 
-  const interests = Array.isArray(data.interests) ? data.interests as string[] : [];
+  // Resolve committee IDs (COM_001 …) → Arabic committee names by
+  // querying the committees table. Cheap one-shot read — and the
+  // notification is fire-and-forget anyway, so a small DB hit here
+  // doesn't slow the applicant's submit response.
+  const interestIds = Array.isArray(data.interests) ? data.interests as string[] : [];
+  let committeeNames: string[] = [];
+  if (interestIds.length) {
+    const rows = await sql`
+      SELECT committee_id, committee_name
+      FROM committees
+      WHERE committee_id = ANY(${interestIds})
+    ` as Array<{ committee_id: string; committee_name: string }>;
+    // Preserve the applicant's chosen ORDER (rows come back in PK order,
+    // not the applicant's order). Fall through to raw ID if a COM_XXX
+    // was deleted between submit and notify.
+    const byId = new Map(rows.map(r => [r.committee_id, r.committee_name]));
+    committeeNames = interestIds.map(id => byId.get(id) ?? id);
+  }
+
   const phoneFull = data.phone
     ? `${data.phone_country_code || ''} ${data.phone}`.trim()
     : '—';
@@ -110,89 +192,138 @@ async function notifyNewApplication(applicationId: string, data: Record<string, 
     ? `${data.whatsapp_country_code || ''} ${data.whatsapp}`.trim()
     : '—';
   const universityField = data.university_other
-    ? `${data.university || ''} (${data.university_other})`.trim()
-    : String(data.university || '—');
+    ? `${t(UNIVERSITY_LABELS, data.university)} — ${data.university_other}`
+    : t(UNIVERSITY_LABELS, data.university);
   const scholarshipField = data.scholarship_entity_other
-    ? `${data.scholarship_entity || ''} — ${data.scholarship_entity_other}`.trim()
-    : String(data.scholarship_entity || '—');
+    ? `${t(SCHOLARSHIP_LABELS_AR, data.scholarship_entity)} — ${data.scholarship_entity_other}`
+    : t(SCHOLARSHIP_LABELS_AR, data.scholarship_entity);
 
-  // Inline-CSS HTML email. Same design language as the password-
-  // recovery template (green brand header + Arabic-first body). Most
-  // email clients strip <style> blocks so every property is inline.
-  const html = `<!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f4f6f4;font-family:'Helvetica Neue',Arial,sans-serif;color:#111827;line-height:1.55;">
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f6f4;">
-  <tr><td align="center" style="padding:24px 12px;">
-    <table cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-      <tr><td style="background:#1A5C2E;padding:22px 24px;color:#fff;">
-        <div style="font-size:13px;color:#c9a032;letter-spacing:.5px;">SSAM — طلبات العضوية</div>
-        <div style="font-size:20px;font-weight:700;margin-top:4px;">طلب عضوية جديد</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;font-family:Menlo,Consolas,monospace;direction:ltr;text-align:left;">${esc(applicationId)}</div>
-      </td></tr>
-      <tr><td style="padding:24px;">
-        ${section('المتقدّم', [
-          ['الاسم (عربي)', nameAr],
-          ['Name (English)',  nameEn || '—'],
-          ['الاسم المختصر',   String(data.preferred_name || '—')],
-          ['الجنس',          String(data.gender || '—')],
-          ['تاريخ الميلاد',  String(data.date_of_birth || '—')],
-        ])}
-        ${section('التواصل', [
-          ['البريد الإلكتروني', String(data.email || '—')],
-          ['الجوال',            phoneFull],
-          ['واتساب',            whatsappFull],
-          ['العنوان في ملبورن', String(data.address_melbourne || '—')],
-        ])}
-        ${section('الهوية', [
-          ['رقم الهوية', String(data.national_id || '—')],
-          ['جهة الابتعاث', scholarshipField],
-        ])}
-        ${section('الدراسة', [
-          ['الجامعة',     universityField],
-          ['المرحلة',     String(data.study_level || '—')],
-          ['التخصص',     String(data.degree_field || data.major || '—')],
-          ['بداية الدراسة', String(data.study_started_window || '—')],
-          ['التخرج المتوقع', String(data.expected_graduation_window || '—')],
-          ['CV',          data.cv_url ? `<a href="${esc(String(data.cv_url))}" style="color:#1A5C2E">رابط</a>` : '—'],
-        ])}
-        ${interests.length ? `
-          <div style="margin-bottom:18px;">
-            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:8px;">اللجان المهتمة بها</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${interests.map(i => `<span style="display:inline-block;background:#e8f5e9;color:#0e3a1c;font-size:12px;padding:4px 10px;border-radius:50px;">${esc(i)}</span>`).join('')}
-            </div>
-          </div>` : ''}
-        ${data.skills_hobbies ? `
-          <div style="margin-bottom:14px;">
-            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">المهارات والاهتمامات</div>
-            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.skills_hobbies))}</div>
-          </div>` : ''}
-        ${data.about_self ? `
-          <div style="margin-bottom:14px;">
-            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">نبذة عن المتقدّم</div>
-            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.about_self))}</div>
-          </div>` : ''}
-        ${data.suggestions ? `
-          <div style="margin-bottom:14px;">
-            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">اقتراحات</div>
-            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.suggestions))}</div>
-          </div>` : ''}
-        <div style="margin-top:24px;text-align:center;">
-          <a href="https://ssamau.com/admin.html#/admin/applications"
-             style="display:inline-block;padding:12px 28px;background:#1A5C2E;color:#fff;text-decoration:none;font-weight:700;font-size:14px;border-radius:10px;">
-            افتح في لوحة الإدارة
-          </a>
-        </div>
-      </td></tr>
-      <tr><td style="background:#f9fafb;padding:14px 24px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
-        رسالة آلية من نظام إدارة النادي — لا ترد عليها.<br/>
-        SSAM — Saudi Students Association in Melbourne
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+  // Inline-CSS HTML email. Same design language and structure as the
+  // password-recovery template (which is known to render across Gmail,
+  // Apple Mail, Outlook) — bulletproof patterns:
+  //   * role="presentation" on every layout table (screen-reader hint
+  //     + signals "this is layout, not data" to some clients)
+  //   * bgcolor attribute MIRRORS style="background:…" because Gmail
+  //     web preserves bgcolor when it strips `background`
+  //   * No display:flex / gap (Gmail strips both — chips fall back to
+  //     plain inline-block spans separated by literal whitespace)
+  //   * <meta name="color-scheme" content="light only"> + supported-
+  //     color-schemes — opts the message out of Gmail's auto-darken
+  //     transform, which is the #1 reason "styling doesn't show up":
+  //     it inverts the white card to black, washes out the green
+  //     header, and rewrites text colors unpredictably
+  //   * !important on text colors inside the dark header band (Gmail
+  //     web/mobile will otherwise re-color white text to dark grey on
+  //     dark-mode users)
+  //   * Bulletproof CTA button: <a> inside a single-cell <table> with
+  //     bgcolor — survives Outlook + Gmail
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <title>${esc(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f4;font-family:'Helvetica Neue',Arial,sans-serif;color:#111827;line-height:1.55;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f4f6f4" style="background-color:#f4f6f4;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <!-- Card -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" bgcolor="#ffffff" style="max-width:640px;background-color:#ffffff;border-radius:12px;border:1px solid #e5e7eb;">
+
+          <!-- Header band -->
+          <tr>
+            <td bgcolor="#1A5C2E" style="background-color:#1A5C2E;padding:22px 24px;border-top-left-radius:12px;border-top-right-radius:12px;">
+              <div style="font-size:13px;color:#c9a032 !important;letter-spacing:.5px;">SSAM — طلبات العضوية</div>
+              <div style="font-size:20px;font-weight:700;margin-top:4px;color:#ffffff !important;">طلب عضوية جديد</div>
+              <div dir="ltr" style="font-size:12px;color:#ffffff !important;opacity:.8;margin-top:6px;font-family:Menlo,Consolas,monospace;text-align:left;">${esc(applicationId)}</div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px;">
+              ${section('المتقدّم', [
+                ['الاسم (عربي)', nameAr],
+                ['Name (English)',  nameEn || '—'],
+                ['الاسم المختصر',   String(data.preferred_name || '—')],
+                ['الجنس',          t(GENDER_LABELS_AR, data.gender)],
+                ['تاريخ الميلاد',  String(data.date_of_birth || '—')],
+              ])}
+              ${section('التواصل', [
+                ['البريد الإلكتروني', String(data.email || '—')],
+                ['الجوال',            phoneFull],
+                ['واتساب',            whatsappFull],
+                ['العنوان في ملبورن', String(data.address_melbourne || '—')],
+              ])}
+              ${section('الهوية', [
+                ['رقم الهوية', String(data.national_id || '—')],
+                ['جهة الابتعاث', scholarshipField],
+              ])}
+              ${section('الدراسة', [
+                ['الجامعة',     universityField],
+                ['المرحلة',     t(STUDY_LEVEL_LABELS_AR, data.study_level)],
+                ['التخصص',     String(data.degree_field || data.major || '—')],
+                ['بداية الدراسة', t(STUDY_STARTED_LABELS_AR, data.study_started_window)],
+                ['التخرج المتوقع', t(GRADUATION_LABELS_AR, data.expected_graduation_window)],
+                ['CV',          data.cv_url ? `<a href="${esc(String(data.cv_url))}" style="color:#1A5C2E;text-decoration:underline;">رابط</a>` : '—'],
+              ])}
+              ${committeeNames.length ? `
+              <div style="margin-bottom:18px;">
+                <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:8px;">اللجان المهتمة بها</div>
+                <div>
+                  ${committeeNames.map(name => `<span style="display:inline-block;background-color:#e8f5e9;color:#0e3a1c;font-size:12px;padding:4px 10px;border-radius:50px;margin:0 0 4px 4px;">${esc(name)}</span>`).join(' ')}
+                </div>
+              </div>` : ''}
+              ${data.skills_hobbies ? `
+              <div style="margin-bottom:14px;">
+                <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">المهارات والاهتمامات</div>
+                <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.skills_hobbies))}</div>
+              </div>` : ''}
+              ${data.about_self ? `
+              <div style="margin-bottom:14px;">
+                <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">نبذة عن المتقدّم</div>
+                <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.about_self))}</div>
+              </div>` : ''}
+              ${data.suggestions ? `
+              <div style="margin-bottom:14px;">
+                <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">اقتراحات</div>
+                <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.suggestions))}</div>
+              </div>` : ''}
+
+              <!-- CTA button (bulletproof: table-wrapped <a> with bgcolor) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0 auto;">
+                <tr>
+                  <td align="center" bgcolor="#1A5C2E" style="background-color:#1A5C2E;border-radius:10px;">
+                    <a href="https://ssamau.com/admin.html#/admin/applications"
+                       style="display:inline-block;padding:12px 28px;background-color:#1A5C2E;color:#ffffff !important;text-decoration:none;font-weight:700;font-size:14px;border-radius:10px;">
+                      افتح في لوحة الإدارة
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" bgcolor="#f9fafb" style="background-color:#f9fafb;padding:14px 24px;border-top:1px solid #e5e7eb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;font-size:11px;color:#9ca3af;line-height:1.6;">
+              <span dir="rtl">رسالة آلية من نظام إدارة النادي — لا ترد عليها.</span><br/>
+              <span dir="ltr">SSAM — Saudi Students Association in Melbourne</span>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   await sendEmail({ to: APPLICATION_NOTIF_TO, subject, html });
 }
@@ -211,12 +342,13 @@ function esc(s: string): string {
 
 // Renders a "section" of label/value rows in the email body. Same
 // table-based layout the password-recovery email uses — survives
-// Outlook + Gmail + Apple Mail rendering quirks.
+// Outlook + Gmail + Apple Mail rendering quirks. role="presentation"
+// tells assistive tech (and some clients) this is layout, not data.
 function section(title: string, rows: Array<[string, string]>): string {
   return `
     <div style="margin-bottom:18px;border-bottom:1px solid #f0f0f0;padding-bottom:14px;">
       <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:10px;">${esc(title)}</div>
-      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;">
         ${rows.map(([l, v]) => `
           <tr>
             <td style="color:#6b7280;padding:3px 0;width:140px;vertical-align:top;">${esc(l)}</td>
