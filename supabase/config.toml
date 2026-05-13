@@ -71,6 +71,30 @@ double_confirm_changes = true
 enable_confirmations = true
 # secure_password_change = true  # require fresh login to change password.
 
+# Rate limit on outgoing auth emails (recovery, signup confirm, etc.) —
+# one send per minute per address. Anything lower (the CLI default is 1s)
+# turns the recovery endpoint into a spam vector — anyone can hammer
+# /auth/v1/recover with a target email and force 60×/min mail to that
+# inbox. 1m matches Supabase's pre-CLI dashboard default and is what
+# was on prod before the first `config push`.
+max_frequency = "1m0s"
+otp_length    = 6
+otp_expiry    = 3600
+
+# Branded password-recovery email — Arabic-first RTL layout matching the
+# rest of the SSAM admin UI. Source of truth is the HTML file under
+# `email-templates/` (version-controlled); `supabase config push` uploads
+# it to the dashboard. Only Reset Password is customised right now — the
+# other Auth templates (Confirm signup, Magic Link, Email Change, Invite)
+# keep the Supabase defaults until a flow lands that actually triggers
+# them. See email-templates/README.md for the editing workflow.
+[auth.email.template.recovery]
+subject       = "إعادة تعيين كلمة المرور — SSAM"
+# Path is resolved relative to the project root (where `supabase` CLI is
+# invoked from), NOT relative to this config.toml file — counterintuitive
+# but verified empirically on CLI 2.98.2.
+content_path  = "./supabase/email-templates/password-recovery.html"
+
 [auth.sms]
 enable_signup = false
 enable_confirmations = false

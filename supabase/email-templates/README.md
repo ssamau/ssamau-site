@@ -8,14 +8,30 @@ pasted back in if the dashboard copy is lost or needs review.
 
 ## How to update
 
-When you change a template here:
+Templates are uploaded via `supabase config push`, NOT pasted into the
+dashboard. The `[auth.email.template.recovery]` block in
+`supabase/config.toml` points at `password-recovery.html` and the push
+applies it to the linked project. This keeps the live template in
+version control and avoids the dashboard-drift class of bugs.
 
-1. Open Supabase Dashboard → Authentication → Email Templates.
-2. Pick the template (e.g. **Reset Password**).
-3. Switch to the **Source** tab (HTML, not the rich text view).
-4. Replace the contents with the file in this folder.
-5. Save.
-6. Send a test to verify rendering — see "Testing" below.
+```bash
+# Edit the .html file
+$EDITOR supabase/email-templates/password-recovery.html
+
+# Push to the linked Supabase project
+supabase config push --yes
+
+# Verify by sending a test (see "Testing" below)
+```
+
+The `--yes` flag is important — without it the CLI shows a diff and
+waits for `[Y/n]`, and a tail/grep pipe can swallow the prompt with
+its default-Y answer (we hit this once and accidentally pushed a
+`max_frequency` regression). With `--yes` you accept the diff
+intentionally; review what the diff is BEFORE running.
+
+If you ever do edit a template in the dashboard, also update the file
+here and run `config push` so they don't drift apart.
 
 ## Templates
 
