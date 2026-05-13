@@ -7,8 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/base.css"/>
 <link rel="stylesheet" href="assets/css/admin.css"/>
+<link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
 </head>
 <body>
+<a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
 <div id="app">
 
 <aside class="sidebar" id="sidebar">
@@ -28,67 +34,80 @@
   </div>
   <nav class="sb-nav">
     <div class="sb-section">لوحة المعلومات</div>
-    <div class="sb-item active" data-page="dashboard" onclick="showPage('dashboard')">
+    <div class="sb-item active" data-page="dashboard" data-action="showPage">
       <span class="sb-ic">📊</span>Dashboard
     </div>
 
     <div class="sb-section">إدارة الأعضاء</div>
-    <div class="sb-item" data-page="members" onclick="showPage('members')">
+    <div class="sb-item" data-page="members" data-action="showPage">
       <span class="sb-ic">👥</span>الأعضاء
       <span class="sb-badge" id="b-members">0</span>
     </div>
-    <div class="sb-item" data-page="applications" onclick="showPage('applications')">
+    <div class="sb-item" data-page="applications" data-action="showPage">
       <span class="sb-ic">📥</span>طلبات العضوية
       <span class="sb-badge" id="b-applications">0</span>
     </div>
-    <div class="sb-item" data-page="accounts" onclick="showPage('accounts')" data-superadmin-only>
+    <div class="sb-item" data-page="accounts" data-action="showPage" data-superadmin-only>
       <span class="sb-ic">🔑</span>حسابات المستخدمين
       <span class="sb-badge" id="b-accounts">0</span>
     </div>
-    <div class="sb-item" data-page="advisors" onclick="showPage('advisors')">
+    <div class="sb-item" data-page="advisors" data-action="showPage">
       <span class="sb-ic">🎓</span>المستشارون
     </div>
-    <div class="sb-item" data-page="committees" onclick="showPage('committees')">
+    <div class="sb-item" data-page="committees" data-action="showPage">
       <span class="sb-ic">🏛️</span>اللجان
     </div>
 
     <div class="sb-section">المشاريع والفعاليات</div>
-    <div class="sb-item" data-page="projects" onclick="showPage('projects')">
+    <div class="sb-item" data-page="projects" data-action="showPage">
       <span class="sb-ic">🗓️</span>المشاريع والفعاليات
       <span class="sb-badge" id="b-projects">0</span>
     </div>
-    <div class="sb-item" data-page="participants" onclick="showPage('participants')">
+    <div class="sb-item" data-page="participants" data-action="showPage">
       <span class="sb-ic">🙋</span>المشاركون
     </div>
-    <div class="sb-item" data-page="opportunities" onclick="showPage('opportunities')">
+    <div class="sb-item" data-page="opportunities" data-action="showPage">
       <span class="sb-ic">🎯</span>الفرص التطوعية
       <span class="sb-badge" id="b-opportunities">0</span>
     </div>
 
     <div class="sb-section">المتابعة</div>
-    <div class="sb-item" data-page="attendance" onclick="showPage('attendance')">
+    <div class="sb-item" data-page="attendance" data-action="showPage">
       <span class="sb-ic">✅</span>الحضور
     </div>
-    <div class="sb-item" data-page="hours" onclick="showPage('hours')">
+    <div class="sb-item" data-page="hours" data-action="showPage">
       <span class="sb-ic">⏱️</span>الساعات التطوعية
     </div>
 
     <div class="sb-section">التواصل</div>
-    <div class="sb-item" data-page="emails" onclick="showPage('emails')">
+    <div class="sb-item" data-page="emails" data-action="showPage">
       <span class="sb-ic">💌</span>الإيميلات والشكر
     </div>
-    <div class="sb-item" data-page="certificates" onclick="showPage('certificates')">
+    <div class="sb-item" data-page="certificates" data-action="showPage">
       <span class="sb-ic">🏅</span>الشهادات
     </div>
-    <div class="sb-item" data-page="interest" onclick="showPage('interest')">
+    <div class="sb-item" data-page="interest" data-action="showPage">
       <span class="sb-ic">🙋</span>طلبات المشاركة
     </div>
 
     <div class="sb-section">الملفات</div>
-    <div class="sb-item" data-page="profile" onclick="showPage('profile')">
+    <div class="sb-item" data-page="profile" data-action="showPage">
       <span class="sb-ic">👤</span>ملف العضو
     </div>
   </nav>
+
+  <!-- Theme toggle. Sits at the bottom of the sidebar so it's
+       reachable from every tab without taking nav space. The
+       three-way switch (Auto / Light / Dark) maps to data-theme
+       on the <html> element + ssam_theme key in localStorage. -->
+  <div class="sb-theme">
+    <div class="sb-theme-label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    </div>
+  </div>
 </aside>
 
 <!-- Dim backdrop shown behind the sidebar on small screens. Click to close. -->
@@ -99,15 +118,15 @@
     <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
     <span class="topbar-title" id="page-title">Dashboard</span>
     <div class="topbar-right">
-      <button class="btn btn-ol btn-sm" onclick="logout()" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
       <div class="api-status pending" id="api-status">
         <div class="api-dot"></div>
         <span id="api-status-text">غير متصل</span>
       </div>
-      <button class="btn btn-ol btn-sm" onclick="refreshData()">🔄 تحديث</button>
+      <button id="refresh-btn" class="btn btn-ol btn-sm" data-action="refreshData"><span class="refresh-icon">🔄</span> تحديث</button>
     </div>
   </header>
-  <div class="content">
+  <main class="content" id="main-content">
 
     <!-- ══════════ DASHBOARD ══════════ -->
     <div class="page active" id="page-dashboard">
@@ -148,19 +167,19 @@
         <div class="card-head">
           <h3>👥 الأعضاء</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث بالاسم أو البريد..." oninput="filterTable('members-tbody',this.value)" id="members-search"/>
-            <select class="filter-select" onchange="filterMembersByRole(this.value)">
+            <input class="search-input" placeholder="بحث بالاسم أو البريد..." data-action="filterTable" data-target="members-tbody" data-event="input" id="members-search"/>
+            <select class="filter-select" data-action="filterMembersByRole">
               <option value="">كل الأدوار</option>
               <option>President</option><option>Vice President</option><option>Deputy Vice President</option>
               <option>Committee Head</option><option>Committee Vice Head</option>
               <option>Project Manager</option><option>Event Manager</option>
               <option>Member</option><option>Volunteer</option>
             </select>
-            <select class="filter-select" onchange="filterMembersByStatus(this.value)">
+            <select class="filter-select" data-action="filterMembersByStatus">
               <option value="">كل الحالات</option>
               <option>Active</option><option>Inactive</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('member')">+ إضافة عضو</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="member">+ إضافة عضو</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -178,8 +197,8 @@
         <div class="card-head">
           <h3 id="accounts-head-title">🔑 حسابات المستخدمين</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث باسم المستخدم..." oninput="filterTable('accounts-tbody',this.value)"/>
-            <button class="btn btn-g" id="accounts-add-btn" onclick="openAccountModal()">+ إضافة حساب</button>
+            <input class="search-input" placeholder="بحث باسم المستخدم..." data-action="filterTable" data-target="accounts-tbody" data-event="input"/>
+            <button class="btn btn-g" id="accounts-add-btn" data-action="openAccountModal">+ إضافة حساب</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -205,7 +224,7 @@
         <div class="card-head">
           <h3>📥 طلبات العضوية</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="applications-status-filter" onchange="loadApplications()">
+            <select class="filter-select" id="applications-status-filter" data-action="loadApplications">
               <option value="">كل الحالات</option>
               <option value="PendingTriage">قيد الفرز</option>
               <option value="AssignedToCommittee">معيّنة للجنة</option>
@@ -239,8 +258,8 @@
         <div class="card-head">
           <h3>🎓 المستشارون</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث..." oninput="filterTable('advisors-tbody',this.value)"/>
-            <button class="btn btn-g" onclick="openModal('advisor')">+ إضافة مستشار</button>
+            <input class="search-input" placeholder="بحث..." data-action="filterTable" data-target="advisors-tbody" data-event="input"/>
+            <button class="btn btn-g" data-action="openModal" data-modal="advisor">+ إضافة مستشار</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -261,7 +280,7 @@
         <div class="card-head">
           <h3>🏛️ اللجان</h3>
           <div class="card-head-right">
-            <button class="btn btn-g" onclick="openModal('committee')">+ إضافة لجنة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="committee">+ إضافة لجنة</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -279,12 +298,12 @@
         <div class="card-head">
           <h3>🗓️ المشاريع والفعاليات</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث..." oninput="filterTable('projects-tbody',this.value)"/>
-            <select class="filter-select" onchange="filterProjectsByStatus(this.value)">
+            <input class="search-input" placeholder="بحث..." data-action="filterTable" data-target="projects-tbody" data-event="input"/>
+            <select class="filter-select" data-action="filterProjectsByStatus">
               <option value="">كل الحالات</option>
               <option>Planning</option><option>Active</option><option>Completed</option><option>Cancelled</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('project')">+ إضافة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="project">+ إضافة</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -302,10 +321,10 @@
         <div class="card-head">
           <h3>🙋 المشاركون في المشاريع</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="participants-project-filter" onchange="loadParticipants(this.value)">
+            <select class="filter-select" id="participants-project-filter" data-action="loadParticipants">
               <option value="">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('participant')">+ إضافة مشارك</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="participant">+ إضافة مشارك</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -323,10 +342,10 @@
         <div class="card-head">
           <h3>🎯 الفرص التطوعية</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="opportunities-project-filter" onchange="loadOpportunities()">
+            <select class="filter-select" id="opportunities-project-filter" data-action="loadOpportunities">
               <option value="">كل المشاريع</option>
             </select>
-            <select class="filter-select" id="opportunities-status-filter" onchange="loadOpportunities()">
+            <select class="filter-select" id="opportunities-status-filter" data-action="loadOpportunities">
               <option value="">كل الحالات</option>
               <option value="Open">مفتوحة</option>
               <option value="Filled">مكتملة</option>
@@ -334,7 +353,7 @@
               <option value="Cancelled">ملغاة</option>
               <option value="Done">منتهية</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('opportunity')">+ إضافة فرصة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="opportunity">+ إضافة فرصة</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -361,11 +380,11 @@
         <div class="card-head">
           <h3>✅ الحضور</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="attendance-project-filter" onchange="loadAttendance(this.value)">
+            <select class="filter-select" id="attendance-project-filter" data-action="loadAttendance">
               <option value="">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('attendance')">+ تسجيل حضور</button>
-            <button class="btn btn-o" onclick="openModal('bulk-att')">⚡ جماعي</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="attendance">+ تسجيل حضور</button>
+            <button class="btn btn-o" data-action="openModal" data-modal="bulk-att">⚡ جماعي</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -383,10 +402,10 @@
         <div class="card-head">
           <h3>⏱️ الساعات التطوعية</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="hours-project-filter" onchange="loadHours(this.value)">
+            <select class="filter-select" id="hours-project-filter" data-action="loadHours">
               <option value="">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" onclick="openModal('hours')">+ تسجيل ساعات</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="hours">+ تسجيل ساعات</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -404,7 +423,7 @@
         <div class="card-head">
           <h3>👤 ملف العضو</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="profile-member-select" onchange="loadMemberProfile(this.value)">
+            <select class="filter-select" id="profile-member-select" data-action="loadMemberProfile">
               <option value="">اختر عضواً</option>
             </select>
           </div>
@@ -415,9 +434,9 @@
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /main -->
-</div><!-- /app -->
+  </main><!-- /#main-content -->
+</div><!-- /.main -->
+</div><!-- /#app -->
 
 <!-- ═══ MODALS ═══ -->
 
@@ -427,7 +446,7 @@
 
     <!-- ══ PROJECT DETAIL ══ -->
     <div class="page" id="page-project-detail">
-      <button class="btn btn-ol btn-sm" onclick="showPage('projects')" style="margin-bottom:1rem">← رجوع للمشاريع</button>
+      <button class="btn btn-ol btn-sm" data-action="showPage" data-page="projects" style="margin-bottom:1rem">← رجوع للمشاريع</button>
       <div id="pdetail-content"><div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div></div>
     </div>
 
@@ -437,8 +456,8 @@
         <div class="card-head">
           <h3>🙋 طلبات المشاركة</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="flt-int-prj" onchange="loadInterest(this.value)"><option value="">كل المشاريع</option></select>
-            <button class="btn btn-g" onclick="openModal('interest')">+ تسجيل اهتمام</button>
+            <select class="filter-select" id="flt-int-prj" data-action="loadInterest"><option value="">كل المشاريع</option></select>
+            <button class="btn btn-g" data-action="openModal" data-modal="interest">+ تسجيل اهتمام</button>
           </div>
         </div>
         <div class="sum-row">
@@ -458,9 +477,9 @@
         <div class="card-head">
           <h3>💌 الإيميلات ورسائل الشكر</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="flt-thx-prj" onchange="loadThanks(this.value)"><option value="">كل المشاريع</option></select>
-            <button class="btn btn-g" onclick="openModal('bulk-thanks')">📧 إرسال جماعي</button>
-            <button class="btn btn-ol" onclick="openModal('thanks')">+ فردي</button>
+            <select class="filter-select" id="flt-thx-prj" data-action="loadThanks"><option value="">كل المشاريع</option></select>
+            <button class="btn btn-g" data-action="openModal" data-modal="bulk-thanks">📧 إرسال جماعي</button>
+            <button class="btn btn-ol" data-action="openModal" data-modal="thanks">+ فردي</button>
           </div>
         </div>
         <div class="sum-row">
@@ -477,16 +496,16 @@
     <!-- ══ CERTIFICATES ══ -->
     <div class="page" id="page-certificates">
       <div class="tab-row">
-        <button class="tab-btn active" onclick="switchCertTab('list')">📋 الشهادات الصادرة</button>
-        <button class="tab-btn" onclick="switchCertTab('issue')">🏅 إصدار شهادة</button>
-        <button class="tab-btn" onclick="switchCertTab('verify')">🔍 التحقق</button>
+        <button class="tab-btn active" data-action="switchCertTab" data-tab="list">📋 الشهادات الصادرة</button>
+        <button class="tab-btn" data-action="switchCertTab" data-tab="issue">🏅 إصدار شهادة</button>
+        <button class="tab-btn" data-action="switchCertTab" data-tab="verify">🔍 التحقق</button>
       </div>
       <div class="tab-content active" id="cert-tab-list">
         <div class="card">
           <div class="card-head"><h3>🏅 الشهادات الصادرة</h3>
             <div class="card-head-right">
-              <select class="filter-select" id="flt-cert-prj" onchange="loadCerts(this.value)"><option value="">كل المشاريع</option></select>
-              <button class="btn btn-g" onclick="openModal('bulk-certs')">⚡ إصدار جماعي</button>
+              <select class="filter-select" id="flt-cert-prj" data-action="loadCerts"><option value="">كل المشاريع</option></select>
+              <button class="btn btn-g" data-action="openModal" data-modal="bulk-certs">⚡ إصدار جماعي</button>
             </div>
           </div>
           <div class="table-wrap"><table><thead><tr><th>المشارك</th><th>المشروع</th><th>الدور</th><th>الساعات</th><th>رمز التحقق</th><th>تاريخ الإصدار</th><th></th></tr></thead>
@@ -500,7 +519,7 @@
               <div class="fg"><label>المشروع <span class="required">*</span></label><select id="cert-proj-sel"><option value="">— اختر —</option></select></div>
               <div class="fg"><label>العضو <span class="required">*</span></label><select id="cert-mbr-sel"><option value="">— اختر —</option></select></div>
             </div>
-            <div style="margin-top:1rem"><button class="btn btn-g" onclick="issueCert()">🏅 إصدار</button></div>
+            <div style="margin-top:1rem"><button class="btn btn-g" data-action="issueCert">🏅 إصدار</button></div>
           </div>
         </div>
       </div>
@@ -511,7 +530,7 @@
               <label>رمز الشهادة</label>
               <input id="verify-code-input" dir="ltr" placeholder="SSAM-XXXXXXXX" style="font-family:monospace;letter-spacing:.1em"/>
             </div>
-            <button class="btn btn-g" onclick="verifyCert()" style="margin-top:.5rem">🔍 تحقق</button>
+            <button class="btn btn-g" data-action="verifyCert" style="margin-top:.5rem">🔍 تحقق</button>
             <div id="verify-result" style="margin-top:1.25rem"></div>
           </div>
         </div>
@@ -525,7 +544,7 @@
 <!-- ═══ MODALS ORIGINAL ═══ -->
 <div class="overlay" id="ov-member">
   <div class="modal">
-    <div class="modal-head"><h3 id="member-modal-title">➕ إضافة عضو</h3><button class="modal-close" onclick="closeModal('member')">✕</button></div>
+    <div class="modal-head"><h3 id="member-modal-title">➕ إضافة عضو</h3><button class="modal-close" data-action="closeModal" data-modal="member">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="m-edit-id"/>
       <div class="form-section">البيانات الأساسية</div>
@@ -575,8 +594,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('member')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveMember()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="member">إلغاء</button>
+      <button class="btn btn-g" data-action="saveMember">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -584,7 +603,7 @@
 <!-- ADVISOR MODAL -->
 <div class="overlay" id="ov-advisor">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3 id="advisor-modal-title">➕ إضافة مستشار</h3><button class="modal-close" onclick="closeModal('advisor')">✕</button></div>
+    <div class="modal-head"><h3 id="advisor-modal-title">➕ إضافة مستشار</h3><button class="modal-close" data-action="closeModal" data-modal="advisor">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="adv-edit-id"/>
       <div class="fg"><label>الاسم الكامل <span class="required">*</span></label><input id="adv-full-name"/></div>
@@ -597,8 +616,8 @@
       <div class="fg"><label>الحالة</label><select id="adv-status"><option>Active</option><option>Inactive</option></select></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('advisor')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveAdvisor()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="advisor">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAdvisor">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -606,7 +625,7 @@
 <!-- COMMITTEE MODAL -->
 <div class="overlay" id="ov-committee">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3 id="committee-modal-title">➕ إضافة لجنة</h3><button class="modal-close" onclick="closeModal('committee')">✕</button></div>
+    <div class="modal-head"><h3 id="committee-modal-title">➕ إضافة لجنة</h3><button class="modal-close" data-action="closeModal" data-modal="committee">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="com-edit-id"/>
       <div class="fg"><label>اسم اللجنة <span class="required">*</span></label><input id="com-name" placeholder="لجنة الفعاليات"/></div>
@@ -618,8 +637,8 @@
       <div class="fg"><label>الحالة</label><select id="com-status"><option>Active</option><option>Inactive</option></select></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('committee')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveCommittee()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="committee">إلغاء</button>
+      <button class="btn btn-g" data-action="saveCommittee">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -627,7 +646,7 @@
 <!-- PROJECT MODAL -->
 <div class="overlay" id="ov-project">
   <div class="modal modal-lg">
-    <div class="modal-head"><h3 id="project-modal-title">➕ إضافة مشروع / فعالية</h3><button class="modal-close" onclick="closeModal('project')">✕</button></div>
+    <div class="modal-head"><h3 id="project-modal-title">➕ إضافة مشروع / فعالية</h3><button class="modal-close" data-action="closeModal" data-modal="project">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="prj-edit-id"/>
       <div class="form-section">معلومات أساسية</div>
@@ -662,8 +681,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('project')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveProject()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="project">إلغاء</button>
+      <button class="btn btn-g" data-action="saveProject">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -673,7 +692,7 @@
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
       <h3 id="account-modal-title">🔑 إضافة حساب</h3>
-      <button class="modal-close" onclick="closeModal('account')">✕</button>
+      <button class="modal-close" data-action="closeModal" data-modal="account">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="acc-edit-id"/>
@@ -686,7 +705,7 @@
         <label>كلمة المرور <span class="required" id="acc-pw-required">*</span></label>
         <div style="display:flex;gap:.4rem">
           <input id="acc-password" dir="ltr" style="flex:1" autocomplete="off"/>
-          <button type="button" class="btn btn-ol" onclick="generateAccountPw()" style="padding:.4rem .7rem;font-size:.8rem">🎲 توليد</button>
+          <button type="button" class="btn btn-ol" data-action="generateAccountPw" style="padding:.4rem .7rem;font-size:.8rem">🎲 توليد</button>
         </div>
         <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem" id="acc-pw-hint">على الأقل 6 أحرف. اتركها فارغة للاحتفاظ بكلمة المرور الحالية.</div>
       </div>
@@ -708,8 +727,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('account')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveAccount()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="account">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAccount">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -719,7 +738,7 @@
   <div class="modal" style="max-width:460px">
     <div class="modal-head">
       <h3>🔑 كلمة المرور المؤقتة</h3>
-      <button class="modal-close" onclick="closeModal('pw-shown')">✕</button>
+      <button class="modal-close" data-action="closeModal" data-modal="pw-shown">✕</button>
     </div>
     <div class="modal-body" style="text-align:center">
       <p style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
@@ -729,10 +748,10 @@
       <div style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
         المستخدم: <span dir="ltr" id="pw-shown-username">—</span>
       </div>
-      <button class="btn btn-g" style="margin-top:1rem" onclick="copyShownPw()">📋 نسخ كلمة المرور</button>
+      <button class="btn btn-g" style="margin-top:1rem" data-action="copyShownPw">📋 نسخ كلمة المرور</button>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('pw-shown')">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="pw-shown">إغلاق</button>
     </div>
   </div>
 </div>
@@ -742,7 +761,7 @@
   <div class="modal" style="max-width:680px">
     <div class="modal-head">
       <h3>📥 مراجعة طلب عضوية</h3>
-      <button class="modal-close" onclick="closeModal('application')">✕</button>
+      <button class="modal-close" data-action="closeModal" data-modal="application">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="app-edit-id"/>
@@ -753,16 +772,16 @@
         <div class="fg"><label>أسند الطلب إلى لجنة <span class="required">*</span></label>
           <select id="app-assign-committee"><option value="">— اختر —</option></select>
         </div>
-        <button class="btn btn-g" onclick="appAssignCommittee()">📤 إرسال لرئيس اللجنة</button>
-        <button class="btn btn-r" style="margin-top:.4rem" onclick="appReject()">❌ رفض الطلب</button>
+        <button class="btn btn-g" data-action="appAssignCommittee">📤 إرسال لرئيس اللجنة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject">❌ رفض الطلب</button>
       </div>
 
       <!-- AssignedToCommittee / InterviewRequested: head decides -->
       <div id="app-action-decide" style="display:none">
         <div class="fg"><label>ملاحظات (اختياري)</label><textarea id="app-decision-note"></textarea></div>
-        <button class="btn btn-g" onclick="appAccept()">✅ قبول وإضافة كعضو</button>
-        <button class="btn btn-y" style="margin-top:.4rem" onclick="appRequestInterview()">💬 طلب مقابلة</button>
-        <button class="btn btn-r" style="margin-top:.4rem" onclick="appReject()">❌ رفض</button>
+        <button class="btn btn-g" data-action="appAccept">✅ قبول وإضافة كعضو</button>
+        <button class="btn btn-y" style="margin-top:.4rem" data-action="appRequestInterview">💬 طلب مقابلة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject">❌ رفض</button>
       </div>
 
       <!-- Accepted / Rejected: read-only -->
@@ -771,7 +790,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('application')">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="application">إغلاق</button>
     </div>
   </div>
 </div>
@@ -779,13 +798,13 @@
 <!-- OPPORTUNITY MODAL -->
 <div class="overlay" id="ov-opportunity">
   <div class="modal">
-    <div class="modal-head"><h3>🎯 فرصة تطوعية</h3><button class="modal-close" onclick="closeModal('opportunity')">✕</button></div>
+    <div class="modal-head"><h3>🎯 فرصة تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="opportunity">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="opp-edit-id"/>
       <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="opp-project"><option value="">— اختر —</option></select></div>
       <div class="fg-row">
         <div class="fg"><label>الدور <span class="required">*</span></label>
-          <select id="opp-role-key" onchange="onOppRolePreset()">
+          <select id="opp-role-key" data-action="onOppRolePreset">
             <option value="">— اختر دور قياسي —</option>
           </select>
         </div>
@@ -810,8 +829,8 @@
       <div class="fg"><label>ملاحظات</label><textarea id="opp-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('opportunity')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveOpportunity()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opportunity">إلغاء</button>
+      <button class="btn btn-g" data-action="saveOpportunity">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -821,7 +840,7 @@
   <div class="modal" style="max-width:760px">
     <div class="modal-head">
       <h3>👥 المسندون على الفرصة</h3>
-      <button class="modal-close" onclick="closeModal('opp-assign')">✕</button>
+      <button class="modal-close" data-action="closeModal" data-modal="opp-assign">✕</button>
     </div>
     <div class="modal-body">
       <div id="opp-assign-header" style="background:var(--c-soft);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem"></div>
@@ -829,14 +848,14 @@
         <div class="fg" style="flex:1"><label>إضافة عضو</label>
           <select id="opp-assign-member"><option value="">— اختر —</option></select>
         </div>
-        <button class="btn btn-g" onclick="addAssignmentMember()">+ إسناد عضو</button>
+        <button class="btn btn-g" data-action="addAssignmentMember">+ إسناد عضو</button>
       </div>
       <details style="margin:.5rem 0 1rem">
         <summary style="cursor:pointer;font-size:.85rem;color:var(--tm)">إسناد متطوع غير عضو</summary>
         <div class="fg-row" style="margin-top:.5rem;align-items:end">
           <div class="fg" style="flex:1"><label>اسم المتطوع</label><input id="opp-assign-vol-name"/></div>
           <div class="fg" style="flex:1"><label>البريد</label><input id="opp-assign-vol-email" dir="ltr"/></div>
-          <button class="btn btn-g" onclick="addAssignmentVolunteer()">+ إسناد</button>
+          <button class="btn btn-g" data-action="addAssignmentVolunteer">+ إسناد</button>
         </div>
       </details>
       <div class="table-wrap" style="max-height:380px;overflow:auto">
@@ -847,7 +866,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('opp-assign')">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-assign">إغلاق</button>
     </div>
   </div>
 </div>
@@ -855,12 +874,12 @@
 <!-- PARTICIPANT MODAL -->
 <div class="overlay" id="ov-participant">
   <div class="modal">
-    <div class="modal-head"><h3>➕ إضافة مشارك</h3><button class="modal-close" onclick="closeModal('participant')">✕</button></div>
+    <div class="modal-head"><h3>➕ إضافة مشارك</h3><button class="modal-close" data-action="closeModal" data-modal="participant">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="par-edit-id"/>
       <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="par-project"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>نوع المشارك <span class="required">*</span></label>
-        <select id="par-type" onchange="toggleParticipantFields()">
+        <select id="par-type" data-action="toggleParticipantFields">
           <option value="Member">عضو (Member)</option>
           <option value="Volunteer">متطوع مؤقت (Volunteer)</option>
         </select>
@@ -887,8 +906,8 @@
       <label class="fg-check"><input type="checkbox" id="par-outstanding"/> 🌟 مميّز (Outstanding)</label>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('participant')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveParticipant()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="participant">إلغاء</button>
+      <button class="btn btn-g" data-action="saveParticipant">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -896,12 +915,12 @@
 <!-- ATTENDANCE MODAL -->
 <div class="overlay" id="ov-attendance">
   <div class="modal">
-    <div class="modal-head"><h3>✅ تسجيل حضور</h3><button class="modal-close" onclick="closeModal('attendance')">✕</button></div>
+    <div class="modal-head"><h3>✅ تسجيل حضور</h3><button class="modal-close" data-action="closeModal" data-modal="attendance">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="att-edit-id"/>
       <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="att-project"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>نوع المشارك</label>
-        <select id="att-type" onchange="toggleAttFields()">
+        <select id="att-type" data-action="toggleAttFields">
           <option value="Member">عضو</option>
           <option value="Volunteer">متطوع</option>
         </select>
@@ -922,8 +941,8 @@
       <div class="fg"><label>ملاحظات</label><textarea id="att-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('attendance')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveAttendance()">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="attendance">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAttendance">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -931,7 +950,7 @@
 <!-- HOURS MODAL -->
 <div class="overlay" id="ov-hours">
   <div class="modal">
-    <div class="modal-head"><h3>⏱️ تسجيل ساعات تطوعية</h3><button class="modal-close" onclick="closeModal('hours')">✕</button></div>
+    <div class="modal-head"><h3>⏱️ تسجيل ساعات تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="hours">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="hrs-edit-id"/>
       <input type="hidden" id="hrs-assignment-id"/>
@@ -948,12 +967,12 @@
         </div>
         <div class="fg-row">
           <div class="fg"><label>الفرصة</label>
-            <select id="hrs-opportunity" onchange="onHrsOpportunityChange()">
+            <select id="hrs-opportunity" data-action="onHrsOpportunityChange">
               <option value="">— تسجيل مباشر بدون فرصة —</option>
             </select>
           </div>
           <div class="fg"><label>المسنَد (الحاضر)</label>
-            <select id="hrs-assignment" onchange="onHrsAssignmentChange()">
+            <select id="hrs-assignment" data-action="onHrsAssignmentChange">
               <option value="">— اختر بعد اختيار الفرصة —</option>
             </select>
           </div>
@@ -962,7 +981,7 @@
 
       <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="hrs-project"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>نوع المشارك</label>
-        <select id="hrs-type" onchange="toggleHrsFields()">
+        <select id="hrs-type" data-action="toggleHrsFields">
           <option value="Member">عضو</option>
           <option value="Volunteer">متطوع</option>
         </select>
@@ -985,8 +1004,8 @@
       <div class="fg"><label>ملاحظات</label><textarea id="hrs-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('hours')">إلغاء</button>
-      <button class="btn btn-g" onclick="saveHours()">💾 تسجيل</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="hours">إلغاء</button>
+      <button class="btn btn-g" data-action="saveHours">💾 تسجيل</button>
     </div>
   </div>
 </div>
@@ -994,12 +1013,12 @@
 <!-- DELETE CONFIRM MODAL -->
 <div class="overlay" id="ov-confirm">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>⚠️ تأكيد الحذف</h3><button class="modal-close" onclick="closeModal('confirm')">✕</button></div>
+    <div class="modal-head"><h3>⚠️ تأكيد الحذف</h3><button class="modal-close" data-action="closeModal" data-modal="confirm">✕</button></div>
     <div class="modal-body">
       <p style="font-size:.88rem;color:var(--tl);line-height:1.7" id="confirm-msg">هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" onclick="closeModal('confirm')">إلغاء</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="confirm">إلغاء</button>
       <button class="btn btn-r" id="confirm-btn">🗑️ حذف</button>
     </div>
   </div>
@@ -1013,7 +1032,7 @@
 <!-- INTEREST -->
 <div class="overlay" id="ov-interest">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>🙋 تسجيل اهتمام</h3><button class="modal-close" onclick="closeModal('interest')">✕</button></div>
+    <div class="modal-head"><h3>🙋 تسجيل اهتمام</h3><button class="modal-close" data-action="closeModal" data-modal="interest">✕</button></div>
     <div class="modal-body">
       <div class="fg"><label>المشروع <span class="required">*</span></label><select id="int-prj-sel"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>العضو <span class="required">*</span></label><select id="int-mbr-sel"><option value="">— اختر —</option></select></div>
@@ -1021,30 +1040,30 @@
       <div class="fg"><label>التوفر</label><select id="int-av"><option>Full</option><option>Before</option><option>During</option><option>After</option><option>Partial</option></select></div>
       <div class="fg"><label>تعليق</label><textarea id="int-cm"></textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" onclick="closeModal('interest')">إلغاء</button><button class="btn btn-g" onclick="saveInterest()">💾 تسجيل</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="interest">إلغاء</button><button class="btn btn-g" data-action="saveInterest">💾 تسجيل</button></div>
   </div>
 </div>
 
 <!-- BULK ATTENDANCE -->
 <div class="overlay" id="ov-bulk-att">
   <div class="modal" style="max-width:820px">
-    <div class="modal-head"><h3>⚡ تسجيل حضور جماعي</h3><button class="modal-close" onclick="closeModal('bulk-att')">✕</button></div>
+    <div class="modal-head"><h3>⚡ تسجيل حضور جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-att">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="batt-prj" onchange="loadBulkAttGrid(this.value)"><option value="">— اختر —</option></select></div>
+      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="batt-prj" data-action="loadBulkAttGrid"><option value="">— اختر —</option></select></div>
       <div id="bulk-att-grid" style="margin-top:.85rem"><p style="color:var(--tm);font-size:.82rem">اختر مشروعاً</p></div>
       <div style="display:flex;gap:.5rem;margin-top:.85rem">
-        <button class="btn btn-g btn-sm" onclick="markAllAtt('Present')">✅ الكل حضر</button>
-        <button class="btn btn-r btn-sm" onclick="markAllAtt('Absent')">❌ الكل غاب</button>
+        <button class="btn btn-g btn-sm" data-action="markAllAtt" data-status="Present">✅ الكل حضر</button>
+        <button class="btn btn-r btn-sm" data-action="markAllAtt" data-status="Absent">❌ الكل غاب</button>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" onclick="closeModal('bulk-att')">إلغاء</button><button class="btn btn-g" onclick="saveBulkAttendance()">💾 حفظ الحضور</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-att">إلغاء</button><button class="btn btn-g" data-action="saveBulkAttendance">💾 حفظ الحضور</button></div>
   </div>
 </div>
 
 <!-- THANKS SINGLE -->
 <div class="overlay" id="ov-thanks">
   <div class="modal">
-    <div class="modal-head"><h3>💌 رسالة شكر فردية</h3><button class="modal-close" onclick="closeModal('thanks')">✕</button></div>
+    <div class="modal-head"><h3>💌 رسالة شكر فردية</h3><button class="modal-close" data-action="closeModal" data-modal="thanks">✕</button></div>
     <div class="modal-body">
       <div class="fg"><label>المشروع <span class="required">*</span></label><select id="thx-prj"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>نوع المستلم</label><select id="thx-tp"><option value="Member">عضو</option><option value="Volunteer">متطوع</option></select></div>
@@ -1056,14 +1075,14 @@
         <label class="fg-check"><input type="checkbox" id="thx-oi"/>تضمين التميّز</label>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" onclick="closeModal('thanks')">إلغاء</button><button class="btn btn-g" onclick="saveThanks()">📧 إرسال</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="thanks">إلغاء</button><button class="btn btn-g" data-action="saveThanks">📧 إرسال</button></div>
   </div>
 </div>
 
 <!-- BULK THANKS -->
 <div class="overlay" id="ov-bulk-thanks">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>📧 إرسال رسائل شكر جماعية</h3><button class="modal-close" onclick="closeModal('bulk-thanks')">✕</button></div>
+    <div class="modal-head"><h3>📧 إرسال رسائل شكر جماعية</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-thanks">✕</button></div>
     <div class="modal-body">
       <div class="fg"><label>المشروع <span class="required">*</span></label><select id="bthx-prj"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>موضوع مخصص</label><input id="bthx-sb" placeholder="اتركه فارغاً للافتراضي"/></div>
@@ -1074,19 +1093,19 @@
       </div>
       <div class="fg-note" style="color:var(--wn);margin-top:.65rem">⚠️ سيُرسل لكل مشارك لم يسبق إرساله</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" onclick="closeModal('bulk-thanks')">إلغاء</button><button class="btn btn-o" onclick="saveBulkThanks()">📧 إرسال للجميع</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-thanks">إلغاء</button><button class="btn btn-o" data-action="saveBulkThanks">📧 إرسال للجميع</button></div>
   </div>
 </div>
 
 <!-- BULK CERTS -->
 <div class="overlay" id="ov-bulk-certs">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>⚡ إصدار شهادات جماعي</h3><button class="modal-close" onclick="closeModal('bulk-certs')">✕</button></div>
+    <div class="modal-head"><h3>⚡ إصدار شهادات جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-certs">✕</button></div>
     <div class="modal-body">
       <div class="fg"><label>المشروع <span class="required">*</span></label><select id="bcert-prj"><option value="">— اختر —</option></select></div>
       <div class="fg-note">سيتم إصدار شهادة لكل مشارك لم تصدر له شهادة بعد.</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" onclick="closeModal('bulk-certs')">إلغاء</button><button class="btn btn-g" onclick="saveBulkCerts()">🏅 إصدار</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-certs">إلغاء</button><button class="btn btn-g" data-action="saveBulkCerts">🏅 إصدار</button></div>
   </div>
 </div>
 
@@ -1095,5 +1114,6 @@
 
 
 <script type="module" src="assets/js/admin/main.js"></script>
+<script type="module" src="assets/js/lib/sw-register.js"></script>
 </body>
 </html>

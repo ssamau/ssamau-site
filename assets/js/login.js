@@ -22,6 +22,9 @@
 //
 // CSP note: all handlers wired via addEventListener — no inline onclick.
 
+import { applyStoredTheme } from './lib/theme.js';
+applyStoredTheme();
+
 import { callApi, apiOrThrow } from './lib/api.js';
 import {
   saveSession, saveSupabaseSession,
@@ -81,7 +84,7 @@ async function doLogin() {
       // We have a Supabase session now. Fetch the app-level profile via
       // `auth.whoami` — needs to go through callApi() so the apikey
       // header is set and the Bearer token from the new session is
-      // attached. Trick: getToken() reads sessionStorage, so we need
+      // attached. Trick: getToken() reads localStorage, so we need
       // to save the Supabase session BEFORE the whoami call, then
       // augment with the profile after it returns.
       saveSupabaseSession(session, { username: identifier });

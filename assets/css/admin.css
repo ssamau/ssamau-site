@@ -151,6 +151,21 @@ tr:hover td { background:#fafcfa; }
 .btn-r { background:var(--dnb); color:var(--dn); border:1px solid rgba(220,38,38,.2); }
 .btn-r:hover { background:var(--dn); color:#fff; }
 .btn-sm { padding:.28rem .6rem; font-size:.74rem; border-radius:6px; }
+
+/* Refresh button spin. The 🔄 emoji is wrapped in <span class="refresh-icon">
+ * so we can rotate just the icon, not the whole button (rotating a
+ * button with its text label looks unhinged).
+ *
+ * inline-block is required for `transform: rotate(…)` to apply —
+ * inline elements can't be transformed. */
+.refresh-icon { display: inline-block; }
+#refresh-btn.refreshing { opacity: .7; cursor: wait; }
+#refresh-btn.refreshing .refresh-icon {
+  animation: ssam-spin 0.7s linear infinite;
+}
+@keyframes ssam-spin {
+  to { transform: rotate(360deg); }
+}
 .btn-icon { padding:.3rem .38rem; border-radius:6px; background:transparent; border:1px solid var(--bd); cursor:pointer; font-size:.88rem; transition:all .13s; }
 .btn-icon:hover { background:var(--bd); }
 .btn-icon.edit:hover { background:var(--gl); border-color:var(--g); }
@@ -319,6 +334,29 @@ tr:hover td { background:#fafcfa; }
 }
 .sb-backdrop.open { opacity: 1; pointer-events: auto; }
 
+/* Theme toggle at sidebar bottom. Three small buttons that map to
+ * the three states stored in localStorage by lib/theme.js: auto,
+ * light, dark. The currently-active button gets a .active class
+ * (managed by JS) so the user sees their current pick. */
+.sb-theme { margin-top: auto; padding: .6rem .85rem .9rem; border-top: 1px solid var(--bd); }
+.sb-theme-label { font-size: .65rem; font-weight: 700; color: var(--tm); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .03em; }
+.sb-theme-row { display: flex; gap: .3rem; }
+.sb-theme-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: .35rem .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--tl);
+  cursor: pointer;
+  transition: all .14s;
+  font-family: inherit;
+}
+.sb-theme-btn:hover  { border-color: var(--g); color: var(--g); }
+.sb-theme-btn.active { background: var(--gl); border-color: var(--g); color: var(--g); }
+
 @media(max-width:900px) {
   .sidebar { transform:translateX(100%); }
   .sidebar.open { transform:translateX(0); }
@@ -332,9 +370,151 @@ tr:hover td { background:#fafcfa; }
   .sb-toggle { display: inline-flex; align-items: center; justify-content: center; }
 }
 @media(max-width:580px) {
-  .stats-grid { grid-template-columns:1fr; }
+  /* Dashboard stat cards: stay 2x2 instead of collapsing to 1-col.
+   * Was 1-col but that meant 4 cards × ~120px each = 480px of scroll
+   * before you saw anything else. 2x2 halves that, and the cards are
+   * small enough (icon + number + label) to still read well at half
+   * width on a 375px iPhone. */
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  /* Form rows (modal inputs) — multi-column inputs collapse to single
+   * column so labels don't get truncated. fg-row3 was already in this
+   * block; fg-row joined it. */
   .fg-row, .fg-row3 { grid-template-columns:1fr; }
-  .profile-stats { grid-template-columns:1fr 1fr; }
+  /* Project KPI tiles + summary rows: 2-col at this width. The 880px
+   * breakpoint already handled the desktop→tablet drop; this one
+   * keeps them 2x2 instead of crashing to a single tall column. */
+  .proj-kpis, .sum-row { grid-template-columns:1fr 1fr; }
+  /* Bigger touch targets for icon buttons (Apple HIG = 44pt minimum,
+   * the spec for accessible touch. Default .btn-icon is ~28px which
+   * is too small to tap reliably on a phone). Apply only at this
+   * breakpoint so desktop tables stay information-dense. */
+  .btn-icon {
+    min-width: 36px;
+    min-height: 36px;
+    padding: .4rem .55rem;
+  }
+  /* Modal content: full-width minus a slim margin instead of the
+   * 520px cap that leaves awkward gutters on narrow phones. */
+  .overlay { padding: .5rem; }
+  .modal { max-height: 95vh; }
+  /* Filter+button rows in card-head wrap nicely (they already had
+   * flex-wrap, but their children were too wide — give selects+inputs
+   * a sane min-width so they shrink rather than overflowing the row). */
+  .card-head-right { width: 100%; }
+  .card-head-right > * { flex: 1 1 auto; min-width: 0; }
+  /* Topbar at narrow widths: shrink the connection-status pill +
+   * align-items so the 5 elements (hamburger / title / status /
+   * logout / refresh) compete more gracefully. */
+  .api-status { font-size: .65rem; padding: .25rem .5rem; }
+}
+
+/* ── Mobile tables: card stack under 640px ───────────────────────────
+ * On a 390px iPhone the 8-column members table was overflowing
+ * horizontally — overflow-x:auto let it scroll, but the leftmost
+ * columns (email, status, actions in RTL) were always off-screen
+ * unless the user scrolled, which felt broken.
+ *
+ * Below 640px every admin table becomes a vertical stack of "cards" —
+ * one card per row, with each cell rendered as a labelled key/value
+ * line. Labels come from the column headers via the `data-label`
+ * attribute, auto-applied to every <td> by applyTableLabels() in
+ * admin/main.js (MutationObserver watches all tbody children, so any
+ * re-render automatically gets labelled).
+ *
+ * Breakpoint chosen at 640px so iPad Mini (768px) stays in the
+ * desktop table layout where there's actually horizontal room.
+ */
+@media(max-width:640px) {
+  /* Constrain the whole container chain to viewport width. The default
+   * <table> behaviour is to grow to fit content — even with display:block —
+   * which is what caused long names + multi-line cells (the Name column
+   * has bold preferred_name + small full_name secondary) to push past the
+   * card edge. width:100% + max-width:100% + box-sizing:border-box on
+   * every level pins everything down. */
+  .table-wrap {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+  .table-wrap table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+  .table-wrap table thead { display: none; }
+  .table-wrap table tbody,
+  .table-wrap table tr {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .table-wrap table tr {
+    margin: 0 0 .75rem 0;
+    border: 1px solid var(--bd);
+    border-radius: var(--rs);
+    background: var(--sf);
+    padding: .25rem .75rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  /* Kill the desktop row-hover background — it doesn't make sense
+   * on a card layout and was bleeding through the rounded corners. */
+  .table-wrap table tr:hover td { background: transparent; }
+
+  .table-wrap table td {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    text-align: end;
+    padding: .55rem 0;
+    border-bottom: 1px dashed #f0f0f0;
+    gap: .4rem;
+    /* Long unbreakable strings (emails, NIDs) wrap mid-character if
+     * needed. Arabic names with spaces wrap on word boundaries
+     * naturally. */
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  /* Children of the td (the actual value HTML — divs, spans, badges,
+   * buttons) need min-width:0 too. Default flex min-width is `auto`
+   * which equals content width and prevents wrapping below that. */
+  .table-wrap table td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  /* Last cell in each card doesn't need a trailing rule. */
+  .table-wrap table tr td:last-child { border-bottom: none; }
+
+  /* The actual key/value labelling — content comes from data-label,
+   * which JS sets to the column header text.
+   *
+   * margin-inline-end:auto is the magic: it absorbs all remaining
+   * flex space after the label, which (combined with the flex row
+   * defaulting to no extra justification) pushes every subsequent
+   * child to the inline-end (= left in RTL). That clusters buttons
+   * tightly together with the `gap` between them, instead of the
+   * old `justify-content:space-between` which fanned them out
+   * across the whole row width. */
+  .table-wrap table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: .7rem;
+    color: var(--tl);
+    flex-shrink: 0;
+    margin-inline-end: auto;
+    text-align: start;
+  }
+
+  /* Empty / loading rows span the full card width with centred text
+   * instead of being formatted as a key/value pair. */
+  .table-wrap table tr.empty-row {
+    text-align: center;
+  }
+  .table-wrap table tr.empty-row td {
+    justify-content: center;
+    color: var(--tm);
+  }
+  .table-wrap table tr.empty-row td::before { content: none; }
 }
 
 
