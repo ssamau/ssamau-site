@@ -1,8 +1,11 @@
 // Shared API client for every page.
 //
-// Single POST endpoint at /.netlify/functions/api; the body is always
+// Single POST endpoint at the Supabase Edge Function; the body is always
 // { action, ...params }. Auth (when present) is sent as a Bearer token in the
-// Authorization header.
+// Authorization header. The Supabase anon key is sent in the `apikey` header —
+// Supabase requires this on every request to route it to the function (and
+// it's safe to ship to the browser: RLS is the actual security boundary, the
+// anon key only proves "this request is for this Supabase project").
 //
 // callApi() returns a flattened envelope so existing call sites that read
 // either `result.data` (when the server returned an array) or `result.<field>`
@@ -13,11 +16,24 @@
 
 import { clearSession, getToken } from './auth.js';
 
-export const API_URL = '/.netlify/functions/api';
+// Supabase Edge Function — replaces /.netlify/functions/api after the
+// migration. Same wire-protocol (action-dispatch POST, JWT in the
+// Authorization header), only the URL changes.
+export const API_URL = 'https://pfibxvwiulwiiuwerawe.supabase.co/functions/v1/api';
+
+// Supabase project anon key. PUBLIC — safe to commit + ship to the browser.
+// This is not a secret; it identifies the project. Real auth is the Bearer
+// JWT in `Authorization` (verified inside the Edge Function), or — after
+// the Supabase Auth migration commit — a Supabase-issued session token
+// gated by RLS policies.
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmaWJ4dndpdWx3aWl1d2VyYXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODI2NzEsImV4cCI6MjA5NDE1ODY3MX0.A0_w-iQQK-ozDiRWBS62ho_THvxEhzHWO-zgBcvfk78';
 
 export async function callApi(action, params = {}) {
   const token   = getToken();
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey':       SUPABASE_ANON_KEY,
+  };
   if (token) headers['Authorization'] = 'Bearer ' + token;
 
   const resp = await fetch(API_URL, {

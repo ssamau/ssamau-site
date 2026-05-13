@@ -6,6 +6,11 @@ node_modules/
 .env.local
 deno.lock
 
+# Supabase CLI's local cache (gotrue version pin, last-pulled CLI version
+# etc.). Generated on `supabase link` / `supabase start` — machine-local,
+# nothing for git to track.
+supabase/.temp/
+
 # Generated preview from `npm run import:inspect`. Contains PII
 # (national IDs, addresses, phones) from the leadership xlsx — never commit.
 db/import-preview.json
