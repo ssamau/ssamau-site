@@ -223,7 +223,62 @@ const PAGE_TITLES = {
   accounts:        '🔑 حسابات المستخدمين',
 };
 
+// ── Hash router ─────────────────────────────────────────────────────
+// URL → page mapping for the admin panel:
+//   #/admin/dashboard   → dashboard tab
+//   #/admin/members     → members tab
+//   ...one per existing tab
+//   (no hash / unrelated hash) → fall through to whatever showPage()'s
+//   caller passed, typically `dashboard` on first load.
+//
+// Two-way sync:
+//   - clicking a sidebar item calls showPage('<tab>') (existing
+//     onclick="showPage(...)"), which then updates the URL via
+//     history.pushState so back/forward works and the URL is
+//     bookmarkable / shareable.
+//   - changing the URL hash (typed, bookmark, browser back/forward)
+//     fires `hashchange`, which calls routeFromHash() → showPage().
+//
+// The `_routerNavigating` flag prevents an infinite loop: when
+// hashchange-triggered showPage runs, we don't want it to push another
+// history entry.
+//
+// project-detail is special-cased — it's a sub-route reached only by
+// clicking a project row, doesn't have its own URL fragment, and we
+// don't want to overwrite the parent (projects) hash when it shows.
+let _routerNavigating = false;
+
+function routeFromHash() {
+  if (!location.hash.startsWith('#/admin/')) return;
+  const m = location.hash.match(/^#\/admin\/([a-z-]+)$/);
+  if (!m) return;
+  _routerNavigating = true;
+  try {
+    showPage(m[1]);
+  } finally {
+    _routerNavigating = false;
+  }
+}
+window.addEventListener('hashchange', routeFromHash);
+
 function showPage(page) {
+  // Sync the URL hash with the active page so refreshes land on the
+  // right tab and Back/Forward navigates between tabs naturally.
+  // pushState updates the URL bar WITHOUT firing hashchange (which is
+  // what we want — we already rendered, no need to re-render). The
+  // hashchange listener above still picks up user-initiated URL
+  // changes (typing, bookmarks, browser Back).
+  if (!_routerNavigating && page !== 'project-detail') {
+    const target = `#/admin/${page}`;
+    if (location.hash !== target) {
+      // replaceState on the very first navigation (so we don't
+      // create a back-button entry to the empty initial state);
+      // pushState afterwards so each tab switch is a back-able step.
+      const method = (location.hash === '' || location.hash === '#') ? 'replaceState' : 'pushState';
+      try { history[method](null, '', target); } catch { /* sandboxed iframe etc. */ }
+    }
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   const el = document.getElementById('page-' + page);
@@ -2149,7 +2204,11 @@ function _initAdmin() {
     await loadDashboard();
     setApiStatus('ok', 'متصل');
     RBAC.applyUIRestrictions();
-    showPage('dashboard');
+    // Respect the URL hash if it's a valid admin route — lets a
+    // refresh / bookmark / shared link land on the intended tab
+    // instead of always bouncing to dashboard.
+    const initialMatch = location.hash.match(/^#\/admin\/([a-z-]+)$/);
+    showPage(initialMatch ? initialMatch[1] : 'dashboard');
   }, 300);
 }
 if (document.readyState === 'loading') {
