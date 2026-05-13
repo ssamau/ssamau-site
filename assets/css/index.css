@@ -221,11 +221,27 @@ footer{background:var(--gd);padding:2.5rem 2rem;border-top:1px solid rgba(184,14
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
-  .nav-menu{display:none;}.nav-actions{display:none;}.nav-hamburger{display:block;}
+  .nav-menu{display:none;}
+  .nav-hamburger{display:block;}
+  /* Mobile nav layout: logo + hamburger cluster on the right (RTL start),
+     login + apply pills cluster on the left. The full link list lives in
+     the hamburger drawer (.mobile-nav). */
+  .nav-brand-text{display:none;}      /* drop the long club name on mobile, logo speaks for itself */
+  .nav-brand{gap:.4rem;}
+  .nav-actions{display:flex;gap:.35rem;align-items:center;}
+  .nav-actions .nav-lang{display:none;}   /* lang toggle moves into the drawer */
+  .nav-join{padding:.35rem .85rem;font-size:.7rem;}
+  .nav-login{padding:.3rem .7rem;font-size:.66rem;}
+  nav{padding:0 1rem;gap:.4rem;}
   .about-grid,.mb-grid,.ct-grid,.report-grid{grid-template-columns:1fr;}
   .ld-grid{grid-template-columns:1fr 1fr;}
   .social-grid{grid-template-columns:1fr 1fr;}
   .hero-stats{gap:1.5rem;}
+}
+/* Extra-narrow phones (≤340px, mostly old / folded devices): pills get a
+   tiny bit smaller so both still fit alongside the logo + hamburger. */
+@media(max-width:340px){
+  .nav-join,.nav-login{padding:.28rem .6rem;font-size:.62rem;}
 }
 @media(max-width:520px){
   .ld-grid{grid-template-columns:1fr;}

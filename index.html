@@ -26,6 +26,10 @@
       <div class="t2">SSAM · Melbourne</div>
     </div>
   </a>
+  <!-- Hamburger sits right after the brand so on mobile (RTL) it lands
+       directly next to the logo on the right. On desktop it's hidden and the
+       full nav-menu + nav-actions take over the row. -->
+  <button class="nav-hamburger" onclick="toggleNav()" id="hamburger" aria-label="القائمة" aria-controls="mobile-nav" aria-expanded="false">&#9776;</button>
   <div class="nav-menu">
     <a href="#about" data-ar>عن النادي</a><a href="#about" data-en style="display:none">About</a>
     <a href="#events" data-ar>الفعاليات</a><a href="#events" data-en style="display:none">Events</a>
@@ -36,12 +40,11 @@
   </div>
   <div class="nav-actions">
     <button class="nav-lang" onclick="toggleLang()" id="lang-btn">EN</button>
-    <a href="#membership" class="nav-join" data-ar>انضم إلينا</a>
-    <a href="#membership" class="nav-join" data-en style="display:none">Join Now</a>
+    <a href="apply.html" class="nav-join" data-ar>انضم إلينا</a>
+    <a href="apply.html" class="nav-join" data-en style="display:none">Join Now</a>
     <a href="login.html" class="nav-login" data-ar>دخول الأعضاء</a>
     <a href="login.html" class="nav-login" data-en style="display:none">Member Login</a>
   </div>
-  <button class="nav-hamburger" onclick="toggleNav()" id="hamburger">&#9776;</button>
 </nav>
 
 <div class="mobile-nav" id="mobile-nav">
@@ -52,15 +55,17 @@
   <a href="#membership" onclick="closeNav()" data-ar>العضوية</a>
   <a href="#membership" onclick="closeNav()" data-en style="display:none">Membership</a>
   <a href="#governance" onclick="closeNav()" data-ar>الإدارة واللجان</a>
-  <a href="#committees" onclick="closeNav()" data-en style="display:none">Committees</a>
+  <a href="#governance" onclick="closeNav()" data-en style="display:none">Governance</a>
   <a href="#sponsors" onclick="closeNav()" data-ar>الشركاء</a>
   <a href="#sponsors" onclick="closeNav()" data-en style="display:none">Partners</a>
   <a href="#contact" onclick="closeNav()" data-ar>تواصل</a>
   <a href="#contact" onclick="closeNav()" data-en style="display:none">Contact</a>
-  <a href="#membership" onclick="closeNav()" style="color:var(--gg);font-weight:800" data-ar>انضم إلينا</a>
-  <a href="#membership" onclick="closeNav()" style="color:var(--gg);font-weight:800" data-en style="display:none">Join Now</a>
-  <a href="login.html" style="color:rgba(255,255,255,.4)" data-ar>دخول الأعضاء</a>
-  <a href="login.html" style="color:rgba(255,255,255,.4)" data-en style="display:none">Member Login</a>
+  <a href="apply.html" onclick="closeNav()" style="color:var(--gg);font-weight:800" data-ar>انضم إلينا</a>
+  <a href="apply.html" onclick="closeNav()" style="color:var(--gg);font-weight:800" data-en style="display:none">Join Now</a>
+  <a href="login.html" style="color:var(--tm)" data-ar>دخول الأعضاء</a>
+  <a href="login.html" style="color:var(--tm)" data-en style="display:none">Member Login</a>
+  <!-- Lang toggle lives here on mobile (hidden from the navbar to save room) -->
+  <button onclick="toggleLang()" id="lang-btn-mobile" style="background:none;border:1px solid var(--bd);color:var(--tl);font-size:.78rem;font-weight:700;padding:.5rem 1rem;border-radius:50px;cursor:pointer;font-family:inherit;align-self:flex-start;margin-top:.5rem;">EN / العربية</button>
 </div>
 
 <!-- HERO -->
