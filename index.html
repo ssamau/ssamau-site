@@ -18,6 +18,11 @@
 
 <!-- NAV -->
 <nav id="navbar">
+  <!-- Hamburger is the FIRST flex item so in RTL it lands at the absolute
+       start of the row — i.e. the right edge of the viewport on mobile,
+       sitting visually to the right of the logo. On desktop it's
+       display:none and the brand becomes the visual start instead. -->
+  <button class="nav-hamburger" onclick="toggleNav()" id="hamburger" aria-label="القائمة" aria-controls="mobile-nav" aria-expanded="false">&#9776;</button>
   <a href="#" class="nav-brand">
     <img src="assets/img/logo-200.png" alt="SSAM"/>
     <div class="nav-brand-text">
@@ -26,10 +31,6 @@
       <div class="t2">SSAM · Melbourne</div>
     </div>
   </a>
-  <!-- Hamburger sits right after the brand so on mobile (RTL) it lands
-       directly next to the logo on the right. On desktop it's hidden and the
-       full nav-menu + nav-actions take over the row. -->
-  <button class="nav-hamburger" onclick="toggleNav()" id="hamburger" aria-label="القائمة" aria-controls="mobile-nav" aria-expanded="false">&#9776;</button>
   <div class="nav-menu">
     <a href="#about" data-ar>عن النادي</a><a href="#about" data-en style="display:none">About</a>
     <a href="#events" data-ar>الفعاليات</a><a href="#events" data-en style="display:none">Events</a>
