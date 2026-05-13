@@ -23,6 +23,27 @@ When you change a template here:
 |---|---|---|
 | `password-recovery.html` | Reset Password | `users.sendPasswordReset` admin action |
 
+Plus one Edge-Function-generated email (not a Supabase Auth template,
+not pasted into the dashboard — composed inline by the action handler):
+
+| Source | When sent | Recipient |
+|---|---|---|
+| `supabase/functions/api/actions/applications.ts` → `notifyNewApplication()` | After `applications.submit` succeeds | `info@ssamau.com` (shared admin inbox) |
+
+The new-application email uses its own SMTP path (`supabase/functions/api/_email.ts`) rather than Supabase Auth's SMTP, because Supabase Auth's SMTP is reserved for auth-related transactional mail (signup confirm, password recovery, magic links). For our custom notification, we connect directly to Google Workspace SMTP using the same `info@ssamau.com` app-password — stored as separate Edge Function secrets:
+
+```bash
+supabase secrets set \
+  SMTP_HOST=smtp.gmail.com \
+  SMTP_PORT=587 \
+  SMTP_USER=info@ssamau.com \
+  SMTP_PASS=<16-char google workspace app password> \
+  SMTP_FROM='SSAM <info@ssamau.com>'
+```
+
+If these aren't set, the Edge Function logs a warning and the
+notification is skipped — the application still saves successfully.
+
 The other Supabase templates (Confirm signup, Magic Link, Change Email
 Address, Invite user) are NOT customised yet — they keep the Supabase
 defaults until we have a flow that actually triggers them. The member

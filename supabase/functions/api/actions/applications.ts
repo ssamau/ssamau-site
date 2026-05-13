@@ -12,6 +12,14 @@ import {
   requireAuth, requireSuperadmin, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
+import { sendEmail } from '../_email.ts';
+
+// Recipient address for new-application notifications. The president's
+// stated requirement: notify the shared admin inbox every time someone
+// submits the public form, so the team can quickly figure out which
+// committee head should pick the application up. Replaces what Google
+// Forms used to do automatically before this stack existed.
+const APPLICATION_NOTIF_TO = 'info@ssamau.com';
 
 // ─── MEMBERSHIP APPLICATIONS (§6) ────────────────────────────────────
 // Public submission. Anyone on the website can hit this without auth.
@@ -70,8 +78,153 @@ const applicationsSubmit: Handler = async (body) => {
       'PendingTriage'
     )
   `;
+
+  // Side-effect: notify the shared admin inbox so the team can triage
+  // and route the application to the right committee head. Replaces
+  // the old Google-Forms-auto-notification behaviour. We deliberately
+  // DON'T await + don't fail the submit if the email send breaks —
+  // the application is already saved, and the admin team can still
+  // see it in the dashboard; an email blip shouldn't surface as a
+  // "submission failed" UX to the applicant.
+  notifyNewApplication(id, data).catch(err => {
+    console.error('[applications.submit] notification email failed:', err);
+  });
+
   return { application_id: id };
 };
+
+// Compose + send the new-application notification. Pulled into its
+// own function so the submit handler stays readable, and so future
+// notifications (e.g. on application accept/reject) can reuse the
+// same template helpers.
+async function notifyNewApplication(applicationId: string, data: Record<string, unknown>): Promise<void> {
+  const nameAr = String(data.name_ar || data.full_name || '—');
+  const nameEn = String(data.name_en || '');
+  const subject = `📥 طلب عضوية جديد — ${nameAr}`;
+
+  const interests = Array.isArray(data.interests) ? data.interests as string[] : [];
+  const phoneFull = data.phone
+    ? `${data.phone_country_code || ''} ${data.phone}`.trim()
+    : '—';
+  const whatsappFull = data.whatsapp
+    ? `${data.whatsapp_country_code || ''} ${data.whatsapp}`.trim()
+    : '—';
+  const universityField = data.university_other
+    ? `${data.university || ''} (${data.university_other})`.trim()
+    : String(data.university || '—');
+  const scholarshipField = data.scholarship_entity_other
+    ? `${data.scholarship_entity || ''} — ${data.scholarship_entity_other}`.trim()
+    : String(data.scholarship_entity || '—');
+
+  // Inline-CSS HTML email. Same design language as the password-
+  // recovery template (green brand header + Arabic-first body). Most
+  // email clients strip <style> blocks so every property is inline.
+  const html = `<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f6f4;font-family:'Helvetica Neue',Arial,sans-serif;color:#111827;line-height:1.55;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f6f4;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+      <tr><td style="background:#1A5C2E;padding:22px 24px;color:#fff;">
+        <div style="font-size:13px;color:#c9a032;letter-spacing:.5px;">SSAM — طلبات العضوية</div>
+        <div style="font-size:20px;font-weight:700;margin-top:4px;">طلب عضوية جديد</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;font-family:Menlo,Consolas,monospace;direction:ltr;text-align:left;">${esc(applicationId)}</div>
+      </td></tr>
+      <tr><td style="padding:24px;">
+        ${section('المتقدّم', [
+          ['الاسم (عربي)', nameAr],
+          ['Name (English)',  nameEn || '—'],
+          ['الاسم المختصر',   String(data.preferred_name || '—')],
+          ['الجنس',          String(data.gender || '—')],
+          ['تاريخ الميلاد',  String(data.date_of_birth || '—')],
+        ])}
+        ${section('التواصل', [
+          ['البريد الإلكتروني', String(data.email || '—')],
+          ['الجوال',            phoneFull],
+          ['واتساب',            whatsappFull],
+          ['العنوان في ملبورن', String(data.address_melbourne || '—')],
+        ])}
+        ${section('الهوية', [
+          ['رقم الهوية', String(data.national_id || '—')],
+          ['جهة الابتعاث', scholarshipField],
+        ])}
+        ${section('الدراسة', [
+          ['الجامعة',     universityField],
+          ['المرحلة',     String(data.study_level || '—')],
+          ['التخصص',     String(data.degree_field || data.major || '—')],
+          ['بداية الدراسة', String(data.study_started_window || '—')],
+          ['التخرج المتوقع', String(data.expected_graduation_window || '—')],
+          ['CV',          data.cv_url ? `<a href="${esc(String(data.cv_url))}" style="color:#1A5C2E">رابط</a>` : '—'],
+        ])}
+        ${interests.length ? `
+          <div style="margin-bottom:18px;">
+            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:8px;">اللجان المهتمة بها</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${interests.map(i => `<span style="display:inline-block;background:#e8f5e9;color:#0e3a1c;font-size:12px;padding:4px 10px;border-radius:50px;">${esc(i)}</span>`).join('')}
+            </div>
+          </div>` : ''}
+        ${data.skills_hobbies ? `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">المهارات والاهتمامات</div>
+            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.skills_hobbies))}</div>
+          </div>` : ''}
+        ${data.about_self ? `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">نبذة عن المتقدّم</div>
+            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.about_self))}</div>
+          </div>` : ''}
+        ${data.suggestions ? `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:6px;">اقتراحات</div>
+            <div style="font-size:13px;color:#374151;white-space:pre-wrap;">${esc(String(data.suggestions))}</div>
+          </div>` : ''}
+        <div style="margin-top:24px;text-align:center;">
+          <a href="https://ssamau.com/admin.html#/admin/applications"
+             style="display:inline-block;padding:12px 28px;background:#1A5C2E;color:#fff;text-decoration:none;font-weight:700;font-size:14px;border-radius:10px;">
+            افتح في لوحة الإدارة
+          </a>
+        </div>
+      </td></tr>
+      <tr><td style="background:#f9fafb;padding:14px 24px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+        رسالة آلية من نظام إدارة النادي — لا ترد عليها.<br/>
+        SSAM — Saudi Students Association in Melbourne
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  await sendEmail({ to: APPLICATION_NOTIF_TO, subject, html });
+}
+
+// HTML-escape for content interpolated into email body. Same logic
+// as the frontend's `esc` but inlined here so this module doesn't
+// pull in lib/format.js (which is browser-targeted).
+function esc(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Renders a "section" of label/value rows in the email body. Same
+// table-based layout the password-recovery email uses — survives
+// Outlook + Gmail + Apple Mail rendering quirks.
+function section(title: string, rows: Array<[string, string]>): string {
+  return `
+    <div style="margin-bottom:18px;border-bottom:1px solid #f0f0f0;padding-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:10px;">${esc(title)}</div>
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;">
+        ${rows.map(([l, v]) => `
+          <tr>
+            <td style="color:#6b7280;padding:3px 0;width:140px;vertical-align:top;">${esc(l)}</td>
+            <td style="color:#111827;padding:3px 0;vertical-align:top;">${v}</td>
+          </tr>`).join('')}
+      </table>
+    </div>`;
+}
 
 const applicationsList: Handler = async (body, user) => {
   requireAuth(user);
