@@ -54,3 +54,65 @@ a { color: inherit; text-decoration: none; }
 
 ::-webkit-scrollbar         { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb   { background: rgba(0,0,0,.15); border-radius: 3px; }
+
+/* ─── A11y ─────────────────────────────────────────────────────────
+ * Focus-visible rings: when a user navigates by keyboard (Tab key),
+ * give every interactive element a clearly-visible focus indicator.
+ * :focus-visible only fires for keyboard/AT focus, not mouse clicks,
+ * so we don't pollute the mouse-driven experience.
+ *
+ * The default browser ring is fine on most elements but renders
+ * inconsistently across browsers (and is invisible on some bg
+ * colors). Pin a high-contrast 2px outline + 2px offset that works
+ * on both light surfaces and the brand-green sidebar/header. */
+:focus-visible {
+  outline: 2px solid var(--g);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* Buttons + form elements get a slightly different style — a glow
+ * instead of outline — so they don't fight with the existing border. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--g);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(26, 92, 46, .15);
+}
+
+/* Honor the user's OS-level motion preference. Transitions and the
+ * `scroll-behavior: smooth` above can trigger vestibular symptoms in
+ * some users; if they've set System Settings → Accessibility → Reduce
+ * Motion (macOS) or the equivalent on iOS/Android/Windows, kill it
+ * all. Animations still fire but instantly so we don't break logic
+ * (e.g. the sidebar drawer's open/close state). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip-to-main link: visible only when keyboard-focused. Lets users
+ * tab past the sidebar nav (which has ~15 tab stops) and jump
+ * straight to the page content. Positioned absolutely + visually
+ * hidden until focus, then slides into view. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  inset-inline-start: 0;
+  z-index: 9999;
+  padding: .55rem 1rem;
+  background: var(--g);
+  color: #fff;
+  font-weight: 700;
+  font-size: .85rem;
+  border-radius: 0 0 var(--rs) 0;
+  transition: top .15s ease;
+}
+.skip-link:focus-visible {
+  top: 0;
+}
