@@ -72,6 +72,17 @@ function updateSubmitState() {
   $('#submit-btn').disabled = !$('#f-confirm').checked;
 }
 
+// Show / hide the entire study section based on the scholarship choice.
+// `companion_non_student` means the applicant is a dependent who isn't
+// themselves a student — they have no degree, no university, no graduation
+// date to report. Keep the section visible for every other choice.
+function toggleStudySection() {
+  const sel = $$('input[name=scholarship]').find((r) => r.checked);
+  const isNonStudent = !!sel && sel.value === 'companion_non_student';
+  const sec = $('#section-study');
+  if (sec) sec.style.display = isNonStudent ? 'none' : '';
+}
+
 // ─── CV paste modal ─────────────────────────────────────────────────────────
 let _cvUrl = '';
 function openCvModal() {
@@ -151,26 +162,39 @@ async function doSubmit() {
   };
 
   // Required-field validation matches the form's spec.
+  //
+  // address_melbourne is intentionally NOT required — many applicants don't
+  // have a fixed Melbourne address yet when they apply (new arrivals, short-
+  // term visitors, family staying temporarily). We collect it when it exists.
+  //
+  // Study fields are only required when the applicant is actually studying.
+  // A `companion_non_student` (dependent who isn't a student themselves)
+  // legitimately has no university/degree/graduation to report — leaving
+  // them required forced people to invent fake data to submit.
   const required = [
     ['national_id',                'رقم الهوية'],
     ['name_ar',                    'الاسم بالعربية'],
     ['name_en',                    'الاسم بالإنجليزية'],
     ['gender',                     'الجنس'],
     ['date_of_birth',              'تاريخ الميلاد'],
-    ['address_melbourne',          'العنوان في ملبورن'],
     ['phone',                      'رقم الجوال'],
     ['email',                      'البريد الإلكتروني'],
     ['scholarship_entity',         'جهة الابتعاث'],
-    ['study_level',                'المرحلة الدراسية'],
-    ['degree_field',               'التخصص'],
-    ['university',                 'الجامعة'],
-    ['study_started_window',       'وقت بدء الدراسة'],
-    ['expected_graduation_window', 'تاريخ التخرج المتوقع'],
     ['skills_hobbies',             'المهارات والهوايات'],
     ['about_self',                 'النبذة عن نفسك'],
     ['referral_source',            'كيف علمت عن النادي'],
     ['suggestions',                'الاقتراحات'],
   ];
+  const isStudying = body.scholarship_entity !== 'companion_non_student';
+  if (isStudying) {
+    required.push(
+      ['study_level',                'المرحلة الدراسية'],
+      ['degree_field',               'التخصص'],
+      ['university',                 'الجامعة'],
+      ['study_started_window',       'وقت بدء الدراسة'],
+      ['expected_graduation_window', 'تاريخ التخرج المتوقع'],
+    );
+  }
   for (const [k, label] of required) {
     if (!body[k]) { showErr(`الحقل مطلوب: ${label}`); return; }
   }
@@ -208,7 +232,10 @@ $('#f-university')?.addEventListener('change', toggleUniOther);
 $('#f-confirm')   ?.addEventListener('change', updateSubmitState);
 $('#submit-btn')  ?.addEventListener('click',  doSubmit);
 
-$$('input[name=scholarship]').forEach((r) => r.addEventListener('change', () => toggleOther('scholarship')));
+$$('input[name=scholarship]').forEach((r) => r.addEventListener('change', () => {
+  toggleOther('scholarship');
+  toggleStudySection();
+}));
 $$('input[name=referral]').forEach((r)    => r.addEventListener('change', () => toggleOther('referral')));
 
 // CV button + modal
