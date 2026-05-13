@@ -1,10 +1,16 @@
 /* ═══════════════════════════════════════════════
    SSAM — Login page
-   ─────────────────────────────────────────────── */
+   ───────────────────────────────────────────────
+   All colors go through CSS custom properties from base.css so the
+   page adapts to light / dark mode + the user's manual theme toggle.
+
+   The branded green gradient (page background + header) keeps brand
+   tokens — those are always dark green regardless of theme; only
+   the surrounding card + text colors shift. */
 
 html, body { height: 100%; }
 body {
-  background: linear-gradient(135deg, #0e3a1c 0%, #1A5C2E 50%, #0e3a1c 100%);
+  background: linear-gradient(135deg, var(--gd) 0%, var(--g) 50%, var(--gd) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,22 +29,22 @@ body::before {
 }
 
 .login-card {
-  background: #fff; border-radius: 20px;
+  background: var(--sf); border-radius: 20px;
   width: 100%; max-width: 420px;
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
 }
 
-/* Header */
+/* Header — keeps the brand green gradient in both light + dark modes */
 .lc-header {
-  background: linear-gradient(135deg, #0e3a1c, #1A5C2E);
+  background: linear-gradient(135deg, var(--gd), var(--g));
   padding: 2.5rem 2rem;
   text-align: center;
 }
 .lc-logo {
   width: 110px; height: 110px;
   border-radius: 50%;
-  background: #fff;
+  background: #fff;        /* always white — frames the SSAM logo */
   border: 3px solid rgba(184,147,42,.5);
   margin: 0 auto 1rem;
   display: flex; align-items: center; justify-content: center;
@@ -51,15 +57,15 @@ body::before {
 
 /* Form */
 .lc-body { padding: 2rem; }
-.lc-welcome { font-size: .82rem; color: #4b5563; text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
+.lc-welcome { font-size: .82rem; color: var(--tl); text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
 
 .fg { margin-bottom: 1rem; }
-.fg label { display: block; font-size: .75rem; font-weight: 700; color: #374151; margin-bottom: .35rem; }
+.fg label { display: block; font-size: .75rem; font-weight: 700; color: var(--tx); margin-bottom: .35rem; }
 .fg-icon-wrap { position: relative; }
 .fg-icon { position: absolute; right: .85rem; top: 50%; transform: translateY(-50%); font-size: .95rem; pointer-events: none; }
 .fg input {
   width: 100%;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--bd);
   border-radius: 10px;
   padding: .65rem 2.4rem .65rem .85rem;
   font-size: .9rem;
@@ -67,22 +73,24 @@ body::before {
   direction: rtl;
   outline: none;
   transition: all .2s;
-  background: #f9fafb;
+  background: var(--bg);
+  color: var(--tx);
 }
-.fg input:focus { border-color: #1A5C2E; background: #fff; box-shadow: 0 0 0 3px rgba(26,92,46,.1); }
+.fg input::placeholder { color: var(--tm); }
+.fg input:focus { border-color: var(--g); background: var(--sf); box-shadow: 0 0 0 3px rgba(26,92,46,.15); }
 
 .pw-toggle {
   position: absolute; left: .85rem; top: 50%;
   transform: translateY(-50%);
   background: none; border: none; cursor: pointer;
-  font-size: .9rem; color: #9ca3af;
+  font-size: .9rem; color: var(--tm);
   padding: .15rem;
 }
-.pw-toggle:hover { color: #1A5C2E; }
+.pw-toggle:hover { color: var(--g); }
 
 .login-btn {
   width: 100%;
-  background: linear-gradient(135deg, #1A5C2E, #2a7a42);
+  background: linear-gradient(135deg, var(--g), var(--gm));
   color: #fff; border: none; border-radius: 10px;
   padding: .8rem;
   font-size: .95rem; font-weight: 800;
@@ -97,11 +105,11 @@ body::before {
 .login-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
 .error-msg {
-  background: #fef2f2;
+  background: var(--dnb);
   border: 1.5px solid rgba(220,38,38,.2);
   border-radius: 8px;
   padding: .65rem .85rem;
-  font-size: .8rem; color: #dc2626; text-align: center;
+  font-size: .8rem; color: var(--dn); text-align: center;
   margin-top: .85rem;
   display: none;
 }
@@ -109,7 +117,7 @@ body::before {
 
 /* Footer */
 .lc-footer { padding: 1rem 2rem 1.5rem; text-align: center; }
-.lc-footer-txt { font-size: .68rem; color: #9ca3af; }
+.lc-footer-txt { font-size: .68rem; color: var(--tm); }
 /* Back-to-home escape hatch. Without it, a user who lands on /login.html and
    decides not to sign in can't get back to the public page short of typing
    the URL or hitting browser back (which doesn't always work, e.g. when
@@ -118,7 +126,7 @@ body::before {
   display: inline-block;
   font-size: .72rem;
   font-weight: 700;
-  color: #1A5C2E;
+  color: var(--g);
   text-decoration: none;
   padding: .35rem .8rem;
   margin-bottom: .65rem;
@@ -127,12 +135,12 @@ body::before {
   transition: all .15s;
 }
 .lc-back:hover {
-  background: #e8f5e9;
+  background: var(--gl);
   border-color: rgba(26, 92, 46, .2);
 }
 .lc-version {
   display: inline-block;
-  background: #f3f4f6; color: #6b7280;
+  background: var(--bg); color: var(--tl);
   font-size: .65rem; font-weight: 700;
   padding: .18rem .5rem;
   border-radius: 50px;

@@ -95,6 +95,19 @@
       <span class="sb-ic">👤</span>ملف العضو
     </div>
   </nav>
+
+  <!-- Theme toggle. Sits at the bottom of the sidebar so it's
+       reachable from every tab without taking nav space. The
+       three-way switch (Auto / Light / Dark) maps to data-theme
+       on the <html> element + ssam_theme key in localStorage. -->
+  <div class="sb-theme">
+    <div class="sb-theme-label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    </div>
+  </div>
 </aside>
 
 <!-- Dim backdrop shown behind the sidebar on small screens. Click to close. -->

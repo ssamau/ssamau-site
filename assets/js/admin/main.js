@@ -19,6 +19,7 @@
 //      addEventListener bindings, at which point the shim is gone.
 
 import { getSession, clearSession, isLoggedIn, signOut } from '../lib/auth.js';
+import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 
 import { DB } from '../lib/state.js';
 import { RBAC } from '../lib/rbac.js';
@@ -106,6 +107,13 @@ import {
 // handler fires on bfcache restore (event.persisted === true), kicks the
 // user back to login, and stops the "ghost admin" state where a logged-
 // out user sees stale data until they touch something that 401s.
+// Apply the user's saved theme preference BEFORE anything renders.
+// admin/main.js is a deferred module so DOM is already parsed by
+// the time we run, but no paint has happened yet — setting the
+// data-theme attribute on <html> here avoids a flash of light when
+// the user prefers dark (or vice versa).
+applyStoredTheme();
+
 function _requireAuthOrRedirect() {
   const user = getSession();
   if (!user || !isLoggedIn()) {
@@ -195,6 +203,18 @@ document.querySelectorAll('.overlay').forEach(o =>
 // instant).
 document.getElementById('sb-toggle')   ?.addEventListener('click', toggleSidebar);
 document.getElementById('sb-backdrop') ?.addEventListener('click', closeSidebar);
+
+// Theme-toggle active-button sync. The CSS .sb-theme-btn.active highlight
+// shows the user which of {auto, light, dark} is currently selected.
+// Re-applied on init + on every change broadcast by lib/theme.js.
+function _syncThemeButtons() {
+  const current = getTheme();
+  document.querySelectorAll('.sb-theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === current);
+  });
+}
+window.addEventListener('ssam-theme-changed', _syncThemeButtons);
+_syncThemeButtons();
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSidebar();
 });
@@ -342,6 +362,13 @@ setHandlers({
 
   // ── Pass the element itself ─────────────────────────────────────
   cycleAttStatus:   (el) => cycleAttStatus(el),
+
+  // ── Theme toggle ────────────────────────────────────────────────
+  // Sidebar's three-way switch. data-value is "auto" | "light" | "dark".
+  // setTheme writes to localStorage + applies the data-theme attribute,
+  // and broadcasts an ssam-theme-changed event the listener below uses
+  // to sync the active-button class.
+  setTheme:         (el) => setTheme(el.dataset.value),
 
   // ── Element + value combo ───────────────────────────────────────
   markAttendance:   (el) => markAttendance(Number(el.dataset.id), el.value),

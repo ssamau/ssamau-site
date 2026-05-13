@@ -14,6 +14,9 @@
 // - Passwords don't match → client-side check
 // - Server rejection (password too weak, etc.) → show the message
 
+import { applyStoredTheme } from './lib/theme.js';
+applyStoredTheme();
+
 import { supabaseUpdatePassword } from './lib/auth.js';
 import { $ } from './lib/dom.js';
 

@@ -22,6 +22,9 @@
 //
 // CSP note: all handlers wired via addEventListener — no inline onclick.
 
+import { applyStoredTheme } from './lib/theme.js';
+applyStoredTheme();
+
 import { callApi, apiOrThrow } from './lib/api.js';
 import {
   saveSession, saveSupabaseSession,

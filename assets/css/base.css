@@ -42,63 +42,85 @@
   --shadow-md: 0 4px 16px rgba(0,0,0,.1);
 }
 
-/* ─── Dark mode ───────────────────────────────────────────────────
- * Honors prefers-color-scheme: dark — the OS-level setting users
- * pick in System Settings → Appearance (macOS) / Settings → Display
- * (iOS/Android/Windows). No manual toggle in-app; if the OS is
- * dark, we're dark. (A future "force light" toggle could be added
- * by setting `color-scheme: light` on the html element.)
+/* ─── Dark mode — three-way toggle ─────────────────────────────────
+ * Users get to pick: Auto (follow OS), Light, or Dark. The choice
+ * lives on `<html data-theme="auto|light|dark">`, set by
+ * assets/js/lib/theme.js from a localStorage preference (default
+ * "auto" = no data-theme attribute = use prefers-color-scheme).
  *
- * Strategy: override only the surface/text custom properties on
- * :root. Everything downstream uses var(--bg) / var(--sf) / var(--tx)
- * / etc. so we don't need to touch any individual rule. The brand
- * green stays the same hue but the tinted backgrounds (--gl + status
- * --dnb/--scb/--wnb/--blb/--pub) shift to dark-mode versions tuned
- * for legibility on dark surfaces.
+ * The CSS rules below realise the three states:
+ *   1. data-theme="light" or :root with no data-theme  →  light tokens
+ *      apply (via the default :root block above) and dark-mode media
+ *      query is suppressed by the :not() selector.
+ *   2. (prefers-color-scheme: dark) AND data-theme is unset/"auto" →
+ *      dark tokens apply via the media query.
+ *   3. data-theme="dark"  →  dark tokens apply unconditionally.
  *
- * Shadows go bigger + softer in dark mode because the contrast
- * against a dark background is much weaker than against white. */
+ * In all three cases everything downstream just reads var(--bg) /
+ * var(--sf) / var(--tx) etc., so individual components never need
+ * to know about the theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Surfaces */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --bg:  #0f1410;   /* page bg — dark green-tinted black */
     --sf:  #1a2018;   /* cards, modals */
     --tx:  #e5e7eb;   /* primary text */
-    --tl:  #9ca3af;   /* secondary text (was --tm in light) */
+    --tl:  #9ca3af;   /* secondary text */
     --tm:  #6b7280;   /* muted text */
-    --bd:  #2a312c;   /* borders — subtle on dark bg */
-
-    /* Brand green's light tint flips to a darker shade. Light .gl
-     * was used as a hover background on light tables; in dark mode
-     * it becomes a subtle green wash that's still visible on --sf. */
-    --gl:  #18342a;
-
-    /* Status badge backgrounds — light-mode versions are
-     * near-white tints; dark-mode versions are subtle deep tints
-     * tuned so the colored text/icons still pop. */
+    --bd:  #2a312c;   /* borders */
+    --gl:  #18342a;   /* dark replacement for the light-green tint */
     --dnb: #2a1414;
     --scb: #122a18;
     --wnb: #2a2010;
     --blb: #14202a;
     --pub: #1e1430;
-
     --shadow:    0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.4);
     --shadow-md: 0 6px 24px rgba(0,0,0,.6);
   }
-
-  /* Tell the browser which color-schemes the page supports so
-   * built-in form controls + scrollbars also adapt. */
-  html { color-scheme: dark; }
-
-  /* Scrollbar thumb gets lighter on dark backgrounds. */
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
-
-  /* Hand-tuned exceptions for elements that hardcoded color values
-   * outside the variable system. Long-term these should migrate to
-   * variables; for now we patch the worst cases here. */
-  .tag.t-gr  { background: #2a2a2a; color: #aaa; }
-  .skip-link { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.18);
+  }
 }
+
+/* Explicit "dark" override — applies regardless of OS preference. */
+:root[data-theme="dark"] {
+  --bg:  #0f1410;
+  --sf:  #1a2018;
+  --tx:  #e5e7eb;
+  --tl:  #9ca3af;
+  --tm:  #6b7280;
+  --bd:  #2a312c;
+  --gl:  #18342a;
+  --dnb: #2a1414;
+  --scb: #122a18;
+  --wnb: #2a2010;
+  --blb: #14202a;
+  --pub: #1e1430;
+  --shadow:    0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 6px 24px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
+
+/* Explicit "light" override — applies regardless of OS preference.
+ * The default :root values are already the light palette, so we
+ * really only need to pin color-scheme so built-in form controls
+ * (date picker, select dropdown) don't follow the OS into dark. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Hand-tuned exceptions for elements outside the variable system.
+ * Selector chain mirrors the dark-tokens chain above — any path
+ * that lands in dark gets these patches. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .tag.t-gr  { background: #2a2a2a; color: #aaa; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .skip-link { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+}
+:root[data-theme="dark"] .tag.t-gr  { background: #2a2a2a; color: #aaa; }
+:root[data-theme="dark"] .skip-link { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { font-size: 15px; scroll-behavior: smooth; }

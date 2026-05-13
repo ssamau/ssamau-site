@@ -334,6 +334,29 @@ tr:hover td { background:#fafcfa; }
 }
 .sb-backdrop.open { opacity: 1; pointer-events: auto; }
 
+/* Theme toggle at sidebar bottom. Three small buttons that map to
+ * the three states stored in localStorage by lib/theme.js: auto,
+ * light, dark. The currently-active button gets a .active class
+ * (managed by JS) so the user sees their current pick. */
+.sb-theme { margin-top: auto; padding: .6rem .85rem .9rem; border-top: 1px solid var(--bd); }
+.sb-theme-label { font-size: .65rem; font-weight: 700; color: var(--tm); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .03em; }
+.sb-theme-row { display: flex; gap: .3rem; }
+.sb-theme-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: .35rem .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--tl);
+  cursor: pointer;
+  transition: all .14s;
+  font-family: inherit;
+}
+.sb-theme-btn:hover  { border-color: var(--g); color: var(--g); }
+.sb-theme-btn.active { background: var(--gl); border-color: var(--g); color: var(--g); }
+
 @media(max-width:900px) {
   .sidebar { transform:translateX(100%); }
   .sidebar.open { transform:translateX(0); }
