@@ -1,7 +1,12 @@
 // ================================================================
 //  RBAC — Role Based Access Control
-//  superadmin = يشوف كل شيء
-//  head       = يشوف لجنته فقط + المشاريع + التقارير
+//  superadmin = dev (just Faisal). Sees everything, plus dev-only ops.
+//  admin      = presidency (President + VPs + DVPs). Sees everything
+//               operationally — same surface as the old single-tier
+//               superadmin minus dev-only stuff.
+//  head       = committee head. Scoped to their own committee.
+//  member     = regular member. View-own.
+//  volunteer  = non-committee participant. Similar to member.
 // ================================================================
 //
 // Reads `window.CURRENT_USER` (populated by the auth guard in main.js)
@@ -12,8 +17,20 @@
 import { DB } from './state.js';
 
 export const RBAC = {
+  // True for the dev account only. Use this ONLY for dev-only ops
+  // (currently none in the admin UI — reserved for the future
+  // dev-account-handover flow). For "is this user allowed to see
+  // everything" use isAdmin() instead.
   isSuperAdmin() {
     return window.CURRENT_USER?.access === 'superadmin';
+  },
+
+  // True for admin (presidency) OR superadmin (dev). This is the
+  // right check for nearly every "see everything / do everything"
+  // UI gate — presidency operates the club, dev does too.
+  isAdmin() {
+    const a = window.CURRENT_USER?.access;
+    return a === 'admin' || a === 'superadmin';
   },
 
   isHead() {
@@ -30,7 +47,7 @@ export const RBAC = {
 
   // هل يمكن رؤية هذه الصفحة؟
   canSeePage(page) {
-    if (this.isSuperAdmin()) return true;
+    if (this.isAdmin()) return true;
     // رؤساء اللجان: يشوفون كل شيء عدا المستشارين. تبويب الحسابات متاح لهم
     // (مع تصفية إلى أعضاء لجنتهم فقط) لإعادة تعيين كلمات المرور.
     const restricted = ['advisors'];
@@ -39,7 +56,7 @@ export const RBAC = {
 
   // فلترة الأعضاء حسب الصلاحية
   filterMembers(members) {
-    if (this.isSuperAdmin()) return members;
+    if (this.isAdmin()) return members;
     // رئيس اللجنة يرى أعضاء لجنته فقط + نفسه
     const myId  = window.CURRENT_USER?.id;
     const myCom = this.myCommitteeId();
@@ -49,7 +66,7 @@ export const RBAC = {
 
   // فلترة اللجان
   filterCommittees(committees) {
-    if (this.isSuperAdmin()) return committees;
+    if (this.isAdmin()) return committees;
     const myCom = this.myCommitteeId();
     if (!myCom) return [];
     return committees.filter(c => c.committee_id === myCom);
@@ -57,7 +74,7 @@ export const RBAC = {
 
   // إخفاء العناصر التي لا يملك صلاحيتها
   applyUIRestrictions() {
-    if (this.isSuperAdmin()) return; // سوبر أدمن يشوف كل شيء
+    if (this.isAdmin()) return; // الإدارة والديف يشوفون كل شيء
 
     // إخفاء بعض خيارات الـ sidebar (المستشارون للسوبر أدمن فقط؛
     // تبويب الحسابات متاح للرؤساء بنطاق لجنتهم)
@@ -90,7 +107,7 @@ export const RBAC = {
 
   // تطبيق بادج "لجنتي" على صفحة الأعضاء
   injectMyTeamBadge() {
-    if (this.isSuperAdmin()) return;
+    if (this.isAdmin()) return;
     const pg = document.getElementById('page-members');
     if (!pg || pg.querySelector('.my-team-badge')) return;
     const myCom = this.myCommitteeId();

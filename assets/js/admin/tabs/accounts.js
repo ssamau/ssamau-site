@@ -20,24 +20,34 @@ import { RBAC } from '../../lib/rbac.js';
 // ══════════════════════════════════════════
 // USER ACCOUNTS (superadmin only)
 // ══════════════════════════════════════════
+// Role display labels + tag colors. Role-system refactor 2026-05-15
+// added the `admin` tier between `head` and `superadmin`. superadmin
+// is now dev-only; admin is the presidency tier (President + VPs +
+// DVPs). Both render with warm/red-ish tags so they read as "high
+// privilege" at a glance.
 export const ACCESS_LABEL_AR = {
-  superadmin: 'مدير عام',
+  superadmin: 'مطوّر',
+  admin:      'إدارة',
   head:       'رئيس لجنة',
   member:     'عضو',
   volunteer:  'متطوع',
 };
 export const ACCESS_COLOR = {
-  superadmin: 't-o',
-  head:       't-g',
-  member:     't-b',
-  volunteer:  't-p',
+  superadmin: 't-r',   // dev — red so it pops, only one row
+  admin:      't-o',   // presidency — orange/warm
+  head:       't-g',   // committee head — green
+  member:     't-b',   // member — blue
+  volunteer:  't-p',   // volunteer — purple
 };
 
 export async function loadAccounts() {
   // Adapt the UI to the caller's role:
-  //   superadmin → full management ("حسابات المستخدمين" + Add button)
-  //   head       → reset-only view scoped to their committee
-  const isAdmin = RBAC.isSuperAdmin();
+  //   admin/superadmin → full management (Add button + every account)
+  //   head             → reset-only view scoped to their committee
+  // (Role split landed 2026-05-15 — presidency now operates as
+  // `admin` while `superadmin` is dev-only. RBAC.isAdmin() handles
+  // both for "see everything" decisions.)
+  const isAdmin = RBAC.isAdmin();
   const title = document.getElementById('accounts-head-title');
   const addBtn = document.getElementById('accounts-add-btn');
   if (title) title.textContent = isAdmin
@@ -74,7 +84,7 @@ export function renderAccountRow(a) {
   // create the account first via the create-account modal).
   const hasAccount = !!a.id;
   const isSelf    = hasAccount && window.CURRENT_USER && a.id === window.CURRENT_USER.id;
-  const isAdmin   = RBAC.isSuperAdmin();
+  const isAdmin   = RBAC.isAdmin();
 
   const memberCell = a.member_id
     ? `<div style="font-weight:600">${esc(a.member_preferred_name || a.member_full_name || a.member_id)}</div>

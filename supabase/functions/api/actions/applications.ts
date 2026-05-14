@@ -9,7 +9,7 @@
 import { sql } from '../_sql.ts';
 import {
   httpErr, shortId,
-  requireAuth, requireSuperadmin, requireAdminScope,
+  requireAuth, requireAdmin, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
@@ -389,7 +389,7 @@ const applicationsList: Handler = async (body, user) => {
 
 // Presidency triages a PendingTriage application to a committee.
 const applicationsAssignCommittee: Handler = async (body, user) => {
-  requireSuperadmin(user);
+  requireAdmin(user);
   const id = body.id as string | undefined;
   const committee_id = body.committee_id as string | undefined;
   if (!committee_id) throw httpErr('committee_id is required', 400);

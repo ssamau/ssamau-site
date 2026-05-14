@@ -16,7 +16,7 @@
 // esm.sh / deno.land — no node_modules.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { resolveUserContext, PUBLIC_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
+import { resolveUserContext, PUBLIC_ACTIONS, ADMIN_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
 
 // Action modules. Each one exports a `Record<string, Handler>` keyed by
 // the same action names the frontend uses (`getMembers`, `users.create`,
@@ -127,8 +127,16 @@ serve(async (req) => {
   if (!PUBLIC_ACTIONS.has(action)) {
     user = await resolveUserContext(req.headers.get('authorization'));
     if (!user) return fail('Unauthorized', 401);
+    // Role-system refactor (2026-05-15): admin-tier and superadmin-tier
+    // allowlists are checked separately. ADMIN_ACTIONS opens the action
+    // to presidency-or-dev (most operational ops); SUPERADMIN_ACTIONS
+    // stays dev-only (currently empty, reserved for future dev-shaped
+    // ops like the dev-account-handover flow).
+    if (ADMIN_ACTIONS.has(action) && user.access !== 'superadmin' && user.access !== 'admin') {
+      return fail('Forbidden — admin access required', 403);
+    }
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
-      return fail('Forbidden — superadmin only', 403);
+      return fail('Forbidden — dev access required', 403);
     }
   }
 

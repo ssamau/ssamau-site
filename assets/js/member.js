@@ -19,6 +19,7 @@ applyStoredTheme();
 import {
   isLoggedIn, getSession, signOut, landingPageForAccess,
 } from './lib/auth.js';
+import { callApi } from './lib/api.js';
 import { $ } from './lib/dom.js';
 
 // ── Guards (run synchronously before paint to avoid a flash of the
@@ -46,6 +47,93 @@ const greetingEl = $('#greeting');
 if (greetingEl && session?.name) {
   greetingEl.textContent = `أهلًا ${session.name} 👋`;
 }
+
+// ── Contact section ────────────────────────────────────────────────
+// QoL added with the role-system refactor (2026-05-15) so a member who
+// just activated their account and needs to reach someone has a
+// directory rendered right on the landing page. Two groups shown:
+//   1. Presidency (President + VPs + DVPs) — visible to every member /
+//      volunteer regardless of committee affiliation.
+//   2. Own committee head + vice — only shown to members who are
+//      committee-affiliated (members.committee_id IS NOT NULL).
+//      Volunteers don't see committee-specific contacts since they
+//      aren't tied to one.
+//
+// Uses getMembers (public action — anyone can call, no JWT needed)
+// then filters client-side. Email-only display for privacy; phone /
+// WhatsApp stay private. Renders into #contact-cards under the
+// #contact-block (initially display:none until populated to avoid a
+// flash of an empty heading on slow connections).
+const LEADERSHIP_ROLES = new Set([
+  'President', 'Vice President', 'Deputy Vice President',
+]);
+const HEAD_ROLES = new Set([
+  'Committee Head', 'Committee Vice Head',
+]);
+const ROLE_LABEL_AR = {
+  'President':              'الرئيس',
+  'Vice President':         'نائب الرئيس',
+  'Deputy Vice President':  'مساعد نائب الرئيس',
+  'Committee Head':         'رئيس اللجنة',
+  'Committee Vice Head':    'نائب رئيس اللجنة',
+};
+
+async function loadContactSection() {
+  const res = await callApi('getMembers');
+  if (!res || !res.success) return;          // fail-soft: silently skip
+  const members = res.data || [];
+
+  // Presidency — always shown.
+  const presidency = members.filter(m => LEADERSHIP_ROLES.has(m.club_role));
+  // Own committee head + vice — only if the current user belongs to a committee.
+  const myCom    = session?.committee_id || null;
+  const myHeads  = myCom
+    ? members.filter(m => m.committee_id === myCom && HEAD_ROLES.has(m.club_role))
+    : [];
+
+  const cards = [...presidency, ...myHeads];
+  if (!cards.length) return;                 // shouldn't happen but defensive
+
+  const wrap = $('#contact-cards');
+  const block = $('#contact-block');
+  if (!wrap || !block) return;
+
+  // Render each contact as a small card: name (Arabic + English subtitle),
+  // role label, email link if present. Same .login-card surface but
+  // inverted so they stand out from the main "coming soon" block.
+  wrap.innerHTML = cards.map(m => {
+    const role = ROLE_LABEL_AR[m.club_role] || m.club_role || '';
+    const name = m.preferred_name || m.full_name || '—';
+    const sub  = m.full_name && m.preferred_name && m.preferred_name !== m.full_name
+      ? `<div style="font-size:.68rem;color:var(--tm,#9ca3af)">${escapeHtml(m.full_name)}</div>`
+      : '';
+    const emailLink = m.email
+      ? `<a href="mailto:${escapeHtml(m.email)}" style="font-size:.74rem;color:var(--g,#1A5C2E);text-decoration:none;font-weight:700;direction:ltr">${escapeHtml(m.email)}</a>`
+      : '<span style="font-size:.7rem;color:var(--tm,#9ca3af)">— لا يوجد بريد —</span>';
+    return `
+      <div style="background:var(--bg,#fff);border:1px solid var(--bd,#e5e7eb);border-radius:10px;padding:.75rem .85rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.3rem">
+          <div>
+            <div style="font-size:.86rem;font-weight:700">${escapeHtml(name)}</div>
+            ${sub}
+          </div>
+          <span style="font-size:.65rem;background:var(--gl,#e8f5e9);color:var(--g,#1A5C2E);padding:.15rem .45rem;border-radius:50px;font-weight:700;white-space:nowrap">${escapeHtml(role)}</span>
+        </div>
+        ${emailLink}
+      </div>`;
+  }).join('');
+  block.style.display = '';
+}
+
+// Cheap local HTML-escape (same pattern as index.js). Inlined so this
+// module doesn't pull in lib/format.js for one helper.
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+loadContactSection();
 
 // ── Logout button ──────────────────────────────────────────────────
 // signOut() handles both auth providers (Supabase + legacy) and

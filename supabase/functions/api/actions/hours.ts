@@ -12,7 +12,7 @@
 import { sql } from '../_sql.ts';
 import {
   httpErr,
-  requireAdminScope, requireSuperadmin,
+  requireAdminScope, requireAdmin,
   type Handler,
 } from '../_helpers.ts';
 
@@ -114,7 +114,7 @@ const hoursPrimaryApprove: Handler = async (body, user) => {
 };
 
 const hoursFinalApprove: Handler = async (body, user) => {
-  requireSuperadmin(user);
+  requireAdmin(user);
   const id = body.id as number | undefined;
   const [row] = await sql`SELECT id, member_id, approval_status FROM hours WHERE id = ${id}` as Array<{
     id: number; member_id: string | null; approval_status: string;
