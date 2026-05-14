@@ -12,7 +12,7 @@
 import { sql } from '../_sql.ts';
 import {
   httpErr,
-  requireAdminScope, requireAdmin,
+  requireAuth, requireAdminScope, requireAdmin,
   type Handler,
 } from '../_helpers.ts';
 
@@ -216,6 +216,28 @@ async function recomputeMemberTotalHours(member_id: string | null | undefined): 
   `;
 }
 
+// Self-service hours listing — member portal (Phase 5 of Branch 4).
+// Same row shape as getMemberHours so the renderer is reusable, but
+// hard-filtered to user.member_id so a member can't see anyone else's
+// rows. Auth-gated only — heads/admins can also call this for their
+// own data on their own portal, which is correct.
+const hoursListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  return sql`
+    SELECT h.id AS hours_id, h.*,
+           p.project_name, p.event_date,
+           o.role_name AS opportunity_role_name
+    FROM hours h
+    LEFT JOIN projects     p  ON p.project_id     = h.project_id
+    LEFT JOIN assignments  a  ON a.assignment_id  = h.assignment_id
+    LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    WHERE h.member_id = ${user.member_id}
+      AND (h.notes IS DISTINCT FROM 'Deleted')
+    ORDER BY h.recorded_at DESC
+  `;
+};
+
 export const hoursActions: Record<string, Handler> = {
   'recordHours':           recordHours,
   'updateHours':           updateHours,
@@ -223,4 +245,5 @@ export const hoursActions: Record<string, Handler> = {
   'hours.finalApprove':    hoursFinalApprove,
   'hours.reject':          hoursReject,
   'getMemberHours':        getMemberHours,
+  'hours.listOwn':         hoursListOwn,
 };
