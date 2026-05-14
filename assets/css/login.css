@@ -70,7 +70,23 @@ body::before {
   padding: .65rem 2.4rem .65rem .85rem;
   font-size: .9rem;
   font-family: 'Almarai', sans-serif;
-  direction: rtl;
+  /* `direction: rtl` was making the Arabic placeholders right-align
+     correctly but breaking the caret position when users typed LTR
+     content (emails, passwords, NIDs, PINs — basically every value
+     this form takes). With direction:rtl + LTR content, the browser
+     anchors the LTR run at the logical start (right edge of the
+     input) but places the caret at the LOGICAL END of the LTR run,
+     which is visually on the LEFT side. Users saw a cursor on the
+     left of their typed text and were confused.
+     `unicode-bidi: plaintext` solves both:
+       - Empty input → inherits RTL from <html dir="rtl">, so Arabic
+         placeholders still right-align as before.
+       - First strong-directional character typed determines the
+         effective direction: LTR for email/password/etc., RTL for
+         Arabic content. Caret behavior follows naturally.
+     Reported during prod testing of the Phase 3 signup flow. */
+  unicode-bidi: plaintext;
+  text-align: start;
   outline: none;
   transition: all .2s;
   background: var(--bg);
