@@ -48,18 +48,26 @@ if (greetingEl && session?.name) {
 }
 
 // ── Logout button ──────────────────────────────────────────────────
-// signOut() handles both auth providers (Supabase + legacy), clears
-// localStorage, and itself redirects to login.html. We just wire the
-// click.
+// signOut() handles both auth providers (Supabase + legacy) and
+// clears localStorage. It does NOT redirect on its own — that's the
+// caller's job (admin/main.js's logout() function does the same
+// explicit redirect after await). Without the redirect below,
+// signOut returns cleanly, this handler ends, and the user is left
+// sitting on member.html with no session — the wrong-portal guards
+// only run on page load, so the user has to refresh manually before
+// the redirect kicks in. Bug reported during PR #19 testing.
+//
+// The redirect lives outside the try/catch so it fires on both the
+// success and the network-blip paths.
 $('#logout-btn')?.addEventListener('click', async () => {
   try {
     await signOut();
   } catch (err) {
     // Even if Supabase's revoke call fails (offline, server blip),
     // signOut clears localStorage first so the session is effectively
-    // gone. Surface the error to console for debugging but bounce
-    // the user to login regardless.
+    // gone. Surface the error to console for debugging but proceed
+    // to the redirect anyway.
     console.warn('[member] signOut error (ignored):', err);
-    window.location.href = 'login.html';
   }
+  window.location.href = 'login.html';
 });
