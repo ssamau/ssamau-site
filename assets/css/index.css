@@ -851,3 +851,91 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
   background-color: #252e26;
   border-color: rgba(255,255,255,.06);
 }
+
+/* ─── Third-pass: nav bar + latest-report section (May 15) ──────────
+ * User reported the past-events strip still looks light. Reading
+ * more carefully revealed the section in the screenshot is actually
+ * `.latest-report` with `.lrep-card` children — a SEPARATE section
+ * from .events / .past-card that I'd been styling. Also the <nav>
+ * top bar has its own hardcoded `background:rgba(255,255,255,.97)`
+ * that doesn't respect data-theme.
+ *
+ * Adds:
+ *   nav                    rgba(255,255,255,.97) → rgba(15,20,16,.92)
+ *   .latest-report         #f8faf8 → #161b16
+ *   .lrep-wrap             #fff    → #1c241e
+ *   .lrep-card             #fff    → #1c241e + light text overrides
+ *   .lrep-card-loc / .lrep-card-mgr / .lrep-card-mgr-n / .lrep-card-stat
+ *
+ * `.lrep-card-mgr` has a `var(--gl)` background in light mode (light
+ * green tint for the manager block); in dark mode --gl resolves to
+ * #18342a which is fine here but we explicitly set rgba white-alpha
+ * to match the other nested-on-dark-card patterns in this file. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) nav {
+    background-color: rgba(15,20,16,.92);
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-brand-text .t1 { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-menu a       { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-hamburger    { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mobile-nav {
+    background-color: #0f1410;
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mobile-nav a {
+    color: #cbd5e1;
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .latest-report {
+    background-color: #161b16;
+    border-top-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-wrap,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-loc   { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-mgr   { background-color: rgba(255,255,255,.04); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-mgr-n { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-stat  {
+    background-color: rgba(184,147,42,.15);
+    color: #c9a032;
+  }
+}
+
+:root[data-theme="dark"] nav {
+  background-color: rgba(15,20,16,.92);
+  border-bottom-color: rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .nav-brand-text .t1 { color: #e5e7eb; }
+:root[data-theme="dark"] .nav-menu a       { color: #cbd5e1; }
+:root[data-theme="dark"] .nav-hamburger    { color: #e5e7eb; }
+:root[data-theme="dark"] .mobile-nav {
+  background-color: #0f1410;
+  border-bottom-color: rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .mobile-nav a {
+  color: #cbd5e1;
+  border-bottom-color: rgba(255,255,255,.08);
+}
+
+:root[data-theme="dark"] .latest-report {
+  background-color: #161b16;
+  border-top-color: rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .lrep-wrap,
+:root[data-theme="dark"] .lrep-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .lrep-card-loc   { color: #cbd5e1; }
+:root[data-theme="dark"] .lrep-card-mgr   { background-color: rgba(255,255,255,.04); }
+:root[data-theme="dark"] .lrep-card-mgr-n { color: #e5e7eb; }
+:root[data-theme="dark"] .lrep-card-stat  {
+  background-color: rgba(184,147,42,.15);
+  color: #c9a032;
+}
