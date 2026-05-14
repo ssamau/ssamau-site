@@ -81,6 +81,8 @@ import {
 } from './tabs/profile.js';
 import {
   loadInterestAll, loadInterest, saveInterest,
+  toggleReviewedVisibility, openInterestAssign,
+  confirmInterestAssign, interestMarkReviewed,
 } from './tabs/interest.js';
 import {
   loadThanks, saveThanks, saveBulkThanks,
@@ -342,6 +344,12 @@ setHandlers({
   loadCerts:              (el) => loadCerts(el.value),
   loadHours:              (el) => loadHours(el.value),
   loadInterest:           (el) => loadInterest(el.value),
+
+  // ── Interest triage workflow (per-row buttons + header toggle) ──
+  toggleReviewedVisibility:  (el) => toggleReviewedVisibility(el),
+  openInterestAssign:        (el) => openInterestAssign(el),
+  confirmInterestAssign:     confirmInterestAssign,
+  interestMarkReviewed:      (el) => interestMarkReviewed(el),
   loadMemberProfile:      (el) => loadMemberProfile(el.value),
   loadParticipants:       (el) => loadParticipants(el.value),
   loadThanks:             (el) => loadThanks(el.value),

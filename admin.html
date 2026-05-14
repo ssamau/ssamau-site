@@ -446,6 +446,10 @@
         <div class="card-head">
           <h3>🙋 طلبات المشاركة</h3>
           <div class="card-head-right">
+            <label class="fg-check" style="font-size:.74rem;color:var(--tl)">
+              <input type="checkbox" id="flt-int-show-reviewed" data-action="toggleReviewedVisibility"/>
+              عرض المُراجَعة
+            </label>
             <select class="filter-select" id="flt-int-prj" data-action="loadInterest"><option value="">كل المشاريع</option></select>
             <button class="btn btn-g" data-action="openModal" data-modal="interest">+ تسجيل اهتمام</button>
           </div>
@@ -460,8 +464,8 @@
             <div class="sum-l">نسبة الاهتمام</div>
           </div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>العضو</th><th>المشروع</th><th>مهتم</th><th>التوفر</th><th>تعليق</th><th>التاريخ</th></tr></thead>
-        <tbody id="tb-interest"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>العضو</th><th>المشروع</th><th>مهتم</th><th>التوفر</th><th>تعليق</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+        <tbody id="tb-interest"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -1103,6 +1107,39 @@
       <div class="fg"><label>تعليق</label><textarea id="int-cm"></textarea></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="interest">إلغاء</button><button class="btn btn-g" data-action="saveInterest">💾 تسجيل</button></div>
+  </div>
+</div>
+
+<!--
+  Assign-from-interest modal — opened from the per-row "➕ تعيين" button
+  on the طلبات المشاركة tab. Pre-fills with the interest row's member +
+  project; loads that project's opportunities into the dropdown and
+  auto-selects the one matching the "مهتم بدور: <role>" hint embedded
+  in the interest comment. One click → confirm → assignment created +
+  interest auto-marked reviewed (the typical "I dealt with this" flow).
+-->
+<div class="overlay" id="ov-int-assign">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3>➕ تعيين العضو لفرصة</h3><button class="modal-close" data-action="closeModal" data-modal="int-assign">✕</button></div>
+    <div class="modal-body">
+      <div style="background:var(--gl);border-radius:10px;padding:.75rem .95rem;margin-bottom:1rem;font-size:.82rem">
+        <div style="margin-bottom:.3rem"><strong>العضو:</strong> <span id="ia-member">—</span></div>
+        <div style="margin-bottom:.3rem"><strong>المشروع:</strong> <span id="ia-project">—</span></div>
+        <div><strong>التعليق:</strong> <span id="ia-comment" style="color:var(--tl)">—</span></div>
+      </div>
+      <div class="fg">
+        <label>الفرصة <span class="required">*</span></label>
+        <select id="ia-opp-sel"><option value="">جاري تحميل الفرص...</option></select>
+        <div class="fg-note" id="ia-opp-note" style="display:none">سيتم تحديد الفرصة تلقائياً حسب الدور المذكور في التعليق</div>
+      </div>
+      <p style="font-size:.72rem;color:var(--tm);margin:.8rem 0 0;line-height:1.55">
+        سيتم تأكيد التعيين وتعليم طلب الاهتمام كـ <strong>مُراجَع</strong> تلقائياً.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="int-assign">إلغاء</button>
+      <button class="btn btn-g" data-action="confirmInterestAssign" id="ia-confirm-btn">➕ تأكيد التعيين</button>
+    </div>
   </div>
 </div>
 
