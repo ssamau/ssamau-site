@@ -216,6 +216,92 @@ async function recomputeMemberTotalHours(member_id: string | null | undefined): 
   `;
 }
 
+// Self-service hours recording — member portal (Phase 5 of Branch 4).
+//
+// Lets a member log hours for one of THEIR OWN assignments, provided the
+// assignment was marked `Attended` (Principle 2, same rule the admin
+// recordHours enforces). The row enters at `Draft` so it flows through
+// the same two-stage approval the requirements doc §7 describes:
+//
+//   Draft  →  (committee head)        →  PrimaryApproved
+//          →  (presidency)            →  FinalApproved   → counts
+//
+// Differences from `recordHours`:
+//   - Hard-scoped to the caller. The assignment row is verified to
+//     belong to user.member_id; passing someone else's assignment_id
+//     returns 404. No ability for a member to log hours on behalf of
+//     another member (that's still the admin's job).
+//   - assignment_id is REQUIRED. Members can't log free-form hours
+//     unattached to an assignment — the requirements doc only blesses
+//     hours that come from an attended assignment.
+//   - One row per (member, assignment). Re-submitting on an assignment
+//     that already has a member-recorded hours row throws 409 — the
+//     member should ask their committee head to edit if they need to
+//     fix a number. (Admins editing on behalf of members still use the
+//     existing updateHours path.)
+const hoursRecordOwn: Handler = async (body, user) => {
+  requireAuth(user);
+  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  const data = (body.data ?? body) as Record<string, unknown>;
+  const assignment_id = data.assignment_id as string | undefined;
+  if (!assignment_id) throw httpErr('assignment_id is required', 400);
+
+  const [a] = await sql`
+    SELECT a.assignment_id, a.member_id, a.attendance_status,
+           o.project_id AS o_project_id
+    FROM assignments a
+    JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    WHERE a.assignment_id = ${assignment_id}
+  ` as Array<{
+    assignment_id: string; member_id: string | null;
+    attendance_status: string; o_project_id: string;
+  }>;
+  if (!a) throw httpErr('Assignment not found', 404);
+  // Server-side self-scope: the assignment must belong to the caller.
+  // Without this a member could pass a stranger's assignment_id and
+  // log hours into their record.
+  if (a.member_id !== user.member_id) {
+    throw httpErr('Assignment does not belong to this member.', 403);
+  }
+  // Principle 2 — only attended assignments earn hours.
+  if (a.attendance_status !== 'Attended') {
+    throw httpErr('Hours can only be recorded for assignments marked Attended (Principle 2).', 422);
+  }
+  // One self-submission per assignment. Members fix mistakes via their
+  // committee head — keeping the audit trail clean is more important
+  // than self-service edits, which would also need a "can't edit after
+  // primary-approved" check that the admin path already owns.
+  const [existing] = await sql`
+    SELECT id FROM hours WHERE assignment_id = ${assignment_id} LIMIT 1
+  ` as Array<{ id: number }>;
+  if (existing) {
+    throw httpErr('Hours already recorded for this assignment. Ask a committee head to edit if needed.', 409);
+  }
+
+  const before = parseFloat(data.hours_before as string) || 0;
+  const during = parseFloat(data.hours_during as string) || 0;
+  const after  = parseFloat(data.hours_after  as string) || 0;
+  if (before + during + after <= 0) {
+    throw httpErr('Total hours must be greater than zero.', 422);
+  }
+
+  const [r] = await sql`
+    INSERT INTO hours (project_id, assignment_id, member_id, participant_type,
+                       hours_before, hours_during, hours_after,
+                       notes, recorded_by, recorded_by_member_id, approval_status)
+    VALUES (${a.o_project_id}, ${assignment_id}, ${user.member_id}, 'member',
+            ${before}, ${during}, ${after},
+            ${data.notes || null}, ${user.id}, ${user.member_id},
+            'Draft')
+    RETURNING id, total_hours
+  ` as Array<{ id: number; total_hours: number }>;
+  // No recomputeMemberTotalHours() call — Draft rows don't count toward
+  // the total. The recompute fires when the head primary-approves and
+  // again when presidency final-approves (see hoursPrimaryApprove /
+  // hoursFinalApprove above).
+  return { id: r.id, hours_id: r.id, total_hours: r.total_hours };
+};
+
 // Self-service hours listing — member portal (Phase 5 of Branch 4).
 // Same row shape as getMemberHours so the renderer is reusable, but
 // hard-filtered to user.member_id so a member can't see anyone else's
@@ -246,4 +332,5 @@ export const hoursActions: Record<string, Handler> = {
   'hours.reject':          hoursReject,
   'getMemberHours':        getMemberHours,
   'hours.listOwn':         hoursListOwn,
+  'hours.recordOwn':       hoursRecordOwn,
 };

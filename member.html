@@ -185,9 +185,10 @@
                 <th>التاريخ</th>
                 <th>الموقع</th>
                 <th>حضوري</th>
+                <th>الساعات</th>
               </tr>
             </thead>
-            <tbody id="assignments-upcoming-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="assignments-upcoming-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -205,9 +206,10 @@
                 <th>التاريخ</th>
                 <th>الموقع</th>
                 <th>حضوري</th>
+                <th>الساعات</th>
               </tr>
             </thead>
-            <tbody id="assignments-past-tbody"><tr class="empty-row"><td colspan="5">—</td></tr></tbody>
+            <tbody id="assignments-past-tbody"><tr class="empty-row"><td colspan="6">—</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -217,6 +219,62 @@
 </div>
 
 </div><!-- /#app -->
+
+<!--
+  Log-hours modal — opened from the assignments tab on any row where:
+   - attendance_status === 'Attended'
+   - no existing hours row references this assignment
+  Submits to the new hours.recordOwn action, which inserts at Draft so
+  the row flows through the §7 two-stage approval chain (committee head
+  → presidency). Members can't edit after submit — they go through the
+  head if a number is wrong.
+-->
+<div class="overlay" id="ov-log-hours" role="dialog" aria-modal="true" aria-labelledby="logh-title">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3 id="logh-title">⏱️ تسجيل ساعات</h3>
+      <button class="modal-close" type="button" data-action="closeLogHoursModal" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Read-only header strip naming what they're logging hours for.
+           Filled by openLogHoursModal() before .open is set. -->
+      <p style="font-size:.78rem;color:var(--tl);margin:0 0 1rem 0">
+        <strong id="logh-role">—</strong> · <span id="logh-project" style="color:var(--tm)">—</span>
+      </p>
+
+      <div class="fg">
+        <label for="logh-before">ساعات قبل الفعالية</label>
+        <input id="logh-before" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
+      </div>
+      <div class="fg">
+        <label for="logh-during">ساعات خلال الفعالية</label>
+        <input id="logh-during" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
+        <div class="fg-note" id="logh-est-note" style="display:none">
+          الساعات التقديرية للدور: <strong id="logh-est"></strong>
+        </div>
+      </div>
+      <div class="fg">
+        <label for="logh-after">ساعات بعد الفعالية</label>
+        <input id="logh-after" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
+      </div>
+      <div class="fg">
+        <label for="logh-notes">ملاحظات (اختياري)</label>
+        <textarea id="logh-notes" rows="2" placeholder="أي تفاصيل إضافية..."></textarea>
+      </div>
+
+      <p style="font-size:.72rem;color:var(--tm);margin:.8rem 0 1rem 0;line-height:1.6">
+        ⓘ سيتم تسجيل ساعاتك كـ <strong>مسوّدة</strong>. تمر على رئيس
+        لجنتك للموافقة الأولية، ثم الإدارة للموافقة النهائية. لا يمكن
+        التعديل بعد الإرسال — تواصل مع رئيس اللجنة لأي تصحيح.
+      </p>
+
+      <div style="display:flex;gap:.6rem;justify-content:flex-end">
+        <button class="btn btn-ol btn-sm" type="button" data-action="closeLogHoursModal">إلغاء</button>
+        <button class="btn btn-g btn-sm" type="button" data-action="submitLogHours" id="logh-submit-btn">إرسال للموافقة</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Toast container — lib/ui.js renders into here -->
 <div id="toast-stack" aria-live="polite" aria-atomic="true"></div>

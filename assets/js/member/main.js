@@ -35,7 +35,10 @@ import { loadHours } from './tabs/hours.js';
 import {
   loadOpportunities, expressInterest,
 } from './tabs/opportunities.js';
-import { loadAssignments } from './tabs/assignments.js';
+import {
+  loadAssignments,
+  openLogHoursModal, closeLogHoursModal, submitLogHours,
+} from './tabs/assignments.js';
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -200,5 +203,12 @@ setHandlers({
   // Passes el through so the handler can read data-project off the same
   // button without a fragile re-lookup.
   expressInterest:   (el) => expressInterest(el.dataset.opportunity, el.dataset.label, el),
+
+  // ── Hours self-submission (assignments tab → log-hours modal) ──────
+  openLogHours:        (el) => openLogHoursModal(
+    el.dataset.assignment, el.dataset.role, el.dataset.project, el.dataset.estimated,
+  ),
+  closeLogHoursModal:  closeLogHoursModal,
+  submitLogHours:      submitLogHours,
 });
 setupDispatch();
