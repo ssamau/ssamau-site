@@ -197,6 +197,8 @@ setHandlers({
   },
 
   // ── Per-row "express interest" button on opportunities tab ─────────
-  expressInterest:   (el) => expressInterest(el.dataset.opportunity, el.dataset.label),
+  // Passes el through so the handler can read data-project off the same
+  // button without a fragile re-lookup.
+  expressInterest:   (el) => expressInterest(el.dataset.opportunity, el.dataset.label, el),
 });
 setupDispatch();
