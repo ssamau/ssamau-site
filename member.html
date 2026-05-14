@@ -4,9 +4,9 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>SSAM — لوحة العضو</title>
-<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/base.css"/>
-<link rel="stylesheet" href="assets/css/login.css"/>
+<link rel="stylesheet" href="assets/css/admin.css"/>
 <link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
 <link rel="manifest" href="manifest.json"/>
@@ -14,85 +14,213 @@
 <meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
 </head>
 <body>
+<a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
+<div id="app">
 
 <!--
-  Placeholder member portal landing — Phase 4 of Branch 4.
+  Member portal shell (Phase 5 of Branch 4). Mirrors admin.html's layout
+  (sidebar + topbar + .page divs) so the existing admin.css styling
+  carries over without a new stylesheet. The big differences:
 
-  At this point we've shipped:
-   - Migration scaffolding (Phase 1)
-   - Invite actions + admin UI (Phase 2)
-   - Public signup endpoints + signup.html (Phase 3)
-   - Login routing (this commit, Phase 4) — superadmin/head land on
-     admin.html, member/volunteer land HERE
-   - The actual member portal (Phase 5) — own hours, profile,
-     opportunities, assignments — is the next piece of work
-
-  Until Phase 5 lands, this page exists so a freshly-activated member
-  has somewhere to land that:
-   - Doesn't 404
-   - Doesn't dump them on admin.html where RBAC hides everything
-   - Confirms their account is real (greeting with their name)
-   - Lets them log out cleanly
-
-  Reuses the .login-card class from login.css for visual consistency
-  with the rest of the auth-flow surfaces (login + signup + reset).
+  - Four tabs only: ملفي / ساعاتي / الفرص / مهامي
+    (profile / hours / opportunities / assignments)
+  - No "إدارة" sections, no superadmin gates, no admin-only badges
+  - Profile tab is the landing page (admin lands on dashboard)
 -->
 
-<div class="login-card">
-  <div class="lc-header">
-    <div class="lc-logo"><img src="assets/img/logo-200.png" alt="شعار النادي"/></div>
-    <div class="lc-title">نادي الطلبة السعوديين في ملبورن</div>
-    <div class="lc-sub">Saudi Students Association in Melbourne</div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">🌿</div>
+    <div class="sb-brand-text">
+      <div class="t1">SSAM</div>
+      <div class="t2">لوحة العضو</div>
+    </div>
   </div>
+  <div class="sb-user">
+    <div class="sb-avatar" id="sb-av">M</div>
+    <div>
+      <div class="sb-user-name" id="sb-name">Loading...</div>
+      <div class="sb-user-role" id="sb-role">—</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">لوحة العضو</div>
+    <div class="sb-item active" data-page="profile" data-action="showPage">
+      <span class="sb-ic">👤</span>ملفي الشخصي
+    </div>
+    <div class="sb-item" data-page="hours" data-action="showPage">
+      <span class="sb-ic">⏱️</span>ساعاتي التطوعية
+    </div>
+    <div class="sb-item" data-page="opportunities" data-action="showPage">
+      <span class="sb-ic">🎯</span>الفرص التطوعية
+    </div>
+    <div class="sb-item" data-page="assignments" data-action="showPage">
+      <span class="sb-ic">📋</span>مهامي
+    </div>
+  </nav>
 
-  <div class="lc-body" style="text-align:center">
-    <div style="font-size:3.2rem;line-height:1;margin-bottom:.6rem">👋</div>
-    <p class="lc-welcome" id="greeting">أهلًا بك في نادي الطلبة السعوديين في ملبورن</p>
+  <!-- Same three-way theme toggle as admin.html. Lives at the bottom
+       so it's reachable from every tab without taking nav space. -->
+  <div class="sb-theme">
+    <div class="sb-theme-label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    </div>
+  </div>
+</aside>
 
-    <div style="background:var(--gl,#e8f5e9);border-radius:12px;padding:1rem 1.1rem;margin:1.25rem 0;text-align:start">
-      <p style="margin:0 0 .5rem 0;font-size:.86rem;font-weight:700;color:var(--g,#1A5C2E)">
-        🚧 لوحة الأعضاء قيد التطوير
-      </p>
-      <p style="margin:0;font-size:.78rem;color:var(--tl,#4b5563);line-height:1.7">
-        تم تفعيل حسابك بنجاح. لوحة الأعضاء التي ستضم ساعاتك التطوعية،
-        ملفك الشخصي، الفرص التطوعية المتاحة، والشهادات — قيد التطوير
-        وستكون متاحة قريباً.
-      </p>
+<div class="sb-backdrop" id="sb-backdrop" aria-hidden="true"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <span class="topbar-title" id="page-title">ملفي الشخصي</span>
+    <div class="topbar-right">
+      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <div class="api-status pending" id="api-status">
+        <div class="api-dot"></div>
+        <span id="api-status-text">غير متصل</span>
+      </div>
+    </div>
+  </header>
+  <main class="content" id="main-content">
+
+    <!-- ══════════ PROFILE (landing) ══════════ -->
+    <div class="page active" id="page-profile">
+      <div class="card">
+        <div class="card-head">
+          <h3>👤 ملفي الشخصي</h3>
+          <div class="card-head-right">
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+          </div>
+        </div>
+        <div class="card-body" id="profile-form-wrap">
+          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+        </div>
+      </div>
+
+      <!-- Contact directory — presidency + own committee head/vice.
+           Carried over from the placeholder member.html (Phase 4) so
+           members keep the directory after the SPA lands. -->
+      <div class="card" id="contact-card" style="display:none">
+        <div class="card-head">
+          <h3>📞 للتواصل</h3>
+        </div>
+        <div class="card-body" id="contact-cards" style="display:flex;flex-direction:column;gap:.55rem"></div>
+      </div>
     </div>
 
-    <p style="font-size:.75rem;color:var(--tm,#9ca3af);margin:1rem 0 .4rem 0">
-      حسابك جاهز وستتلقى إشعاراً عند توفّر اللوحة الكاملة.
-    </p>
-
-    <!--
-      Contact section — populated by member.js once getMembers completes.
-      Shows: the 3-tier presidency (President + VPs + DVPs) PLUS the
-      member's own committee head + vice (if they're committee-affiliated;
-      volunteers don't have a committee so they see presidency only).
-      Each card is a name + role + email (where available). No phone /
-      WhatsApp on this screen for privacy — staff who want those can
-      reach out via the listed email first.
-    -->
-    <div id="contact-block" style="margin-top:1.5rem;text-align:start;display:none">
-      <h3 style="font-size:.95rem;font-weight:800;color:var(--g,#1A5C2E);margin:0 0 .75rem 0;text-align:center">
-        📞 للتواصل
-      </h3>
-      <div id="contact-cards" style="display:flex;flex-direction:column;gap:.55rem"></div>
+    <!-- ══════════ HOURS ══════════ -->
+    <div class="page" id="page-hours">
+      <div class="card">
+        <div class="card-head">
+          <h3>⏱️ ساعاتي التطوعية</h3>
+          <div class="card-head-right">
+            <span class="stat-pill" id="hours-total-pill">المجموع المعتمد: <strong>0</strong> ساعة</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المشروع/الفعالية</th>
+                <th>الدور</th>
+                <th>التاريخ</th>
+                <th>الساعات</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="hours-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <button class="login-btn" id="logout-btn" type="button" style="margin-top:1.25rem">
-      🚪 تسجيل الخروج
-    </button>
-  </div>
+    <!-- ══════════ OPPORTUNITIES ══════════ -->
+    <div class="page" id="page-opportunities">
+      <div class="card">
+        <div class="card-head">
+          <h3>🎯 الفرص التطوعية المتاحة</h3>
+          <div class="card-head-right">
+            <input class="search-input" placeholder="بحث بالاسم..." data-action="filterTable" data-target="opps-tbody" data-event="input"/>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--tl);margin:0 0 .8rem 0">
+          الفرص الخاصة بلجنتك والفرص المفتوحة للجميع. اضغط "اهتمام" لتسجيل اهتمامك،
+          وسيتواصل معك رئيس اللجنة لتأكيد المشاركة.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الفرصة</th>
+                <th>المشروع</th>
+                <th>اللجنة</th>
+                <th>التاريخ</th>
+                <th>الساعات التقديرية</th>
+                <th>إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="opps-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-  <div class="lc-footer">
-    <a href="index.html" class="lc-back">← العودة إلى الصفحة الرئيسية</a>
-    <div class="lc-footer-txt">لوحة العضو — قيد التطوير</div>
-    <div class="lc-version">v3.0 · 2026</div>
-  </div>
+    <!-- ══════════ ASSIGNMENTS ══════════ -->
+    <div class="page" id="page-assignments">
+      <div class="card">
+        <div class="card-head">
+          <h3>📋 مهامي القادمة</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الفرصة</th>
+                <th>المشروع</th>
+                <th>التاريخ</th>
+                <th>الموقع</th>
+                <th>حضوري</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-upcoming-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-head">
+          <h3>📜 مهامي السابقة</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الفرصة</th>
+                <th>المشروع</th>
+                <th>التاريخ</th>
+                <th>الموقع</th>
+                <th>حضوري</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-past-tbody"><tr class="empty-row"><td colspan="5">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<script type="module" src="assets/js/member.js"></script>
+</div><!-- /#app -->
+
+<!-- Toast container — lib/ui.js renders into here -->
+<div id="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+<script type="module" src="assets/js/member/main.js"></script>
 <script type="module" src="assets/js/lib/sw-register.js"></script>
 </body>
 </html>
