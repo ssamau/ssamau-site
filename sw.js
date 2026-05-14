@@ -33,7 +33,7 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-const CACHE_VERSION = 'v3-2026-05-15-signup';
+const CACHE_VERSION = 'v4-2026-05-15-member-portal';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -45,6 +45,7 @@ const SHELL_URLS = [
   '/',
   '/index.html',
   '/admin.html',
+  '/member.html',
   '/login.html',
   '/apply.html',
   '/reset-password.html',
@@ -54,6 +55,7 @@ const SHELL_URLS = [
   '/assets/css/base.css',
   '/assets/css/index.css',
   '/assets/css/admin.css',
+  '/assets/css/member.css',
   '/assets/css/login.css',
   '/assets/css/apply.css',
   // JS modules
@@ -64,6 +66,13 @@ const SHELL_URLS = [
   '/assets/js/reset-password.js',
   '/assets/js/signup.js',
   '/assets/js/admin/main.js',
+  '/assets/js/member/main.js',
+  '/assets/js/member/router.js',
+  '/assets/js/member/dispatch.js',
+  '/assets/js/member/tabs/profile.js',
+  '/assets/js/member/tabs/hours.js',
+  '/assets/js/member/tabs/opportunities.js',
+  '/assets/js/member/tabs/assignments.js',
   // Icons
   '/assets/img/logo-200.png',
   '/assets/img/icon-192.png',
