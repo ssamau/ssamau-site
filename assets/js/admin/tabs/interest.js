@@ -34,6 +34,11 @@ export function updateIntStats(list) {
   setEl('int-total', list.length);
   setEl('int-yes',   yes);
   setEl('int-no',    no);
+  // Percentage value renders as a real number in the 4th stat box
+  // (parallel to int-total/yes/no) so the bar isn't the only thing
+  // representing "نسبة الاهتمام" — gives that box visual weight that
+  // matches the other three. Bar below is now a secondary mini-chart.
+  setEl('int-pct',   list.length ? pct + '%' : '—');
   const bar = document.getElementById('int-bar-vis');
   if (bar) {
     bar.querySelector('.int-yes').style.width = pct + '%';
@@ -44,13 +49,22 @@ export function renderInterest(list) {
   const tb = document.getElementById('tb-interest');
   if (!tb) return;
   if (!list.length) { tb.innerHTML = '<tr class="empty-row"><td colspan="6">لا توجد طلبات</td></tr>'; return; }
+  // interest.listAll JOINs members + projects, so the API rows already
+  // carry `full_name`, `preferred_name`, and `project_name`. Use them
+  // directly — falling back to DB.members.find() leaves cells blank
+  // (or showing raw IDs) when the user lands on this tab before the
+  // members/projects caches have warmed.
   tb.innerHTML = list.map(i => {
-    const m  = DB.members.find(mb => mb.member_id === i.member_id);
-    const p  = DB.projects.find(pr => pr.project_id === i.project_id);
+    const name = i.preferred_name || i.full_name
+              || DB.members.find(mb => mb.member_id === i.member_id)?.full_name
+              || i.member_id;
+    const proj = i.project_name
+              || DB.projects.find(pr => pr.project_id === i.project_id)?.project_name
+              || i.project_id;
     const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
     return `<tr>
-      <td><strong>${esc(m ? (m.preferred_name || m.full_name) : i.member_id)}</strong></td>
-      <td style="font-size:.76rem">${esc(p ? p.project_name : i.project_id)}</td>
+      <td><strong>${esc(name)}</strong></td>
+      <td style="font-size:.76rem">${esc(proj)}</td>
       <td>${tag(yn ? 'نعم ✓' : 'لا ✗', yn ? 't-g' : 't-r')}</td>
       <td>${tag(i.availability_type || '—', 't-b')}</td>
       <td style="font-size:.76rem;max-width:130px">${esc(i.comment) || '—'}</td>
