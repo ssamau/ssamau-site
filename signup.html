@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SSAM — تفعيل الحساب</title>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/base.css"/>
+<link rel="stylesheet" href="assets/css/login.css"/>
+<link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
+</head>
+<body>
+
+<!--
+  Member portal signup page (Phase 3 of Branch 4).
+
+  Two activation paths land here, both ending at the same outcome
+  (auth.users row created + linked to public.users + redirected to login):
+
+  1. EMAIL-LINK MODE — auth.invite.byEmail sent the member a link to
+     `/signup.html?token=<64-hex>`. The token identifies the pending
+     users row server-side; the member just types a password.
+
+  2. NID + PIN MODE — auth.invite.byPin gave the admin a 6-digit PIN
+     to pass to the member offline. The member visits `/signup.html`
+     directly (no query string) and types their national ID + the PIN
+     + a password.
+
+  signup.js picks the mode at load based on URL params; the user can
+  also flip modes via the "use a PIN instead" / "use the email link
+  instead" link at the bottom of each form. Reuses login.css's
+  .login-card / .fg / .login-btn classes — the only signup-specific
+  layout addition is below in the small <style> block.
+-->
+
+<style>
+  /* Bilingual "or use the other method" toggle — keeps both modes
+     reachable from the same page so a stale email link doesn't dead-end
+     a member who happens to also have a PIN, and vice versa. */
+  .mode-toggle {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: .78rem;
+  }
+  .mode-toggle a {
+    color: var(--g);
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mode-toggle a:hover { text-decoration: underline; }
+  /* PIN box gets monospace + tight letter-spacing so 6 digits look
+     unambiguous. Same look as the admin "PIN shown" modal. */
+  #pin {
+    font-family: Menlo, Consolas, monospace;
+    letter-spacing: .25em;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  /* NID also monospace, but LTR + left-aligned (10-digit Saudi NID is
+     easier to verify visually that way). */
+  #national-id {
+    font-family: Menlo, Consolas, monospace;
+    direction: ltr;
+    text-align: left;
+  }
+</style>
+
+<div class="login-card">
+  <div class="lc-header">
+    <div class="lc-logo"><img src="assets/img/logo-200.png" alt="شعار النادي"/></div>
+    <div class="lc-title">نادي الطلبة السعوديين في ملبورن</div>
+    <div class="lc-sub">Saudi Students Association in Melbourne</div>
+  </div>
+
+  <div class="lc-body">
+    <p class="lc-welcome" id="welcome-msg">يرجى إكمال تفعيل الحساب</p>
+
+    <!-- NID + PIN fields (shown only in PIN mode; hidden when ?token=… is present) -->
+    <div id="pin-fields">
+      <div class="fg">
+        <label>رقم الهوية الوطنية / National ID</label>
+        <div class="fg-icon-wrap">
+          <span class="fg-icon">🪪</span>
+          <input type="text" id="national-id" placeholder="10 أرقام" autocomplete="off" inputmode="numeric" maxlength="10"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>الرمز السري المؤقت / One-time PIN</label>
+        <div class="fg-icon-wrap">
+          <span class="fg-icon">🔢</span>
+          <input type="text" id="pin" placeholder="6 أرقام" autocomplete="off" inputmode="numeric" maxlength="6"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Password + confirm fields (shown in both modes) -->
+    <div class="fg">
+      <label>كلمة المرور الجديدة / New Password</label>
+      <div class="fg-icon-wrap">
+        <span class="fg-icon">🔒</span>
+        <input type="password" id="pw1" placeholder="8 أحرف على الأقل" autocomplete="new-password" minlength="8"/>
+        <button class="pw-toggle" type="button" id="pw-eye1">👁️</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label>تأكيد كلمة المرور / Confirm Password</label>
+      <div class="fg-icon-wrap">
+        <span class="fg-icon">🔒</span>
+        <input type="password" id="pw2" placeholder="أعد إدخال كلمة المرور" autocomplete="new-password" minlength="8"/>
+        <button class="pw-toggle" type="button" id="pw-eye2">👁️</button>
+      </div>
+    </div>
+
+    <button class="login-btn" id="submit-btn" type="button">
+      <span id="submit-btn-txt">تفعيل الحساب</span>
+    </button>
+
+    <div class="error-msg" id="error-msg">❌</div>
+    <div class="error-msg" id="success-msg" style="background:#0f5132;color:#d1e7dd;border-color:#0f5132">✅</div>
+
+    <div class="mode-toggle">
+      <a id="mode-switch"></a>
+    </div>
+  </div>
+
+  <div class="lc-footer">
+    <a href="login.html" class="lc-back">← الرجوع إلى تسجيل الدخول</a>
+    <div class="lc-footer-txt">تفعيل حساب عضو النادي — استخدم رابط الدعوة أو رمز PIN</div>
+    <div class="lc-version">v3.0 · 2026</div>
+  </div>
+</div>
+
+<script type="module" src="assets/js/signup.js"></script>
+<script type="module" src="assets/js/lib/sw-register.js"></script>
+</body>
+</html>
