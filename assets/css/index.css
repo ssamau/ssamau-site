@@ -19,6 +19,12 @@ nav{position:fixed;top:0;right:0;left:0;z-index:200;background:rgba(255,255,255,
 .nav-actions{display:flex;align-items:center;gap:.5rem;margin-inline-start:auto;flex-shrink:0;}
 .nav-lang{font-size:.7rem;color:var(--tl);cursor:pointer;padding:.28rem .55rem;border:1px solid var(--bd);border-radius:50px;transition:all .2s;background:none;font-family:inherit;}
 .nav-lang:hover{color:var(--g);border-color:var(--g);}
+/* Theme toggle — icon-only, sits next to .nav-lang in nav-actions.
+   Same circular shape, slightly larger touch target for the emoji.
+   On mobile this stays visible (single character, takes minimal width)
+   whereas .nav-lang is hidden into the drawer. */
+.nav-theme{font-size:.9rem;line-height:1;color:var(--tl);cursor:pointer;padding:.22rem .42rem;border:1px solid var(--bd);border-radius:50px;transition:all .2s;background:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;}
+.nav-theme:hover{border-color:var(--g);transform:scale(1.05);}
 .nav-join{background:var(--go);color:#fff !important;padding:.38rem 1rem;border-radius:50px;font-size:.76rem;font-weight:800 !important;white-space:nowrap;}
 .nav-join:hover{background:var(--gg) !important;}
 .nav-login{color:var(--go) !important;font-size:.73rem !important;border:1.5px solid var(--go);padding:.32rem .8rem;border-radius:50px;white-space:nowrap;}

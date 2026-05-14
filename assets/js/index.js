@@ -23,6 +23,161 @@
 //      recent-events grid with the live data. Static HTML acts as fallback.
 
 import { callApi } from './lib/api.js';
+import { getTheme, setTheme } from './lib/theme.js';
+
+// ── Theme bootstrap ─────────────────────────────────────────────────────────
+// The public homepage defaults to LIGHT mode regardless of OS preference
+// (per design decision May 15: the homepage is the marketing surface and
+// should look light + welcoming to first-time visitors). The admin pages
+// keep the 3-way auto/light/dark toggle. Cross-page behaviour:
+//
+//   localStorage.ssam_theme value     → homepage shows
+//   ────────────────────────────────────────────────────────
+//   "dark"                            → dark (respects explicit choice)
+//   "light"                           → light
+//   "auto" or unset                   → LIGHT (homepage override)
+//
+// We run this synchronously at the top of the module to avoid a flash
+// of dark-theme paint on slow mobile networks. Theme.js's applyStoredTheme
+// would honour the auto/unset case as OS-prefers — we deliberately don't
+// use it here.
+(function applyHomepageTheme() {
+  const stored = localStorage.getItem('ssam_theme');
+  const effective = (stored === 'dark') ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', effective);
+})();
+
+// ── Inline-onclick retrofit ─────────────────────────────────────────────────
+// Background: Branch 3 commit 6 tightened CSP to `script-src-attr 'self'`,
+// which effectively bans `onclick="..."` attributes (inline attrs can never
+// be same-origin). The admin pages got migrated to data-action delegation
+// in the same branch. The public homepage was MISSED — ~40 inline onclicks
+// in index.html became dead code overnight, but it wasn't noticed because
+// most flows landed on apply.html (which uses addEventListener) and the
+// admin path. The EN button, events tabs, governance drawer, gallery modal
+// — all silently broken.
+//
+// Proper fix: rewrite each onclick to a data-action attribute + register
+// handlers in a small dispatch map. ~40 element edits + a 30-line dispatcher.
+// That's its own PR.
+//
+// This commit ships the SHORT fix: walk every `[onclick]` element at DOM-
+// ready, parse the inline call as `fnName(args…)`, look fnName up on the
+// window namespace (where index.js already re-exports the handlers), and
+// re-bind via addEventListener. Same behaviour, CSP-compliant, no markup
+// change. Logs a console warning if anything fails to parse so we catch
+// it during the proper-migration follow-up.
+function retrofitInlineOnclicks() {
+  document.querySelectorAll('[onclick]').forEach(el => {
+    const code = el.getAttribute('onclick');
+    el.removeAttribute('onclick');
+    const call = parseInlineCall(code);
+    if (!call) {
+      console.warn('[onclick-retrofit] unparseable onclick on', el, '→', code);
+      return;
+    }
+    const fn = window[call.fnName];
+    if (typeof fn !== 'function') {
+      console.warn('[onclick-retrofit] window.' + call.fnName + ' missing for', el);
+      return;
+    }
+    el.addEventListener('click', (event) => {
+      // Resolve `this` and `event` lazily at click time. String / number
+      // literals are baked at parse time.
+      const args = call.argTokens.map(tok => {
+        if (tok === 'this')  return el;
+        if (tok === 'event') return event;
+        if (tok.kind === 'string') return tok.value;
+        if (tok.kind === 'number') return tok.value;
+        return undefined;
+      });
+      try { fn.apply(el, args); }
+      catch (err) { console.error('[onclick-retrofit] handler threw:', err); }
+    });
+  });
+}
+
+// Parse a single function-call expression. Supports:
+//   - fn()
+//   - fn(123), fn(-1)            → number arg
+//   - fn('foo'), fn("bar")       → string arg (quotes stripped)
+//   - fn(this), fn(event)        → DOM context (resolved at click time)
+//   - fn('a', 0, this)           → mixed
+// Doesn't support: chained calls, expressions like `event.preventDefault()`,
+// arithmetic, member access. None of these appear in our index.html, so the
+// minimal parser is adequate. If we ever add a complex inline handler,
+// retrofitInlineOnclicks will log a warning and we'll do the proper fix.
+function parseInlineCall(code) {
+  const m = code.match(/^\s*(\w+)\s*\(\s*(.*?)\s*\)\s*;?\s*$/);
+  if (!m) return null;
+  const [, fnName, argStr] = m;
+  if (!argStr.trim()) return { fnName, argTokens: [] };
+  // Split on top-level commas (respecting matched quotes).
+  const tokens = [];
+  let buf = '', quote = null;
+  for (const ch of argStr) {
+    if (quote) {
+      buf += ch;
+      if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      buf += ch;
+    } else if (ch === ',') {
+      tokens.push(buf.trim());
+      buf = '';
+    } else {
+      buf += ch;
+    }
+  }
+  if (buf.trim()) tokens.push(buf.trim());
+  // Normalize each token to { kind, value } or the raw 'this'/'event' string.
+  const argTokens = tokens.map(t => {
+    if (t === 'this' || t === 'event') return t;
+    if (/^['"].*['"]$/.test(t)) return { kind: 'string', value: t.slice(1, -1) };
+    if (/^-?\d+(\.\d+)?$/.test(t)) return { kind: 'number', value: Number(t) };
+    return t;  // identifier — caller will resolve as undefined and console.warn
+  });
+  return { fnName, argTokens };
+}
+
+// ── Lang toggle wiring ──────────────────────────────────────────────────────
+// EN ⇄ AR toggle. Two buttons (#lang-btn in nav-actions, #lang-btn-mobile in
+// the drawer) both call window.toggleLang. We deliberately removed the
+// inline onclick="toggleLang()" attributes (CSP forbade them anyway) and
+// don't rely on the retrofit polyfill for these two — newly-touched code
+// should use addEventListener directly, no legacy patterns.
+function wireLangToggle() {
+  ['lang-btn', 'lang-btn-mobile'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => toggleLang());
+  });
+}
+
+// ── Theme toggle button wiring ──────────────────────────────────────────────
+// Two buttons (desktop in nav-actions, mobile in the hamburger drawer) both
+// flip light ↔ dark via theme.js's setTheme(). Icon: 🌙 in light mode (i.e.
+// the icon shows what you'd switch TO), ☀️ in dark mode. Listens to the
+// `ssam-theme-changed` event setTheme dispatches so the icon stays in sync
+// even if some other code calls setTheme directly.
+function wireThemeToggle() {
+  const update = () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = dark ? '☀️' : '🌙';
+    document.querySelectorAll('#theme-btn, #theme-btn-mobile').forEach(b => {
+      b.textContent = icon;
+    });
+  };
+  const toggle = () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    setTheme(dark ? 'light' : 'dark');
+  };
+  ['theme-btn', 'theme-btn-mobile'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', toggle);
+  });
+  window.addEventListener('ssam-theme-changed', update);
+  update();
+}
 
 // ── Google Analytics bootstrap ──────────────────────────────────────────────
 // The external gtag.js loader is loaded by a <script async> in index.html
@@ -751,6 +906,17 @@ function renderRecentEvents(projects, members) {
     '</div>';
   }).join('');
 }
+
+// Theme toggle + inline-onclick retrofit need to run as early as
+// possible — DOMContentLoaded rather than load — so the EN button is
+// already functional by the time the user can see the page. (The load
+// listener below additionally waits for images, which is overkill for
+// re-binding click handlers.)
+document.addEventListener('DOMContentLoaded', () => {
+  retrofitInlineOnclicks();
+  wireLangToggle();
+  wireThemeToggle();
+});
 
 // Kick off the DB fetch when the page is fully loaded (images + all).
 // All four reads are public actions; no JWT needed.
