@@ -507,10 +507,7 @@ const authInviteByEmail: Handler = async (body, user) => {
       `Use users.sendPasswordReset to send them a password recovery email instead.`, 409);
   }
 
-  // Generate 64-char hex token (32 bytes from crypto.getRandomValues).
-  const buf = new Uint8Array(32);
-  crypto.getRandomValues(buf);
-  const token = Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+  const token = generateInviteToken();
 
   if (existing) {
     // Resend: overwrite the pending invite on the existing row, clear
@@ -703,6 +700,16 @@ const authInviteRevoke: Handler = async (body, user) => {
   return { member_id: memberId, revoked: true };
 };
 
+// Generate a 64-hex-char invite token (32 bytes from crypto.getRandomValues
+// → 256 bits of entropy). Used for the email-link signup flow.
+// Exported so applications.accept can issue an auto-invite on the same
+// pattern when a committee head accepts a membership application.
+export function generateInviteToken(): string {
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Compose the Arabic-first invite email body. Same design language as
 // the application-notification email (green band header + RTL body)
 // and the password-recovery template (proven to render across Gmail,
@@ -716,7 +723,9 @@ const authInviteRevoke: Handler = async (body, user) => {
 //
 // Token vs PIN mode share most copy. We pass `mode` so the body text
 // can vary: "click the link" vs "enter the PIN".
-function composeInviteEmail(opts: {
+// Exported so other actions (e.g. applications.accept auto-invite)
+// can compose using the same template.
+export function composeInviteEmail(opts: {
   displayName: string;
   committeeName: string | null;
   signupLink: string;

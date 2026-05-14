@@ -5,6 +5,14 @@
 // to functions exposed from main.js — editMember (this file), confirmDelete
 // (lib/ui.js), and viewProfile (profile.js). filterMembersByRole/Status
 // re-render the filtered subset without re-fetching.
+//
+// Portal-invite UI (Branch 4): each row also exposes a small invite
+// indicator + action button driven by the account_* fields the
+// getMembers query joins from public.users:
+//   - account_id NULL                              → "not invited" → 📩 button
+//   - account_signup_completed_at IS NOT NULL OR
+//     account_auth_user_id IS NOT NULL             → "joined" badge, no button
+//   - else (pending invite, or limbo legacy row)   → "pending" badge + 🔄 resend + ❌ revoke
 
 import { DB, ROLE_COLORS, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson } from '../../lib/format.js';
@@ -13,6 +21,11 @@ import {
   populateMemberSelects,
 } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
+
+// Module-level state for the invite modal — `openInviteModal()` writes
+// this, and the per-action handlers (sendInviteByEmail / sendInviteByPin
+// / copyShownPin) read it. Cleared whenever the modal closes.
+let _currentInviteMember = null;
 
 // ══════════════════════════════════════════
 // MEMBERS
@@ -50,6 +63,29 @@ export function renderMembers(members) {
     const contact = contactLines.length
       ? contactLines.join('')
       : '<span style="color:var(--tm)">—</span>';
+    // Portal-account state buttons. Three branches keyed off the
+    // account_* fields joined from public.users by getMembers:
+    const joined  = !!(m.account_signup_completed_at || m.account_auth_user_id);
+    const pending = !joined && (m.account_signup_token_set || m.account_signup_pin_set);
+    const noAccount = !m.account_id;
+    let inviteBtns = '';
+    if (joined) {
+      // Already signed up — show a small green tag for at-a-glance status.
+      inviteBtns = '<span class="t-g" style="font-size:.66rem;padding:.15rem .4rem;border-radius:6px;background:var(--gl);color:var(--g);font-weight:600" title="انضم إلى لوحة الأعضاء">✓ منضم</span>';
+    } else if (pending) {
+      // Invite outstanding — let admin resend (same modal) or revoke.
+      inviteBtns =
+        `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="إعادة إرسال الدعوة">🔄</button>` +
+        `<button class="btn-icon del" data-action="confirmRevokeInvite" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="إلغاء الدعوة">❌</button>`;
+    } else if (noAccount) {
+      // Never invited — offer the first invite.
+      inviteBtns = `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="دعوة إلى لوحة الأعضاء">📩</button>`;
+    }
+    // else: account_id is set but no signup_* and no signup_completed_at
+    //       and no auth_user_id — legacy admin account in limbo. We
+    //       deliberately render nothing in the invite column; managing
+    //       these is the Accounts tab's job, not Members.
+
     return `<tr>
       <td>
         <div style="font-weight:700">${esc(m.preferred_name || m.full_name)}</div>
@@ -65,6 +101,7 @@ export function renderMembers(members) {
         <button class="btn-icon edit" data-action="editMember" data-id="${m.member_id}" title="تعديل">✏️</button>
         <button class="btn-icon del" data-action="confirmDelete" data-type="member" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="حذف">🗑️</button>
         <button class="btn-icon" data-action="viewProfile" data-id="${m.member_id}" title="ملف العضو">👤</button>
+        ${inviteBtns}
       </td>
     </tr>`;
   }).join('');
@@ -131,4 +168,109 @@ export function editMember(id) {
   sv('m-join-date', m.join_date ? String(m.join_date).slice(0, 10) : '');
   document.getElementById('member-modal-title').textContent = '✏️ تعديل العضو';
   openModal('member');
+}
+
+// ══════════════════════════════════════════
+// PORTAL INVITES (Branch 4 Phase 2b)
+// ══════════════════════════════════════════
+// Opens the invite modal in "pick a method" state. Stashes the target
+// member in a module-level variable so the chosen-method handlers can
+// pick it up without re-walking the DB.members array.
+export function openInviteModal(memberId) {
+  const m = DB.members.find(x => x.member_id === memberId);
+  if (!m) {
+    toast('العضو غير موجود', 'twarn');
+    return;
+  }
+  _currentInviteMember = m;
+
+  // Populate the member context block at the top of the modal. The
+  // fields are <div>s (display-only), not <input>s, so sv() is wrong
+  // here — sv() sets el.value which is meaningless on a div. We use
+  // textContent directly. Same pattern below for the PIN value and
+  // email-target display fields.
+  document.getElementById('invite-member-name').textContent  = m.preferred_name || m.full_name;
+  document.getElementById('invite-member-email').textContent = m.email || '— لا يوجد بريد، استخدم رمز PIN —';
+
+  // The email button is unusable if the member has no email on file —
+  // disable it so the admin can't trigger a 400 from the server.
+  const emailBtn  = document.getElementById('invite-email-btn');
+  const emailHelp = document.getElementById('invite-email-help');
+  if (m.email) {
+    emailBtn.disabled = false;
+    emailBtn.style.opacity = '';
+    emailHelp.textContent = 'يستلم العضو رابطاً صالحاً 7 أيام لاختيار كلمة المرور بنفسه.';
+  } else {
+    emailBtn.disabled = true;
+    emailBtn.style.opacity = '.4';
+    emailHelp.textContent = '⚠️ لا يوجد بريد للعضو — استخدم PIN، أو أضف بريداً عبر "تعديل" أولاً.';
+  }
+
+  // Reset the modal to "choose method" state (the previous open might
+  // have left it in "PIN result" or "email success" view).
+  document.getElementById('invite-choose').style.display = '';
+  document.getElementById('invite-pin-result').style.display = 'none';
+  document.getElementById('invite-email-result').style.display = 'none';
+
+  openModal('member-invite');
+}
+
+export async function sendInviteByEmail() {
+  const m = _currentInviteMember;
+  if (!m) return;
+  const res = await api('auth.invite.byEmail', {
+    member_id: m.member_id,
+    redirectTo: window.location.origin + '/signup.html',
+  });
+  if (!res || !res.success) return;  // api() already toasted the error
+  // The DB-side invite landed even if the SMTP send failed. Distinguish
+  // the two so the admin isn't told "sent" when it wasn't.
+  if (res.data && res.data.sent === false) {
+    toast('⚠️ تم إنشاء الدعوة لكن فشل إرسال البريد. حاول مرة أخرى لاحقاً.', 'twarn');
+    closeModal('member-invite');
+    loadMembers();
+    return;
+  }
+  // Toggle modal to "email sent" state.
+  document.getElementById('invite-choose').style.display = 'none';
+  document.getElementById('invite-email-result-target').textContent = m.email;
+  document.getElementById('invite-email-result').style.display = '';
+  toast('📧 تم إرسال الدعوة', 'tok');
+  // Refresh the table so the row's state flips from "📩" to "🔄 ❌".
+  loadMembers();
+}
+
+export async function sendInviteByPin() {
+  const m = _currentInviteMember;
+  if (!m) return;
+  const res = await api('auth.invite.byPin', { member_id: m.member_id });
+  if (!res || !res.success) return;
+  // The plaintext PIN comes back in res.data.pin — we display it once.
+  document.getElementById('invite-choose').style.display = 'none';
+  document.getElementById('invite-pin-value').textContent = res.data.pin;
+  document.getElementById('invite-pin-result').style.display = '';
+  toast('🔢 تم إنشاء رمز PIN', 'tok');
+  loadMembers();
+}
+
+export async function copyShownPin() {
+  const pin = document.getElementById('invite-pin-value').textContent;
+  try {
+    await navigator.clipboard.writeText(pin);
+    toast('📋 نُسخ الرمز', 'tok');
+  } catch (err) {
+    console.warn('[clipboard] write failed:', err);
+    toast('تعذّر النسخ — انسخ الرمز يدوياً', 'twarn');
+  }
+}
+
+// Two-step revoke: small confirm prompt before calling the server, so a
+// stray click doesn't nuke a pending invite the admin still wants. No
+// modal for this — toast-driven for speed.
+export async function confirmRevokeInvite(memberId, memberName) {
+  if (!confirm(`إلغاء الدعوة المعلّقة للعضو "${memberName}"؟ سيُحذف رمز التفعيل ولن يستطيع العضو إكمال التسجيل حتى تُرسل له دعوة جديدة.`)) return;
+  const res = await api('auth.invite.revoke', { member_id: memberId });
+  if (!res || !res.success) return;
+  toast('❌ تم إلغاء الدعوة', 'tok');
+  loadMembers();
 }

@@ -13,6 +13,7 @@ import {
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
+import { generateInviteToken, composeInviteEmail } from './auth.ts';
 
 // Recipient address for new-application notifications. The president's
 // stated requirement: notify the shared admin inbox every time someone
@@ -427,9 +428,26 @@ const applicationsRequestInterview: Handler = async (body, user) => {
   return { application_id: id };
 };
 
-// Accept: creates a members row tied to the assigned committee. Per the
-// current decision, no users (login) row is created — login provisioning
-// is part of the upcoming member-portal restructure.
+// Accept: creates a members row tied to the assigned committee, then
+// auto-fires a portal-signup invite to the new member's email
+// (fire-and-forget — same pattern as notifyNewApplication).
+//
+// Per SSAM_Requirements_v1.1 §6: "عند القبول، يُنشأ حساب للعضو في
+// النظام ويُضاف للجنة" — upon acceptance, an account is created for
+// the member in the system and added to the committee. This handler
+// implements that flow end-to-end:
+//
+//   1. INSERT the members row (already existed before Branch 4).
+//   2. UPDATE the membership_applications row to status=Accepted
+//      (already existed).
+//   3. (NEW) Create a pending-signup public.users row with an email-
+//      link signup_token.
+//   4. (NEW) Email the new member an Arabic invite to /signup.html
+//      so they can choose their own password and activate the account.
+//
+// Steps 3+4 are fire-and-forget. If the email fails (SMTP blip, no
+// email on the application) the acceptance still succeeded — the
+// admin can back-fill via the Members tab "Invite" button later.
 const applicationsAccept: Handler = async (body, user) => {
   const id = body.id as string | undefined;
   const note = body.note as string | undefined;
@@ -476,8 +494,77 @@ const applicationsAccept: Handler = async (body, user) => {
       created_member_id  = ${memberId}
     WHERE application_id = ${id}
   `;
+
+  // Fire-and-forget auto-invite. The applicant's email comes straight
+  // from their application (validated as non-null at submit time in
+  // most cases — but we re-check here defensively). If they didn't
+  // supply one, skip silently — the admin can use the "Invite by PIN"
+  // back-fill path from the Members tab.
+  if (app.email) {
+    autoInviteAcceptedMember(
+      memberId,
+      String(app.email),
+      String(displayName),
+      app.assigned_committee_id as string,
+    ).catch(err => {
+      console.error('[applications.accept] auto-invite failed (acceptance still succeeded):', err);
+    });
+  } else {
+    console.warn(`[applications.accept] member ${memberId} accepted without email — no auto-invite. Use Members tab "Invite by PIN" to back-fill.`);
+  }
+
   return { application_id: id, member_id: memberId };
 };
+
+// Side-effect helper: stamp a pending-signup row + send the invite email
+// to a freshly-accepted member. Caller has already INSERTed the
+// members row, so we know there's no public.users conflict — a plain
+// INSERT is safe (no UPSERT branching needed).
+//
+// Returns nothing visible — errors are caught by the .catch() in
+// applications.accept and logged. We never want the auto-invite to
+// roll back the acceptance.
+async function autoInviteAcceptedMember(
+  memberId: string,
+  email: string,
+  displayName: string,
+  committeeId: string,
+): Promise<void> {
+  // Look up the committee name for the email body. If it's missing
+  // (deleted between accept and invite, vanishingly rare), the email
+  // just omits the "member of <committee>" line and ships fine.
+  const [com] = await sql`
+    SELECT committee_name FROM public.committees WHERE committee_id = ${committeeId}
+  ` as Array<{ committee_name: string | null }>;
+
+  const token = generateInviteToken();
+
+  await sql`
+    INSERT INTO public.users (
+      username, member_id, access_level, password_hash,
+      signup_token, signup_token_expires_at
+    ) VALUES (
+      ${'mbr_' + memberId.toLowerCase()},
+      ${memberId},
+      'member',
+      NULL,
+      ${token},
+      NOW() + INTERVAL '7 days'
+    )
+  `;
+
+  const html = composeInviteEmail({
+    displayName,
+    committeeName: com?.committee_name ?? null,
+    signupLink: `https://ssamau.com/signup.html?token=${token}`,
+    mode: 'token',
+  });
+  await sendEmail({
+    to: email,
+    subject: 'دعوة للانضمام إلى لوحة الأعضاء — SSAM',
+    html,
+  });
+}
 
 const applicationsReject: Handler = async (body, user) => {
   const id = body.id as string | undefined;

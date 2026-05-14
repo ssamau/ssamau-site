@@ -756,6 +756,73 @@
   </div>
 </div>
 
+<!-- MEMBER PORTAL INVITE MODAL -->
+<!-- One modal serving three states (toggled via display:none|block in
+     members.js). State 1: pick email vs PIN. State 2: PIN issued
+     (shows the plaintext PIN once + copy button — same UX as the
+     pw-shown modal above). State 3: email sent confirmation. -->
+<div class="overlay" id="ov-member-invite">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h3>📩 دعوة العضو إلى لوحة الأعضاء</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="member-invite">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Member context (set by openInviteModal in members.js) -->
+      <div style="background:var(--gl);border-radius:var(--rs);padding:.75rem;margin-bottom:1rem;font-size:.85rem">
+        <div style="font-weight:600" id="invite-member-name">—</div>
+        <div style="font-size:.78rem;color:var(--tm);direction:ltr;text-align:left" id="invite-member-email">—</div>
+      </div>
+
+      <!-- STATE 1: pick a method -->
+      <div id="invite-choose">
+        <p style="font-size:.85rem;margin-bottom:1rem">
+          اختر طريقة الدعوة:
+        </p>
+        <button class="btn btn-g" style="width:100%;margin-bottom:.5rem" data-action="sendInviteByEmail" id="invite-email-btn">
+          📧 إرسال رابط بالبريد الإلكتروني
+        </button>
+        <div style="font-size:.72rem;color:var(--tm);margin-bottom:.85rem;text-align:center" id="invite-email-help">
+          يستلم العضو رابطاً صالحاً 7 أيام لاختيار كلمة المرور بنفسه.
+        </div>
+
+        <button class="btn btn-y" style="width:100%" data-action="sendInviteByPin">
+          🔢 إنشاء رمز PIN
+        </button>
+        <div style="font-size:.72rem;color:var(--tm);margin-top:.4rem;text-align:center">
+          رمز من 6 أرقام يُسلَّم للعضو خارج النظام (واتساب، شفاهيًا…). صالح 72 ساعة.
+        </div>
+      </div>
+
+      <!-- STATE 2: PIN result (only shown after sendInviteByPin returns) -->
+      <div id="invite-pin-result" style="display:none;text-align:center">
+        <p style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
+          انسخ الرمز الآن — لن يظهر مرة أخرى. سلّمه للعضو بقناة آمنة.
+        </p>
+        <div style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;padding:.85rem;font-family:Menlo,Consolas,monospace;font-size:1.6rem;font-weight:700;color:#1A5C2E;letter-spacing:.3em;direction:ltr" id="invite-pin-value">—</div>
+        <div style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
+          صالح لـ 72 ساعة. يستخدم العضو رقم الهوية + هذا الرمز عند الدخول إلى صفحة التسجيل.
+        </div>
+        <button class="btn btn-g" style="margin-top:1rem;width:100%" data-action="copyShownPin">📋 نسخ الرمز</button>
+      </div>
+
+      <!-- STATE 3: email sent confirmation -->
+      <div id="invite-email-result" style="display:none;text-align:center">
+        <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">✅</div>
+        <p style="font-size:.95rem;font-weight:600;margin-bottom:.4rem">تم إرسال الدعوة</p>
+        <p style="font-size:.78rem;color:var(--tm)" id="invite-email-result-target">—</p>
+        <p style="font-size:.72rem;color:var(--tm);margin-top:.75rem">
+          الرابط صالح لـ 7 أيام. إذا لم يصل البريد خلال ساعة، تحقق من مجلد الرسائل غير المرغوب فيها أو أعد الإرسال.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="member-invite">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- MEMBERSHIP APPLICATION REVIEW MODAL -->
 <div class="overlay" id="ov-application">
   <div class="modal" style="max-width:680px">

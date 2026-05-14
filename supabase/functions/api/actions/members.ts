@@ -13,10 +13,32 @@ import {
 } from '../_helpers.ts';
 
 // ─── MEMBERS ─────────────────────────────────────────────────────────
+// LEFT JOIN public.users so the Members tab can render per-row portal-
+// account status (no account, pending invite, joined) without a second
+// round-trip. The joined columns are namespaced `account_*` so they
+// don't collide with members.* fields:
+//   account_id              — public.users.id (NULL = no account row)
+//   account_signup_token_set — TRUE if a pending email-link invite exists
+//   account_signup_pin_set  — TRUE if a pending PIN invite exists
+//   account_signup_completed_at — non-NULL = signup finished (joined)
+//   account_auth_user_id    — non-NULL = linked to a Supabase Auth row
+//
+// We deliberately do NOT expose signup_token / signup_pin_hash plaintext
+// to the client — those are server-only secrets. The boolean flags are
+// enough for the UI to pick the right action label ("Invite" / "Resend"
+// / "Revoke" / "Joined").
 const getMembers: Handler = async () => sql`
-  SELECT * FROM members
+  SELECT
+    m.*,
+    u.id                              AS account_id,
+    (u.signup_token IS NOT NULL)      AS account_signup_token_set,
+    (u.signup_pin_hash IS NOT NULL)   AS account_signup_pin_set,
+    u.signup_completed_at             AS account_signup_completed_at,
+    u.auth_user_id                    AS account_auth_user_id
+  FROM members m
+  LEFT JOIN public.users u ON u.member_id = m.member_id
   ORDER BY
-    CASE club_role
+    CASE m.club_role
       WHEN 'President' THEN 1
       WHEN 'Vice President' THEN 2
       WHEN 'Deputy Vice President' THEN 3
@@ -24,7 +46,7 @@ const getMembers: Handler = async () => sql`
       WHEN 'Committee Vice Head' THEN 5
       ELSE 9
     END,
-    full_name
+    m.full_name
 `;
 
 const createMember: Handler = async (body, user) => {
