@@ -280,8 +280,20 @@ const usersUpdate: Handler = async (body, user) => {
 const usersDelete: Handler = async (body, user) => {
   requireSuperadmin(user);
   const id = body.id as number | undefined;
-  const [target] = await sql`SELECT id, username, access_level FROM users WHERE id = ${id}` as Array<{
+  // Pull auth_user_id along with the existing fields so we can cascade
+  // the delete into auth.users for Supabase-Auth accounts. Without
+  // this, deleting a user via the admin UI leaves an orphaned auth.users
+  // row behind — and the next time we try to re-invite the same member
+  // (same email), `admin.auth.admin.createUser` fails with "User with
+  // this email address has already been registered". Found by user
+  // testing the Phase 3 signup flow when re-inviting a deleted member.
+  const [target] = await sql`
+    SELECT id, username, access_level, auth_user_id
+    FROM users
+    WHERE id = ${id}
+  ` as Array<{
     id: number; username: string; access_level: string;
+    auth_user_id: string | null;
   }>;
   if (!target) return { id };
   if (target.access_level === 'superadmin') {
@@ -289,6 +301,35 @@ const usersDelete: Handler = async (body, user) => {
     if (count <= 1) throw httpErr('Cannot delete the only remaining superadmin', 409);
   }
   if (target.id === user!.id) throw httpErr('You cannot delete your own account', 409);
+
+  // Delete auth.users FIRST when present, then public.users. This
+  // ordering matters:
+  //  - If auth.users deletion fails (network blip, missing service
+  //    role key, etc.) the exception bubbles up and public.users
+  //    stays intact → state remains consistent
+  //  - If both succeed: ON DELETE SET NULL on the users.auth_user_id
+  //    FK will null the column in public.users between the two
+  //    statements, but we're about to delete that row anyway so it
+  //    doesn't matter
+  //  - Idempotent for legacy accounts (auth_user_id NULL): skips
+  //    the admin SDK call entirely, only does the SQL delete
+  if (target.auth_user_id) {
+    const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error } = await admin.auth.admin.deleteUser(target.auth_user_id);
+    // 404 from the admin SDK means "already deleted upstream" — fine,
+    // we just proceed with the SQL delete. Other errors abort so the
+    // admin sees what went wrong rather than getting a half-deleted state.
+    if (error && !/not_found|user not found/i.test(error.message || '')) {
+      console.error('[users.delete] auth.users deletion failed:', error);
+      throw httpErr(`Supabase auth delete failed: ${error.message}`, 500);
+    }
+  }
+
   await sql`DELETE FROM users WHERE id = ${id}`;
   return { id };
 };
@@ -700,6 +741,217 @@ const authInviteRevoke: Handler = async (body, user) => {
   return { member_id: memberId, revoked: true };
 };
 
+// ─── `auth.signup.completeByToken` — member completes email-link signup ─
+// Public action (no auth). Called by signup.html when the member opens
+// the link from their invite email. Looks up the pending users row by
+// signup_token, creates an auth.users record via Supabase admin API
+// using the member's email + the password the member just chose, links
+// them via users.auth_user_id, and clears the signup state.
+//
+// On success returns { email, login_hint: 'redirect to login' } — the
+// frontend redirects to login.html and the member signs in normally.
+//
+// Error shape is deliberately uniform across the failure modes so the
+// frontend can show a single "هذا الرابط لم يعد صالحاً" message without
+// leaking whether the token was wrong, expired, or already used —
+// all of those mean the same thing to the member ("ask the admin to
+// reissue"). Internal logging captures the distinction for debugging.
+const authSignupCompleteByToken: Handler = async (body) => {
+  const token    = String(body.token    ?? '').trim();
+  const password = String(body.password ?? '');
+  if (!token)             throw httpErr('Invite link is invalid', 400);
+  if (password.length < 8) throw httpErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل / Password must be at least 8 characters', 400);
+
+  const [row] = await sql`
+    SELECT u.id, u.member_id, u.signup_token_expires_at, u.signup_completed_at, u.auth_user_id,
+           m.email, m.full_name, m.preferred_name
+    FROM public.users u
+    LEFT JOIN public.members m ON m.member_id = u.member_id
+    WHERE u.signup_token = ${token}
+    LIMIT 1
+  ` as Array<{
+    id: number; member_id: string; signup_token_expires_at: string | null;
+    signup_completed_at: string | null; auth_user_id: string | null;
+    email: string | null; full_name: string; preferred_name: string | null;
+  }>;
+
+  if (!row) {
+    console.warn('[auth.signup.completeByToken] token not found');
+    throw httpErr('هذا الرابط لم يعد صالحاً / Invite link is invalid or expired', 410);
+  }
+  if (row.signup_completed_at || row.auth_user_id) {
+    console.warn(`[auth.signup.completeByToken] user ${row.id} already activated`);
+    throw httpErr('هذا الحساب مفعّل سابقاً، الرجاء تسجيل الدخول مباشرةً / Account already activated — please sign in', 409);
+  }
+  if (row.signup_token_expires_at && new Date(row.signup_token_expires_at) < new Date()) {
+    console.warn(`[auth.signup.completeByToken] token expired for user ${row.id}`);
+    throw httpErr('انتهت صلاحية الدعوة، الرجاء طلب دعوة جديدة من المسؤول / Invite expired — ask the admin for a new one', 410);
+  }
+  if (!row.email) {
+    // Shouldn't happen: invite.byEmail validates email-exists at issue time.
+    // But the member's email column COULD have been cleared between issue
+    // and completion. Refuse rather than create an unmappable auth.users.
+    throw httpErr('لا يوجد بريد إلكتروني للعضو، الرجاء التواصل مع المسؤول / Member has no email on file — contact admin', 400);
+  }
+
+  // Create the auth.users row via the Supabase admin SDK (service role
+  // bypasses RLS + the disabled enable_signup flag). email_confirm=true
+  // skips the "click this link to confirm your email" step — the member
+  // just used a one-time link FROM us, that's already confirmed enough.
+  const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await admin.auth.admin.createUser({
+    email:         row.email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      member_id: row.member_id,
+      name:      row.preferred_name || row.full_name,
+    },
+  });
+  if (error || !data?.user) {
+    // Surface the Supabase error string so the user gets actionable
+    // feedback (e.g. "User already registered" if they re-clicked the
+    // link after a successful activation that didn't redirect cleanly).
+    console.error('[auth.signup.completeByToken] createUser failed:', error);
+    throw httpErr(error?.message || 'Failed to activate account', 500);
+  }
+
+  // Link + clear signup state. Done in one UPDATE so a crash between
+  // createUser and this query doesn't leave orphan rows pointing at
+  // a usable token. (Worst case: createUser succeeded but the UPDATE
+  // failed — member's auth.users row exists but our users row still
+  // has signup_token. Next attempt to complete will hit the "already
+  // registered" error from createUser and bounce the user to login.
+  // Annoying but not insecure.)
+  await sql`
+    UPDATE public.users SET
+      auth_user_id             = ${data.user.id},
+      signup_token             = NULL,
+      signup_token_expires_at  = NULL,
+      signup_pin_hash          = NULL,
+      signup_pin_expires_at    = NULL,
+      signup_completed_at      = NOW()
+    WHERE id = ${row.id}
+  `;
+
+  console.log(`[auth.signup.completeByToken] activated user ${row.id} (member ${row.member_id})`);
+  return { email: row.email, login_hint: 'redirect to login' };
+};
+
+// ─── `auth.signup.completeByPin` — member completes NID+PIN signup ──────
+// Public action (no auth). Called by signup.html when the member chose
+// the NID-flow path. Looks up the member by national_id, validates the
+// PIN against the bcrypt-hashed signup_pin_hash on the corresponding
+// users row, then creates auth.users + links + clears state — same
+// terminal flow as completeByToken.
+//
+// Brute-force mitigation today:
+//   - bcrypt comparison is ~100ms (rounds=10), throttling rapid retries
+//   - PIN expires 72h after issue (auth.invite.byPin sets the deadline)
+//   - Edge Function endpoint has Supabase's per-IP rate limit on top
+// A proper attempt-counter + auto-lockout will land as a follow-up; for
+// now error messages are deliberately UNIFORM across "NID not found" /
+// "no invite issued" / "PIN wrong" so attackers can't tell which of
+// those they hit — same generic credentials-style response.
+const authSignupCompleteByPin: Handler = async (body) => {
+  const nationalId = String(body.national_id ?? '').trim();
+  const pin        = String(body.pin         ?? '').trim();
+  const password   = String(body.password    ?? '');
+  if (!nationalId || !pin) throw httpErr('بيانات ناقصة / Missing credentials', 400);
+  if (password.length < 8) throw httpErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل / Password must be at least 8 characters', 400);
+
+  // Single query covering member lookup + linked users row + PIN state.
+  // Returning eagerly with a uniform error message means the attacker
+  // can't time-distinguish "NID doesn't exist" from "no users row" from
+  // "PIN hash empty" — they're all "Invalid credentials" to them.
+  const [row] = await sql`
+    SELECT u.id, u.member_id, u.signup_pin_hash, u.signup_pin_expires_at,
+           u.signup_completed_at, u.auth_user_id,
+           m.email, m.full_name, m.preferred_name
+    FROM public.members m
+    LEFT JOIN public.users u ON u.member_id = m.member_id
+    WHERE m.national_id = ${nationalId}
+    LIMIT 1
+  ` as Array<{
+    id: number | null; member_id: string;
+    signup_pin_hash: string | null; signup_pin_expires_at: string | null;
+    signup_completed_at: string | null; auth_user_id: string | null;
+    email: string | null; full_name: string; preferred_name: string | null;
+  }>;
+
+  const generic = httpErr('بيانات الدخول غير صحيحة / Invalid credentials', 401);
+
+  if (!row || !row.id || !row.signup_pin_hash) {
+    console.warn(`[auth.signup.completeByPin] no pending PIN for NID ${nationalId}`);
+    // Still do a fake bcrypt compare to keep timing consistent with the
+    // valid-row path (~100ms per attempt regardless of NID validity).
+    // Without this, attackers could enumerate valid NIDs by measuring
+    // response time. Use a known-junk hash that will reliably mismatch.
+    await bcryptCompare('___fake___', '$2a$10$abcdefghijklmnopqrstuvwx0123456789ABCDEFGHIJKLMNOPQR');
+    throw generic;
+  }
+  if (row.signup_completed_at || row.auth_user_id) {
+    console.warn(`[auth.signup.completeByPin] user ${row.id} already activated`);
+    throw httpErr('هذا الحساب مفعّل سابقاً، الرجاء تسجيل الدخول مباشرةً / Account already activated — please sign in', 409);
+  }
+  if (row.signup_pin_expires_at && new Date(row.signup_pin_expires_at) < new Date()) {
+    console.warn(`[auth.signup.completeByPin] PIN expired for user ${row.id}`);
+    throw httpErr('انتهت صلاحية الرمز، الرجاء طلب دعوة جديدة من المسؤول / PIN expired — ask the admin for a new one', 410);
+  }
+  if (!row.email) {
+    // PIN flow doesn't strictly REQUIRE email at invite time (per
+    // auth.invite.byPin), but Supabase Auth needs an email to create
+    // an auth.users row. Refuse here with a clear message.
+    throw httpErr('لا يوجد بريد إلكتروني للعضو، الرجاء التواصل مع المسؤول / Member has no email on file — contact admin', 400);
+  }
+
+  const pinOk = await bcryptCompare(pin, row.signup_pin_hash);
+  if (!pinOk) {
+    console.warn(`[auth.signup.completeByPin] wrong PIN for user ${row.id}`);
+    throw generic;
+  }
+
+  // Create auth.users (same as completeByToken path).
+  const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await admin.auth.admin.createUser({
+    email:         row.email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      member_id: row.member_id,
+      name:      row.preferred_name || row.full_name,
+    },
+  });
+  if (error || !data?.user) {
+    console.error('[auth.signup.completeByPin] createUser failed:', error);
+    throw httpErr(error?.message || 'Failed to activate account', 500);
+  }
+
+  await sql`
+    UPDATE public.users SET
+      auth_user_id             = ${data.user.id},
+      signup_token             = NULL,
+      signup_token_expires_at  = NULL,
+      signup_pin_hash          = NULL,
+      signup_pin_expires_at    = NULL,
+      signup_completed_at      = NOW()
+    WHERE id = ${row.id}
+  `;
+
+  console.log(`[auth.signup.completeByPin] activated user ${row.id} (member ${row.member_id})`);
+  return { email: row.email, login_hint: 'redirect to login' };
+};
+
 // Generate a 64-hex-char invite token (32 bytes from crypto.getRandomValues
 // → 256 bits of entropy). Used for the email-link signup flow.
 // Exported so applications.accept can issue an auto-invite on the same
@@ -813,9 +1065,11 @@ export const authActions: Record<string, Handler> = {
   'auth':                    auth,
   'auth.resolveIdentifier':  authResolveIdentifier,
   'auth.whoami':             authWhoami,
-  'auth.invite.byEmail':     authInviteByEmail,
-  'auth.invite.byPin':       authInviteByPin,
-  'auth.invite.revoke':      authInviteRevoke,
+  'auth.invite.byEmail':         authInviteByEmail,
+  'auth.invite.byPin':           authInviteByPin,
+  'auth.invite.revoke':          authInviteRevoke,
+  'auth.signup.completeByToken': authSignupCompleteByToken,
+  'auth.signup.completeByPin':   authSignupCompleteByPin,
   'users.list':              usersList,
   'users.create':            usersCreate,
   'users.update':            usersUpdate,

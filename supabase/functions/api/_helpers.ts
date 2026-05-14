@@ -258,6 +258,14 @@ export function requireAdminScope(user: UserContext | null, committeeId: string 
 export const PUBLIC_ACTIONS = new Set<string>([
   'auth',
   'auth.resolveIdentifier',
+  // Phase 3 of Branch 4 — member completes the signup flow from
+  // signup.html using either the email-link token or the NID+PIN combo.
+  // These are intentionally public: at the moment the member calls
+  // them they don't yet have an auth.users row, so JWT-gated access
+  // would be impossible. The actions enforce their own credential
+  // checks (token uniqueness + expiry, bcrypt PIN compare + expiry).
+  'auth.signup.completeByToken',
+  'auth.signup.completeByPin',
   'getMembers', 'getCommittees', 'getAdvisors', 'getProjects',
   'certs.verify',
   'setup.bulkSeed',
