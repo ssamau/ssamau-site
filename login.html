@@ -12,6 +12,30 @@
 <link rel="manifest" href="manifest.json"/>
 <meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
 <meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
+<style>
+  /* "First time? Activate your account here" link below the login button.
+     Light mode: brand dark-green on near-white (good contrast).
+     Dark  mode: brand gold on dark-green panel — var(--g) becomes invisible
+     in dark mode (only 3% lightness difference from the panel) so we
+     swap to gold, matching the kpi-n / ev-tag accent on the homepage
+     dark pass. Same fix as in signup.html's .mode-toggle a. */
+  .activate-link {
+    margin-top: 1.25rem;
+    text-align: center;
+    font-size: .78rem;
+    color: var(--tm, #9ca3af);
+  }
+  .activate-link a {
+    color: var(--g, #1A5C2E);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .activate-link a:hover { text-decoration: underline; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) .activate-link a { color: #c9a032; }
+  }
+  :root[data-theme="dark"] .activate-link a { color: #c9a032; }
+</style>
 </head>
 <body>
 
@@ -56,12 +80,16 @@
       get to the activation form. The link is intentionally low-emphasis
       relative to the primary login button — most visitors to /login.html
       already have an account.
+
+      Styling lives in the <style> block below (not inline) so the
+      dark-mode color override can win the cascade — inline styles
+      override CSS rules at any specificity, so the bug from PR #18
+      was that var(--g) (dark green) became invisible on dark mode
+      because we couldn't override it.
     -->
-    <div style="margin-top:1.25rem;text-align:center;font-size:.78rem;color:var(--tm,#9ca3af)">
+    <div class="activate-link">
       <span>عضو جديد ولديك دعوة من المسؤول؟ </span>
-      <a href="signup.html" style="color:var(--g,#1A5C2E);font-weight:700;text-decoration:none">
-        فعّل حسابك هنا ←
-      </a>
+      <a href="signup.html">فعّل حسابك هنا ←</a>
     </div>
   </div>
 
