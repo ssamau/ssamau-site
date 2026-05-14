@@ -706,3 +706,148 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
   background-color: rgba(184,147,42,.15);
   color: #c9a032;
 }
+
+/* ─── Second-pass dark-mode coverage (May 15 follow-up) ──────────────
+ * The May 15 first pass covered .kpi cards + section backgrounds.
+ * User testing on a phone surfaced the rest: every other card class
+ * still had hardcoded `background:#fff` or near-white, producing
+ * white panels stamped on the dark sections — visually broken on
+ * Leadership, Sponsors, Universities, Past Events, Committee
+ * shortcut cards, Reports.
+ *
+ * Same value palette as the first pass: card surface `#1c241e`,
+ * nested-on-card surface `#252e26`, borders rgba(255,255,255,.06).
+ * Dark-green text (`color: var(--gd)`) inside cards swaps to light
+ * grey/white since --gd doesn't have a dark-mode variant (and
+ * shouldn't — it's the brand primary). We override per-element.
+ *
+ * Both the auto/unset and explicit data-theme="dark" cases are
+ * covered. Body of the rules is identical between the two blocks —
+ * duplicated rather than abstracted via a custom-property indirection
+ * because nesting is shallow and grep-ability matters more than DRY
+ * for this defensive CSS layer. */
+
+/* --- auto/unset (OS prefers dark) ------------------------------- */
+@media (prefers-color-scheme: dark) {
+  /* Past events strip — section uses var(--bg) which IS theme-aware,
+     but card BODY (.past-card itself) and the manager sub-block are
+     both hardcoded light. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .past-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-loc    { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-mgr    {
+    background-color: rgba(255,255,255,.04);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-mgr-n  { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-stat-n { color: #c9a032; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-stat   { border-inline-start-color: rgba(255,255,255,.08); }
+
+  /* Committee cards (Governance → اللجان التنفيذية tab) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-card,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ccard {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-name-ar,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-head-name { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .cm-name {
+    background-color: rgba(255,255,255,.06);
+    color: #cbd5e1;
+  }
+
+  /* Board cards (مجلس الإدارة tab) — bcard.pres has a cream gradient
+     in light mode; reuse the same tinted concept with a gold-on-dark
+     gradient so the president card still stands out. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .bcard {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .bcard.pres {
+    background: linear-gradient(to bottom, #2a2418, #1c241e);
+    border-color: rgba(201,160,50,.5);
+  }
+
+  /* Leadership cards (Governance → مجلس الإدارة landing layout) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ld-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ld-name { color: #e5e7eb; }
+  /* .ld-name-en uses var(--tm) which already adapts in dark mode */
+
+  /* Report KPIs (admin overview surfaced on homepage) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .rk {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .rk-n { color: #c9a032; }
+
+  /* Sponsor cards (الشركاء section) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sp-card,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sp-card-logo {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  /* University partner pills (lighter tint than other cards in light
+     mode → match a slightly lighter dark surface for consistency). */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .uni-card {
+    background-color: #252e26;
+    border-color: rgba(255,255,255,.06);
+  }
+}
+
+/* --- explicit data-theme="dark" (toggled via the new theme btn) -- */
+:root[data-theme="dark"] .past-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .pc-loc    { color: #cbd5e1; }
+:root[data-theme="dark"] .pc-mgr    { background-color: rgba(255,255,255,.04); }
+:root[data-theme="dark"] .pc-mgr-n  { color: #e5e7eb; }
+:root[data-theme="dark"] .pc-stat-n { color: #c9a032; }
+:root[data-theme="dark"] .pc-stat   { border-inline-start-color: rgba(255,255,255,.08); }
+
+:root[data-theme="dark"] .com-card,
+:root[data-theme="dark"] .ccard {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .com-name-ar,
+:root[data-theme="dark"] .com-head-name { color: #e5e7eb; }
+:root[data-theme="dark"] .cm-name {
+  background-color: rgba(255,255,255,.06);
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .bcard {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .bcard.pres {
+  background: linear-gradient(to bottom, #2a2418, #1c241e);
+  border-color: rgba(201,160,50,.5);
+}
+
+:root[data-theme="dark"] .ld-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .ld-name { color: #e5e7eb; }
+
+:root[data-theme="dark"] .rk {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .rk-n { color: #c9a032; }
+
+:root[data-theme="dark"] .sp-card,
+:root[data-theme="dark"] .sp-card-logo {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .uni-card {
+  background-color: #252e26;
+  border-color: rgba(255,255,255,.06);
+}
