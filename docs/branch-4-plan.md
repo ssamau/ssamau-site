@@ -55,7 +55,7 @@ and defer the rest to a follow-up branch if priorities shift.
 | **2a** | Edge Function invite actions (`auth.invite.byEmail`, `.byPin`, `.revoke`) | ✅ Done — deployed, schema smoke-test passes |
 | **2b** | Admin "Invite to portal" UI + auto-invite on `applications.accept` | ✅ Done — `getMembers` now joins `users` for account status; row buttons + invite modal; auto-invite side-effect on accept per requirements §6 |
 | **3** | Public signup endpoints (`auth.signup.completeByToken`, `.completeByPin`) + `signup.html` page | ✅ Done — Edge Function actions deployed + in PUBLIC_ACTIONS allowlist, signup.html mounted with mode toggle, sw.js shell updated |
-| **4** | Login routing: `access_level='member'` redirects to `member.html` instead of `admin.html` | ⏳ Pending |
+| **4** | Login routing: `access_level='member'` redirects to `member.html` instead of `admin.html` | ✅ Done — landingPageForAccess helper in auth.js; login.js routes on session save + already-logged-in re-entry; admin/main.js + member.html cross-guard each other; placeholder member.html with greeting + logout |
 | **5** | Member portal SPA shell + 4 tabs (profile, own hours, opportunities, assignments) | ⏳ Pending |
 | **6** | Closing items: CV upload via Supabase Storage + member self-service password reset wired to existing branded template | ⏳ Pending |
 
