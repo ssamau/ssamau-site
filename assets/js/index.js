@@ -493,16 +493,18 @@ document.addEventListener('keydown', (e) => {
 })();
 
 // ── NAV: scroll style + mobile hamburger + smooth-scroll anchors ────────────
+// Add/remove `.scrolled` class on the nav as the user scrolls past 60px.
+// CSS handles the actual visual change (background opacity bump + shadow)
+// per-theme — keeping the styling in CSS rather than inline lets dark-mode
+// overrides actually win. The previous version inline-set
+// `nav.style.background = 'rgba(255,255,255,.99)'` which has inline-style
+// priority and stomped every CSS rule no matter how specific, leaving the
+// nav stuck on white the moment the user scrolled past the hero. Bug
+// surfaced May 15 after dark mode shipped on the homepage.
 window.addEventListener('scroll', () => {
   const nav = document.getElementById('navbar');
   if (!nav) return;
-  if (window.scrollY > 60) {
-    nav.style.background = 'rgba(255,255,255,.99)';
-    nav.style.boxShadow  = '0 2px 16px rgba(0,0,0,.1)';
-  } else {
-    nav.style.background = 'rgba(255,255,255,.97)';
-    nav.style.boxShadow  = 'none';
-  }
+  nav.classList.toggle('scrolled', window.scrollY > 60);
 });
 
 let navOpen = false;

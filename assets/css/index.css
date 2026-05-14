@@ -314,7 +314,11 @@ html[dir="ltr"] html[dir="ltr"]
 .drwmg{font-size:.63rem;color:var(--tm)}
 @media(max-width:600px){.bgrid{grid-template-columns:1fr}.drwmbs{grid-template-columns:1fr}}
 
-nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
+/* Scroll-state nav: slightly more opaque + shadow once the user scrolls
+   past the hero. Dark-mode counterpart below in the @media + data-theme
+   blocks. The JS scroll handler in index.js just toggles this class —
+   the actual visual change lives here so dark mode can override it. */
+nav.scrolled{background:rgba(255,255,255,.99);box-shadow:0 2px 16px rgba(0,0,0,.1);}
 
 /* Language system */
 
@@ -877,6 +881,9 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
     background-color: rgba(15,20,16,.92);
     border-bottom-color: rgba(255,255,255,.08);
   }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) nav.scrolled {
+    background-color: rgba(15,20,16,.99);
+  }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-brand-text .t1 { color: #e5e7eb; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-menu a       { color: #cbd5e1; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-hamburger    { color: #e5e7eb; }
@@ -910,6 +917,13 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
 :root[data-theme="dark"] nav {
   background-color: rgba(15,20,16,.92);
   border-bottom-color: rgba(255,255,255,.08);
+}
+/* Scrolled-state opacity bump, dark counterpart. Has to be a more
+   specific selector than `nav.scrolled` to win the cascade — both
+   are class-level. `:root[data-theme="dark"]` adds (0,0,1,1)
+   specificity, so this beats the plain `nav.scrolled` rule above. */
+:root[data-theme="dark"] nav.scrolled {
+  background-color: rgba(15,20,16,.99);
 }
 :root[data-theme="dark"] .nav-brand-text .t1 { color: #e5e7eb; }
 :root[data-theme="dark"] .nav-menu a       { color: #cbd5e1; }
