@@ -47,6 +47,22 @@
     </button>
 
     <div class="error-msg" id="error-msg">❌ المعرّف أو كلمة المرور غير صحيحة</div>
+
+    <!--
+      First-time activation entry point — for newly-invited members who
+      have either an email link (handled by signup.html?token=…) or a
+      PIN from the committee head. Visible on EVERY login load so a
+      member who doesn't know to look in their inbox first can still
+      get to the activation form. The link is intentionally low-emphasis
+      relative to the primary login button — most visitors to /login.html
+      already have an account.
+    -->
+    <div style="margin-top:1.25rem;text-align:center;font-size:.78rem;color:var(--tm,#9ca3af)">
+      <span>عضو جديد ولديك دعوة من المسؤول؟ </span>
+      <a href="signup.html" style="color:var(--g,#1A5C2E);font-weight:700;text-decoration:none">
+        فعّل حسابك هنا ←
+      </a>
+    </div>
   </div>
 
   <div class="lc-footer">

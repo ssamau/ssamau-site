@@ -280,8 +280,20 @@ const usersUpdate: Handler = async (body, user) => {
 const usersDelete: Handler = async (body, user) => {
   requireSuperadmin(user);
   const id = body.id as number | undefined;
-  const [target] = await sql`SELECT id, username, access_level FROM users WHERE id = ${id}` as Array<{
+  // Pull auth_user_id along with the existing fields so we can cascade
+  // the delete into auth.users for Supabase-Auth accounts. Without
+  // this, deleting a user via the admin UI leaves an orphaned auth.users
+  // row behind — and the next time we try to re-invite the same member
+  // (same email), `admin.auth.admin.createUser` fails with "User with
+  // this email address has already been registered". Found by user
+  // testing the Phase 3 signup flow when re-inviting a deleted member.
+  const [target] = await sql`
+    SELECT id, username, access_level, auth_user_id
+    FROM users
+    WHERE id = ${id}
+  ` as Array<{
     id: number; username: string; access_level: string;
+    auth_user_id: string | null;
   }>;
   if (!target) return { id };
   if (target.access_level === 'superadmin') {
@@ -289,6 +301,35 @@ const usersDelete: Handler = async (body, user) => {
     if (count <= 1) throw httpErr('Cannot delete the only remaining superadmin', 409);
   }
   if (target.id === user!.id) throw httpErr('You cannot delete your own account', 409);
+
+  // Delete auth.users FIRST when present, then public.users. This
+  // ordering matters:
+  //  - If auth.users deletion fails (network blip, missing service
+  //    role key, etc.) the exception bubbles up and public.users
+  //    stays intact → state remains consistent
+  //  - If both succeed: ON DELETE SET NULL on the users.auth_user_id
+  //    FK will null the column in public.users between the two
+  //    statements, but we're about to delete that row anyway so it
+  //    doesn't matter
+  //  - Idempotent for legacy accounts (auth_user_id NULL): skips
+  //    the admin SDK call entirely, only does the SQL delete
+  if (target.auth_user_id) {
+    const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error } = await admin.auth.admin.deleteUser(target.auth_user_id);
+    // 404 from the admin SDK means "already deleted upstream" — fine,
+    // we just proceed with the SQL delete. Other errors abort so the
+    // admin sees what went wrong rather than getting a half-deleted state.
+    if (error && !/not_found|user not found/i.test(error.message || '')) {
+      console.error('[users.delete] auth.users deletion failed:', error);
+      throw httpErr(`Supabase auth delete failed: ${error.message}`, 500);
+    }
+  }
+
   await sql`DELETE FROM users WHERE id = ${id}`;
   return { id };
 };
