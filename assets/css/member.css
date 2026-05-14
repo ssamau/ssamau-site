@@ -99,16 +99,3 @@
   cursor: default;
 }
 
-/* Toast container (lib/ui.js renders into this) — admin.html has its own
- * baked-in styling; mirroring it here so member toasts look the same. */
-#toast-stack {
-  position: fixed;
-  bottom: 1rem;
-  inset-inline-end: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  z-index: 9999;
-  pointer-events: none;
-}
-#toast-stack > * { pointer-events: auto; }

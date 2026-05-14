@@ -276,8 +276,13 @@
   </div>
 </div>
 
-<!-- Toast container — lib/ui.js renders into here -->
-<div id="toast-stack" aria-live="polite" aria-atomic="true"></div>
+<!-- Toast — single-message overlay rendered by lib/ui.js's toast(). The
+     element MUST be id="toast" (singular) because lib/ui.js looks up that
+     specific id; styling for it lives in admin.css (#toast.show + .tok /
+     .terr / .twarn variants). An earlier #toast-stack here caused
+     toast() to throw on every save/error feedback, which silently
+     rolled back UI state — confused users since clicks "did nothing". -->
+<div id="toast"></div>
 
 <script type="module" src="assets/js/member/main.js"></script>
 <script type="module" src="assets/js/lib/sw-register.js"></script>
