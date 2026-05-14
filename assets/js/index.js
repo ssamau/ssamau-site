@@ -71,6 +71,13 @@ function retrofitInlineOnclicks() {
   document.querySelectorAll('[onclick]').forEach(el => {
     const code = el.getAttribute('onclick');
     el.removeAttribute('onclick');
+    // Stash the original code on the element as a data attribute so
+    // OTHER code paths that legitimately need to inspect the inline
+    // call (e.g. updateCommittees parses `oDrw('events')` to extract
+    // the committee id and patch COMS_DATA with live DB names) can
+    // still read it. Without this, those paths see attribute-less
+    // elements and silently fall back to stale static data.
+    el.dataset.origOnclick = code;
     const call = parseInlineCall(code);
     if (!call) {
       console.warn('[onclick-retrofit] unparseable onclick on', el, '→', code);
@@ -561,8 +568,17 @@ function evTab(id, btn) {
   document.querySelectorAll('.ev-panel').forEach((p) => p.classList.remove('ac'));
   const panel = document.getElementById('ev-' + id);
   if (panel) panel.classList.add('ac');
+  // Match buttons by DOM identity rather than `onclick` attribute string —
+  // the retrofitInlineOnclicks polyfill (added in the same branch this
+  // file lives on) strips every onclick attribute at DOMContentLoaded
+  // for CSP compliance. After that, `b.getAttribute('onclick')` is null
+  // for every button, `null === null` is always true, and every tab
+  // ends up with `.ac` — leaving both tabs visually highlighted in dark
+  // mode where the inactive state contrast is already subtle. Comparing
+  // `b === btn` doesn't depend on attribute state and survives the
+  // polyfill cleanly.
   document.querySelectorAll('.ev-tbtn').forEach((b) => {
-    b.classList.toggle('ac', b.getAttribute('onclick') === btn.getAttribute('onclick'));
+    b.classList.toggle('ac', b === btn);
   });
 }
 
@@ -650,7 +666,12 @@ function updateCommittees(members, committees) {
     }
 
     // Patch COMS_DATA so the drawer (opened via oDrw) shows live heads.
-    const cid = card.getAttribute('onclick');
+    // Read from data-orig-onclick (stashed by retrofitInlineOnclicks)
+    // since the attribute itself was stripped at DOMContentLoaded for
+    // CSP compliance. Fallback to getAttribute for early-load paths
+    // where the polyfill hasn't run yet (shouldn't happen — load fires
+    // after DOMContentLoaded — but defensive).
+    const cid = card.dataset.origOnclick || card.getAttribute('onclick');
     if (cid) {
       const match = cid.match(/oDrw\('([^']+)'\)/);
       if (match) {
