@@ -7,7 +7,7 @@
 
 import { sql } from '../_sql.ts';
 import {
-  httpErr, requireAdmin,
+  httpErr, requireAuth, requireAdmin,
   type Handler,
 } from '../_helpers.ts';
 
@@ -65,9 +65,26 @@ const interestMarkReviewed: Handler = async (body, user) => {
   return { id, reviewed };
 };
 
+// Member-portal self-scoped listing — returns only the caller's interest
+// rows so the opportunities tab can pre-mark "✓ مُسجّل" on rows the
+// member already expressed interest in. Without this, the button state
+// is in-memory only and resets on every reload — members would re-click,
+// see the same state-flip again, and assume the site is broken.
+// Returns the minimal shape needed for the client-side set lookup.
+const interestListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user.member_id) return [];     // dev account: no member_id → no interests
+  return sql`
+    SELECT id, project_id, interested, comment, submitted_at, reviewed_at
+    FROM interest_requests
+    WHERE member_id = ${user.member_id}
+  `;
+};
+
 export const interestActions: Record<string, Handler> = {
   'interest.submit':       interestSubmit,
   'interest.list':         interestList,
   'interest.listAll':      interestListAll,
+  'interest.listOwn':      interestListOwn,
   'interest.markReviewed': interestMarkReviewed,
 };

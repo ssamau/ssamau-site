@@ -20,12 +20,12 @@ import { api } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
 
-// Cache of project_ids the member has already expressed interest in.
-// We don't fetch the interest_requests table separately — we infer from
-// "did the user click the button this session" because the listAll
-// action is admin-only. Reloading the tab re-enables the button; the
-// server's upsert (ON CONFLICT) makes a re-submit a no-op. The pill on
-// the row stays sticky for the rest of the session.
+// Set of project_ids the member has already expressed interest in.
+// Populated FROM SERVER on every load via `interest.listOwn` so the
+// "✓ مُسجّل" pill survives reload / navigation / different device.
+// Without server backing, the pill was in-memory only — members would
+// refresh the page, see the button reset to "🙋 اهتمام", click again,
+// see it flip back, and reasonably assume the site is broken.
 const _interestedProjects = new Set();
 
 export async function loadOpportunities() {
@@ -33,12 +33,31 @@ export async function loadOpportunities() {
   if (!tbody) return;
   tbody.innerHTML = '<tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr>';
 
-  const res = await api('opportunities.list');
-  if (!res || !res.success) {
+  // Two parallel fetches: opportunities + own interest history. Both are
+  // small queries; loading them together avoids a waterfall.
+  const [oppsRes, interestRes] = await Promise.all([
+    api('opportunities.list'),
+    api('interest.listOwn'),
+  ]);
+  if (!oppsRes || !oppsRes.success) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="6" style="color:var(--dn)">تعذّر التحميل</td></tr>';
     return;
   }
-  const all = res.data || [];
+
+  // Rebuild the interested-projects set from server data. Replacing the
+  // set (rather than merging) ensures a member who's no longer in the
+  // interest_requests table doesn't keep a stale "✓ مُسجّل" badge.
+  _interestedProjects.clear();
+  if (interestRes && interestRes.success) {
+    for (const i of (interestRes.data || [])) {
+      // Only count `interested = true` rows. A "no I'm not interested"
+      // row shouldn't flip the button to "registered".
+      const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
+      if (yn) _interestedProjects.add(i.project_id);
+    }
+  }
+
+  const all = oppsRes.data || [];
   const session = getSession();
   const myCom = session?.committee_id || null;
 
