@@ -47,6 +47,36 @@ enabled = true
 # don't choke.
 file_size_limit = "50MiB"
 
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║                                                                      ║
+# ║   ⚠️   READ BEFORE RUNNING `supabase config push`   ⚠️                  ║
+# ║                                                                      ║
+# ║   The CLI fills in DEFAULT VALUES for any [auth.*] field this file  ║
+# ║   doesn't explicitly set, and pushes those defaults to prod. Most   ║
+# ║   `bool` fields default to `false` (Go zero value), which means     ║
+# ║   pushing this file can SILENTLY DISABLE features that are turned   ║
+# ║   on in the dashboard.                                              ║
+# ║                                                                      ║
+# ║   Real incidents this caused on May 14, 2026:                       ║
+# ║    1. `max_frequency` defaulted from prod's 1m → CLI's 1s,          ║
+# ║       making /auth/v1/recover spammable at 60×/min.                  ║
+# ║    2. `[auth.email].enabled` defaulted to false → email login       ║
+# ║       broke on prod, admins locked out until manual dashboard fix.  ║
+# ║                                                                      ║
+# ║   BEFORE the next push:                                             ║
+# ║    1. Read the diff the CLI prints CAREFULLY. Don't pipe it through ║
+# ║       `tail` or `head` — those can swallow the interactive [Y/n]    ║
+# ║       prompt and let the default-Y answer go through.                ║
+# ║    2. Use `--yes` ONLY after you've reviewed the diff in a separate ║
+# ║       command. Never `--yes` blind.                                  ║
+# ║    3. Every line in the diff with a `-` is a value you're            ║
+# ║       OVERWRITING. Confirm each one is intentional.                  ║
+# ║    4. If in doubt, edit the field in the Supabase dashboard         ║
+# ║       directly and DON'T push config. The dashboard is the source    ║
+# ║       of truth for runtime auth — this file is a starting scaffold. ║
+# ║                                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
 [auth]
 enabled = true
 # Magic-link reset is the primary mechanism per the migration plan. OTP is
@@ -66,6 +96,15 @@ enable_signup = false          # public can't self-create accounts; members
 enable_anonymous_sign_ins = false
 
 [auth.email]
+# ⚠️  CRITICAL: do NOT remove `enabled = true`. The Supabase CLI defaults
+# this to `false` (Go zero-value for bool) when omitted, and `supabase
+# config push` will silently disable email login on prod — taking down
+# the entire admin sign-in flow. We learned this the hard way on the
+# May-14 push: login broke immediately on prod, was diagnosed only when
+# users couldn't sign in. This pin keeps the email auth provider on.
+# Same hazard applies to ANY `enabled` field across all [auth.*] blocks.
+enabled = true
+
 enable_signup = false
 double_confirm_changes = true
 enable_confirmations = true

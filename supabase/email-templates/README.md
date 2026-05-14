@@ -8,30 +8,56 @@ pasted back in if the dashboard copy is lost or needs review.
 
 ## How to update
 
-Templates are uploaded via `supabase config push`, NOT pasted into the
-dashboard. The `[auth.email.template.recovery]` block in
-`supabase/config.toml` points at `password-recovery.html` and the push
-applies it to the linked project. This keeps the live template in
-version control and avoids the dashboard-drift class of bugs.
+> ⚠️  **Read the giant warning at the top of `supabase/config.toml`
+> before running `supabase config push`.** It silently rewrites ALL
+> `[auth.*]` fields, including ones this template change doesn't care
+> about — and CLI defaults are mostly `false`, so it can disable
+> features that are on in the dashboard. Two prod regressions in one
+> day taught us this the hard way.
+
+### Recommended: dashboard paste (safest)
+
+When you change a template here:
+
+1. Open Supabase Dashboard → Authentication → Email Templates.
+2. Pick the template (e.g. **Reset Password**).
+3. Switch to the **Source** tab (HTML, not the rich text view).
+4. Replace the contents with the file in this folder.
+5. Save.
+6. Send a test to verify rendering — see "Testing" below.
+
+The HTML file in this repo stays as the version-controlled source of
+truth — you're just manually syncing it to the dashboard.
+
+### Faster but riskier: `supabase config push`
+
+The `[auth.email.template.recovery]` block in `config.toml` points at
+`password-recovery.html` and a push uploads it to the dashboard. But
+the same push will also overwrite `enable_signup`, `max_frequency`,
+`enabled`, etc. with whatever's pinned in config.toml — and with the
+CLI's `false` defaults for any field you forgot to pin. **Only use
+this path if:**
+
+1. You've already explicitly pinned every relevant `[auth.*]` field
+   in config.toml to match the live dashboard state. (Pull the live
+   state first if you're not sure.)
+2. You run `supabase config push` WITHOUT `--yes` first, in a clean
+   terminal, and read the diff line-by-line. Every `-` line is a
+   value you're overwriting on prod.
+3. You're not exhausted at 6am 🙂
 
 ```bash
 # Edit the .html file
 $EDITOR supabase/email-templates/password-recovery.html
 
-# Push to the linked Supabase project
+# Inspect what the push would change
+supabase config push     # answer 'n' at the [Y/n] prompt to abort
+
+# Once you've reviewed the diff and it's clean, push for real
 supabase config push --yes
 
 # Verify by sending a test (see "Testing" below)
 ```
-
-The `--yes` flag is important — without it the CLI shows a diff and
-waits for `[Y/n]`, and a tail/grep pipe can swallow the prompt with
-its default-Y answer (we hit this once and accidentally pushed a
-`max_frequency` regression). With `--yes` you accept the diff
-intentionally; review what the diff is BEFORE running.
-
-If you ever do edit a template in the dashboard, also update the file
-here and run `config push` so they don't drift apart.
 
 ## Templates
 
