@@ -95,6 +95,18 @@ body::before {
 .fg input::placeholder { color: var(--tm); }
 .fg input:focus { border-color: var(--g); background: var(--sf); box-shadow: 0 0 0 3px rgba(26,92,46,.15); }
 
+/* Password inputs have TWO icons — the .fg-icon lock on the right
+   (already covered by padding-right: 2.4rem above) AND the .pw-toggle
+   eye on the left at `left: .85rem`. The default left padding of
+   .85rem only just barely starts AT the eye toggle — typed text
+   overlaps the emoji. Previously hidden by direction:rtl right-
+   aligning the content; surfaced when we switched to unicode-bidi:
+   plaintext and LTR content started rendering left-aligned. Bump the
+   physical left padding to clear the toggle. */
+.fg input[type="password"] {
+  padding-left: 2.4rem;
+}
+
 .pw-toggle {
   position: absolute; left: .85rem; top: 50%;
   transform: translateY(-50%);
