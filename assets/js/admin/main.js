@@ -40,6 +40,8 @@ import { loadDashboard } from './tabs/dashboard.js';
 import {
   loadMembers, saveMember, editMember,
   filterMembersByRole, filterMembersByStatus,
+  openInviteModal, sendInviteByEmail, sendInviteByPin,
+  copyShownPin, confirmRevokeInvite,
 } from './tabs/members.js';
 import { loadAdvisors, saveAdvisor, editAdvisor } from './tabs/advisors.js';
 import { loadCommittees, saveCommittee, editCommittee } from './tabs/committees.js';
@@ -299,7 +301,7 @@ window.addEventListener('load', () => {
 // load function).
 setHandlers({
   // ── No-arg ──────────────────────────────────────────────────────
-  refreshData, logout, copyShownPw, generateAccountPw,
+  refreshData, logout, copyShownPw, copyShownPin, generateAccountPw,
   saveAccount, saveAdvisor, saveAttendance, saveBulkAttendance,
   saveBulkCerts, saveBulkThanks, saveCommittee, saveHours, saveInterest,
   saveMember, saveOpportunity, saveParticipant, saveProject, saveThanks,
@@ -310,6 +312,7 @@ setHandlers({
   toggleAttFields, toggleHrsFields, toggleParticipantFields,
   loadApplications, loadOpportunities,
   openAccountModal,
+  sendInviteByEmail, sendInviteByPin,
 
   // ── Hardcoded-string args via data-attribute ────────────────────
   closeModal:       (el) => closeModal(el.dataset.modal),
@@ -344,6 +347,8 @@ setHandlers({
   openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
   viewProfile:                 (el) => viewProfile(el.dataset.id),
   openAccountModalForMember:   (el) => openAccountModalForMember(el.dataset.id),
+  openInviteModal:             (el) => openInviteModal(el.dataset.id),
+  confirmRevokeInvite:         (el) => confirmRevokeInvite(el.dataset.id, el.dataset.name),
 
   // ── Single dynamic ID (numeric) ─────────────────────────────────
   editAccount:           (el) => editAccount(Number(el.dataset.id)),

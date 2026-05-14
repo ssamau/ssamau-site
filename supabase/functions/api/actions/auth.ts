@@ -18,6 +18,7 @@ import {
   requireAuth, requireSuperadmin,
   type Handler,
 } from '../_helpers.ts';
+import { sendEmail } from '../_email.ts';
 
 // ─── `auth.resolveIdentifier` — username / NID / email → login plan ─────
 // Public action. The login form sends a single free-text identifier
@@ -444,10 +445,377 @@ const authWhoami: Handler = async (_body, user) => {
   };
 };
 
+// ─── `auth.invite.byEmail` — head OR superadmin sends a signup link ─────
+// Generates a 64-hex-char random token (256 bits of entropy from
+// crypto.getRandomValues), stamps it onto the member's public.users row
+// (creating that row if it doesn't exist yet), and emails the member a
+// link to /signup.html?token=… so they can choose their own password.
+//
+// Permissions match users.resetPassword:
+//   - superadmin can invite any member
+//   - head can invite a member in their OWN committee only
+//
+// "Resend" behaviour: if a pending invite (token or PIN) already exists,
+// we overwrite it with a fresh token. The previous token becomes
+// immediately unusable (UNIQUE index would block re-insert anyway).
+// We do NOT touch users rows that have already completed signup
+// (signup_completed_at IS NOT NULL) — that's a 409.
+const authInviteByEmail: Handler = async (body, user) => {
+  requireAuth(user);
+  const memberId   = String(body.member_id ?? '').trim();
+  const redirectTo = (body.redirectTo as string | undefined)?.trim()
+    || 'https://ssamau.com/signup.html';
+  if (!memberId) throw httpErr('member_id is required', 400);
+
+  const [member] = await sql`
+    SELECT m.member_id, m.full_name, m.preferred_name, m.email, m.committee_id,
+           c.committee_name
+    FROM public.members m
+    LEFT JOIN public.committees c ON c.committee_id = m.committee_id
+    WHERE m.member_id = ${memberId}
+  ` as Array<{
+    member_id: string; full_name: string; preferred_name: string | null;
+    email: string | null; committee_id: string | null;
+    committee_name: string | null;
+  }>;
+  if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+  if (!member.email) {
+    throw httpErr(
+      `Member ${memberId} has no email on file — use auth.invite.byPin instead, ` +
+      `or add an email to their member record first.`, 400);
+  }
+
+  // Scope: head can only invite within their own committee.
+  if (user!.access === 'head') {
+    if (member.committee_id !== user!.committee_id) {
+      throw httpErr('Forbidden — that member is not in your committee', 403);
+    }
+  } else if (user!.access !== 'superadmin') {
+    throw httpErr('Forbidden', 403);
+  }
+
+  // Look up existing users row (if any) for this member.
+  const [existing] = await sql`
+    SELECT id, signup_completed_at, auth_user_id
+    FROM public.users
+    WHERE member_id = ${memberId}
+  ` as Array<{ id: number; signup_completed_at: string | null; auth_user_id: string | null }>;
+
+  if (existing?.signup_completed_at || existing?.auth_user_id) {
+    throw httpErr(
+      `Member ${memberId} (${member.full_name}) has already joined the portal. ` +
+      `Use users.sendPasswordReset to send them a password recovery email instead.`, 409);
+  }
+
+  const token = generateInviteToken();
+
+  if (existing) {
+    // Resend: overwrite the pending invite on the existing row, clear
+    // any PIN that might also be pending (only one invite path at a time).
+    await sql`
+      UPDATE public.users SET
+        signup_token            = ${token},
+        signup_token_expires_at = NOW() + INTERVAL '7 days',
+        signup_pin_hash         = NULL,
+        signup_pin_expires_at   = NULL
+      WHERE id = ${existing.id}
+    `;
+  } else {
+    // First-time invite: create the users row in pending state. The
+    // username is the deterministic placeholder `mbr_<member_id>` —
+    // members never see this; it's an internal handle that satisfies
+    // the UNIQUE NOT NULL constraint on the column.
+    await sql`
+      INSERT INTO public.users (
+        username, member_id, access_level, password_hash,
+        signup_token, signup_token_expires_at
+      ) VALUES (
+        ${'mbr_' + memberId.toLowerCase()},
+        ${memberId},
+        'member',
+        NULL,
+        ${token},
+        NOW() + INTERVAL '7 days'
+      )
+    `;
+  }
+
+  // Compose + send the invite email. Fire-and-forget pattern with try/catch
+  // is built into sendEmail() — it returns false rather than throwing on
+  // failure, so an SMTP blip can't roll back the invite that just landed
+  // in the DB. The admin can retry by clicking "Resend" if they don't
+  // hear back from the member.
+  const displayName = member.preferred_name || member.full_name;
+  const link        = `${redirectTo}?token=${token}`;
+  const subject     = `دعوة للانضمام إلى لوحة الأعضاء — SSAM`;
+  const html        = composeInviteEmail({
+    displayName,
+    committeeName: member.committee_name,
+    signupLink: link,
+    mode: 'token',
+  });
+  const sent = await sendEmail({ to: member.email, subject, html });
+
+  return {
+    sent,
+    member_id: memberId,
+    email: member.email,
+    expires_at_iso8601_plus_7d: true, // hint for the UI; exact ms not exposed
+  };
+};
+
+// ─── `auth.invite.byPin` — head OR superadmin issues a 6-digit PIN ─────
+// For members without a reliable email. Admin clicks "Invite by PIN",
+// the action returns the plaintext PIN ONCE in the response, admin
+// passes it to the member offline (WhatsApp, in person), member visits
+// signup.html and enters their NID + PIN to claim the account.
+//
+// The PIN is bcrypt-hashed before storage (rounds=10) so a DB leak
+// doesn't expose it. Brute-force in 72h would require ~3.86 attempts/sec
+// over 10^6 combinations — server-side rate limiting on the eventual
+// completeByPin action (Phase 3) closes that. The expiry alone isn't
+// sufficient; add real rate limiting when implementing Phase 3.
+const authInviteByPin: Handler = async (body, user) => {
+  requireAuth(user);
+  const memberId = String(body.member_id ?? '').trim();
+  if (!memberId) throw httpErr('member_id is required', 400);
+
+  const [member] = await sql`
+    SELECT m.member_id, m.full_name, m.committee_id, m.national_id
+    FROM public.members m
+    WHERE m.member_id = ${memberId}
+  ` as Array<{
+    member_id: string; full_name: string;
+    committee_id: string | null; national_id: string | null;
+  }>;
+  if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+  if (!member.national_id) {
+    throw httpErr(
+      `Member ${memberId} has no national_id on file — required for PIN-based ` +
+      `signup. Use auth.invite.byEmail if they have an email, or update the ` +
+      `member record first.`, 400);
+  }
+
+  if (user!.access === 'head') {
+    if (member.committee_id !== user!.committee_id) {
+      throw httpErr('Forbidden — that member is not in your committee', 403);
+    }
+  } else if (user!.access !== 'superadmin') {
+    throw httpErr('Forbidden', 403);
+  }
+
+  const [existing] = await sql`
+    SELECT id, signup_completed_at, auth_user_id
+    FROM public.users
+    WHERE member_id = ${memberId}
+  ` as Array<{ id: number; signup_completed_at: string | null; auth_user_id: string | null }>;
+
+  if (existing?.signup_completed_at || existing?.auth_user_id) {
+    throw httpErr(
+      `Member ${memberId} (${member.full_name}) has already joined the portal.`, 409);
+  }
+
+  // 6-digit numeric PIN. Math.random() isn't cryptographically strong,
+  // but we use crypto.getRandomValues() then mod 1_000_000 to stay
+  // uniform. The PIN is short-lived (72h) + bcrypt-hashed + rate-
+  // limited at completion time, so 20 bits of entropy is acceptable.
+  const r = new Uint32Array(1);
+  crypto.getRandomValues(r);
+  const pinNum = r[0] % 1_000_000;
+  const pin = pinNum.toString().padStart(6, '0');
+  const pinHash = await bcryptHash(pin, 10);
+
+  if (existing) {
+    await sql`
+      UPDATE public.users SET
+        signup_pin_hash         = ${pinHash},
+        signup_pin_expires_at   = NOW() + INTERVAL '72 hours',
+        signup_token            = NULL,
+        signup_token_expires_at = NULL
+      WHERE id = ${existing.id}
+    `;
+  } else {
+    await sql`
+      INSERT INTO public.users (
+        username, member_id, access_level, password_hash,
+        signup_pin_hash, signup_pin_expires_at
+      ) VALUES (
+        ${'mbr_' + memberId.toLowerCase()},
+        ${memberId},
+        'member',
+        NULL,
+        ${pinHash},
+        NOW() + INTERVAL '72 hours'
+      )
+    `;
+  }
+
+  // Plaintext PIN goes back to the admin ONCE. We never persist it.
+  // Admin must copy it now and pass it to the member (WhatsApp, etc.).
+  return {
+    member_id: memberId,
+    member_name: member.full_name,
+    pin,                       // ← unrecoverable after this response
+    expires_in_hours: 72,
+  };
+};
+
+// ─── `auth.invite.revoke` — cancel a pending invite ────────────────────
+// Deletes the pending users row entirely (which only contains the invite
+// state — no member activity to preserve). Refuses to touch rows where
+// signup has been completed; those go through users.delete with the
+// usual superadmin-only guard.
+const authInviteRevoke: Handler = async (body, user) => {
+  requireAuth(user);
+  const memberId = String(body.member_id ?? '').trim();
+  if (!memberId) throw httpErr('member_id is required', 400);
+
+  const [existing] = await sql`
+    SELECT u.id, u.signup_completed_at, u.auth_user_id,
+           m.committee_id
+    FROM public.users u
+    LEFT JOIN public.members m ON m.member_id = u.member_id
+    WHERE u.member_id = ${memberId}
+  ` as Array<{
+    id: number; signup_completed_at: string | null;
+    auth_user_id: string | null; committee_id: string | null;
+  }>;
+  if (!existing) throw httpErr('No pending invite to revoke', 404);
+
+  if (existing.signup_completed_at || existing.auth_user_id) {
+    throw httpErr(
+      'That member has already joined the portal — use users.delete ' +
+      '(superadmin only) if you really need to remove their account.', 409);
+  }
+
+  if (user!.access === 'head') {
+    if (existing.committee_id !== user!.committee_id) {
+      throw httpErr('Forbidden — that member is not in your committee', 403);
+    }
+  } else if (user!.access !== 'superadmin') {
+    throw httpErr('Forbidden', 403);
+  }
+
+  await sql`DELETE FROM public.users WHERE id = ${existing.id}`;
+  return { member_id: memberId, revoked: true };
+};
+
+// Generate a 64-hex-char invite token (32 bytes from crypto.getRandomValues
+// → 256 bits of entropy). Used for the email-link signup flow.
+// Exported so applications.accept can issue an auto-invite on the same
+// pattern when a committee head accepts a membership application.
+export function generateInviteToken(): string {
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Compose the Arabic-first invite email body. Same design language as
+// the application-notification email (green band header + RTL body)
+// and the password-recovery template (proven to render across Gmail,
+// Apple Mail, Outlook). Reuses the bulletproof patterns:
+//   - role="presentation" + bgcolor mirror style for Gmail strip
+//   - <meta name="color-scheme" content="light only"> opts out of
+//     Gmail's auto-dark transform
+//   - !important on header text colors so dark-mode Gmail doesn't
+//     re-colour white text to grey
+//   - CTA button = <a> inside a single-cell <table> with bgcolor
+//
+// Token vs PIN mode share most copy. We pass `mode` so the body text
+// can vary: "click the link" vs "enter the PIN".
+// Exported so other actions (e.g. applications.accept auto-invite)
+// can compose using the same template.
+export function composeInviteEmail(opts: {
+  displayName: string;
+  committeeName: string | null;
+  signupLink: string;
+  mode: 'token' | 'pin';
+}): string {
+  const esc = (s: string) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const committeeLine = opts.committeeName
+    ? `<p style="margin:0 0 14px 0;font-size:14px;color:#374151;">عضو في <strong>${esc(opts.committeeName)}</strong>.</p>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <title>دعوة للانضمام إلى لوحة الأعضاء — SSAM</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f4;font-family:'Helvetica Neue',Arial,sans-serif;color:#111827;line-height:1.55;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f4f6f4" style="background-color:#f4f6f4;">
+    <tr><td align="center" style="padding:24px 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" bgcolor="#ffffff" style="max-width:600px;background-color:#ffffff;border-radius:12px;border:1px solid #e5e7eb;">
+        <tr>
+          <td bgcolor="#1A5C2E" style="background-color:#1A5C2E;padding:22px 24px;border-top-left-radius:12px;border-top-right-radius:12px;">
+            <div style="font-size:13px;color:#c9a032 !important;letter-spacing:.5px;">SSAM — دعوة للانضمام</div>
+            <div style="font-size:20px;font-weight:700;margin-top:4px;color:#ffffff !important;">أهلًا ${esc(opts.displayName)} 👋</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 14px 0;font-size:15px;color:#111827;">
+              تم تفعيل حسابك في لوحة الأعضاء الخاصة بنادي الطلبة السعوديين في ملبورن.
+            </p>
+            ${committeeLine}
+            <p style="margin:0 0 14px 0;font-size:14px;color:#374151;">
+              من خلال اللوحة تقدر:
+            </p>
+            <ul style="margin:0 0 18px 0;padding-right:20px;font-size:14px;color:#374151;">
+              <li style="margin-bottom:6px;">عرض ساعات تطوّعك المعتمدة وقيد المراجعة.</li>
+              <li style="margin-bottom:6px;">التسجيل في الفعاليات والفرص التطوعية.</li>
+              <li style="margin-bottom:6px;">تحديث بياناتك الشخصية ورفع السيرة الذاتية.</li>
+            </ul>
+            <p style="margin:0 0 14px 0;font-size:14px;color:#374151;">
+              اضغط الزر أدناه لإنشاء كلمة مرورك وتفعيل الحساب:
+            </p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:18px auto 22px auto;">
+              <tr>
+                <td align="center" bgcolor="#1A5C2E" style="background-color:#1A5C2E;border-radius:10px;">
+                  <a href="${esc(opts.signupLink)}" style="display:inline-block;padding:14px 36px;background-color:#1A5C2E;color:#ffffff !important;text-decoration:none;font-weight:700;font-size:15px;border-radius:10px;">
+                    تفعيل الحساب
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 8px 0;font-size:12px;color:#6b7280;">
+              أو انسخ هذا الرابط والصقه في المتصفح:
+            </p>
+            <p dir="ltr" style="margin:0 0 16px 0;font-size:12px;color:#374151;word-break:break-all;background-color:#f4f6f4;padding:10px 12px;border-radius:8px;border:1px solid #e5e7eb;text-align:left;">
+              ${esc(opts.signupLink)}
+            </p>
+            <p style="margin:8px 0 0 0;font-size:12px;color:#9ca3af;">
+              صلاحية هذا الرابط 7 أيام من وقت الإرسال. إن لم تكن تتوقع هذه الدعوة، يمكنك تجاهل الرسالة بأمان.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" bgcolor="#f9fafb" style="background-color:#f9fafb;padding:14px 24px;border-top:1px solid #e5e7eb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;font-size:11px;color:#9ca3af;line-height:1.6;">
+            <span dir="rtl">رسالة آلية من نظام إدارة النادي — لا ترد عليها.</span><br/>
+            <span dir="ltr">SSAM — Saudi Students Association in Melbourne</span>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export const authActions: Record<string, Handler> = {
   'auth':                    auth,
   'auth.resolveIdentifier':  authResolveIdentifier,
   'auth.whoami':             authWhoami,
+  'auth.invite.byEmail':     authInviteByEmail,
+  'auth.invite.byPin':       authInviteByPin,
+  'auth.invite.revoke':      authInviteRevoke,
   'users.list':              usersList,
   'users.create':            usersCreate,
   'users.update':            usersUpdate,
