@@ -63,7 +63,14 @@
 #     isn't blocked, and the Supabase project domain since the API is now
 #     a Supabase Edge Function (different origin from the static site).
 #     `*.supabase.co` would be safer but our single project's hostname is
-#     fine and tighter.
+#     fine and tighter. Also includes fonts.googleapis.com +
+#     fonts.gstatic.com — the service worker (sw.js) tries to fetch +
+#     cache those for offline rendering, and `fetch()` calls are gated
+#     by connect-src even when the matching resource is already allowed
+#     by style-src / font-src. Without this, the SW logs "Refused to
+#     connect" errors on every page load and the Almarai font falls
+#     back to a system serif. See the May-15 fix/homepage-dark-mode
+#     branch for the visible-CSS regression that surfaced this.
 #   • frame-ancestors 'none' blocks the site from being framed (clickjacking).
 #
 # Other headers:
@@ -83,7 +90,7 @@ style-src 'self' https://fonts.googleapis.com; \
 style-src-attr 'unsafe-inline'; \
 font-src 'self' https://fonts.gstatic.com; \
 img-src 'self' data: https:; \
-connect-src 'self' https://www.google-analytics.com https://pfibxvwiulwiiuwerawe.supabase.co; \
+connect-src 'self' https://www.google-analytics.com https://pfibxvwiulwiiuwerawe.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; \
 frame-src 'self' https://app.netlify.com; \
 frame-ancestors 'self' https://app.netlify.com https://*.netlify.app; \
 base-uri 'self'; \

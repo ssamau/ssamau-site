@@ -595,3 +595,108 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
 .latest-ev-wrap{cursor:pointer;transition:box-shadow .2s;}
 .latest-ev-wrap:hover{box-shadow:0 8px 30px rgba(0,0,0,.15);}
 .gallery-trigger-hint{font-size:.68rem;color:rgba(255,255,255,.5);text-align:center;padding:.45rem;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;gap:.35rem;}
+
+/* ─── DARK MODE OVERRIDES ───────────────────────────────────────────
+ * The public homepage was originally designed light-only. Branch 3
+ * (feature/spa-and-pwa) added dark mode for the admin UI via a
+ * three-way toggle, but didn't audit the marketing pages. Result: on
+ * an OS-dark-mode visitor (or any visitor who toggled dark in admin —
+ * the preference persists via localStorage), section backgrounds stay
+ * white but card text colors collapse to invisible because they sit
+ * on top of dark variable backgrounds (e.g. .kpi-n in #1A5C2E green
+ * on a .kpi background of #18342a — 6 brightness points apart, fully
+ * unreadable).
+ *
+ * Two-mode pattern matches base.css:
+ *   - @media (prefers-color-scheme: dark) with `:root:not([data-theme="light"]):not([data-theme="dark"])` —
+ *     applies dark overrides only when theme is auto/unset
+ *   - :root[data-theme="dark"] — applies dark overrides unconditionally
+ *
+ * This pass is INTENTIONALLY minimal: covers only the visible-broken
+ * sections (about/kpi cards, .about background, .events section bg,
+ * .ev-card background, .committees + .leadership + .sponsors + .report
+ * + .contact + .membership section backgrounds). Deeper coverage
+ * (committee cards, leadership cards, contact form fields, etc.) is a
+ * follow-up if needed — flag the visible-broken element and we add
+ * targeted rules. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) body {
+    background-color: #0f1410;
+    color: #e5e7eb;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .about,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .membership,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sponsors,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .contact {
+    background-color: #0f1410;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .events,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .committees,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .leadership,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .report {
+    background-color: #161b16;
+  }
+  /* About-section stat cards: bg goes to a slightly-lighter-than-section
+     panel + numbers swap to brand gold for high contrast on dark green. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi {
+    background-color: #18342a;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-n   { color: #c9a032; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-l   { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-l-en{ color: #9ca3af; }
+  /* Event cards: white card backgrounds → invisible on white-ish events
+     section. Swap to dark card panels. The colored .ev-hdr (green/gold/
+     blue) doesn't need overrides — those gradients already have white
+     text and look correct in either mode. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-desc { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-meta-row { color: #9ca3af; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-foot { border-top-color: rgba(255,255,255,.08); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-tag {
+    background-color: rgba(184,147,42,.15);
+    color: #c9a032;
+  }
+}
+
+/* Same overrides for the explicit data-theme="dark" case (when the
+   visitor toggled dark mode via the admin's theme switch — the
+   preference persists across pages). */
+:root[data-theme="dark"] body {
+  background-color: #0f1410;
+  color: #e5e7eb;
+}
+:root[data-theme="dark"] .about,
+:root[data-theme="dark"] .membership,
+:root[data-theme="dark"] .sponsors,
+:root[data-theme="dark"] .contact {
+  background-color: #0f1410;
+}
+:root[data-theme="dark"] .events,
+:root[data-theme="dark"] .committees,
+:root[data-theme="dark"] .leadership,
+:root[data-theme="dark"] .report {
+  background-color: #161b16;
+}
+:root[data-theme="dark"] .kpi {
+  background-color: #18342a;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .kpi-n   { color: #c9a032; }
+:root[data-theme="dark"] .kpi-l   { color: #e5e7eb; }
+:root[data-theme="dark"] .kpi-l-en{ color: #9ca3af; }
+:root[data-theme="dark"] .ev-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .ev-card .ev-desc { color: #cbd5e1; }
+:root[data-theme="dark"] .ev-card .ev-meta-row { color: #9ca3af; }
+:root[data-theme="dark"] .ev-card .ev-foot { border-top-color: rgba(255,255,255,.08); }
+:root[data-theme="dark"] .ev-tag {
+  background-color: rgba(184,147,42,.15);
+  color: #c9a032;
+}
