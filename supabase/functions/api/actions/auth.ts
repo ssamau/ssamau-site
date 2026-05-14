@@ -15,7 +15,7 @@ import { sql } from '../_sql.ts';
 import {
   bcryptCompare, bcryptHash, signToken,
   httpErr, randomBytesB64Url,
-  requireAuth, requireSuperadmin,
+  requireAuth, requireAdmin,
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
@@ -196,9 +196,13 @@ const usersList: Handler = async (_body, user) => {
   `;
 };
 
-// ─── `users.create` — superadmin only ────────────────────────────────────
+// ─── `users.create` — admin or superadmin ────────────────────────────────
+// Role-system refactor (2026-05-15): widened from superadmin-only to
+// admin-or-above (presidency can onboard new leadership without
+// bottlenecking on the dev). Includes a guard preventing an admin
+// from granting `superadmin` since that tier is reserved for dev.
 const usersCreate: Handler = async (body, user) => {
-  requireSuperadmin(user);
+  requireAdmin(user);
   const data = (body.data ?? body) as Record<string, unknown>;
   const username = String(data.username || '').trim().toLowerCase();
   const password = String(data.password || '');
@@ -207,8 +211,17 @@ const usersCreate: Handler = async (body, user) => {
 
   if (!username) throw httpErr('username is required', 400);
   if (!password || password.length < 6) throw httpErr('password must be at least 6 characters', 400);
-  if (!['superadmin','head','member','volunteer'].includes(access)) {
+  if (!['superadmin','admin','head','member','volunteer'].includes(access)) {
     throw httpErr(`invalid access_level: ${access}`, 400);
+  }
+  // Privilege ceiling: an admin can't promote anyone to superadmin —
+  // that tier is reserved for the dev and is only granted via the
+  // dev-handover flow (which is itself superadmin-only). Without this
+  // guard a compromised admin account could grant itself dev access
+  // by creating a new superadmin user. requireSuperadmin path stays
+  // open for the dev to do the same op without restriction.
+  if (access === 'superadmin' && user!.access !== 'superadmin') {
+    throw httpErr('Only the dev (superadmin) can create another superadmin account', 403);
   }
 
   const [existsByUser] = await sql`SELECT id FROM users WHERE LOWER(username) = ${username}` as Array<{ id: number }>;
@@ -232,9 +245,16 @@ const usersCreate: Handler = async (body, user) => {
   return { id: r.id, username: r.username, access_level: r.access_level, member_id: r.member_id };
 };
 
-// ─── `users.update` — superadmin only, guards last-superadmin demotion ───
+// ─── `users.update` — admin or superadmin, with privilege guards ─────────
+// Role-system refactor (2026-05-15): widened from superadmin-only to
+// admin-or-above. Three privilege guards apply:
+//   1. Last-superadmin demotion is blocked (existed before).
+//   2. An admin cannot mutate a superadmin account at all — the dev
+//      account isn't editable from the presidency UI.
+//   3. An admin cannot promote anyone TO superadmin — same rationale
+//      as in usersCreate above.
 const usersUpdate: Handler = async (body, user) => {
-  requireSuperadmin(user);
+  requireAdmin(user);
   const data = (body.data ?? body) as Record<string, unknown>;
   const id = data.id as number | undefined;
   if (!id) throw httpErr('id is required', 400);
@@ -243,6 +263,15 @@ const usersUpdate: Handler = async (body, user) => {
     id: number; username: string; password_hash: string; access_level: string; member_id: string | null;
   }>;
   if (!target) throw httpErr('User not found', 404);
+
+  // Privilege ceiling — an admin cannot touch a superadmin row at all.
+  if (target.access_level === 'superadmin' && user!.access !== 'superadmin') {
+    throw httpErr('Only the dev (superadmin) can modify another superadmin account', 403);
+  }
+  // Privilege ceiling — an admin cannot promote anyone to superadmin.
+  if (data.access_level === 'superadmin' && user!.access !== 'superadmin') {
+    throw httpErr('Only the dev (superadmin) can grant superadmin access', 403);
+  }
 
   if (target.access_level === 'superadmin' && data.access_level && data.access_level !== 'superadmin') {
     const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'` as Array<{ count: number }>;
@@ -262,7 +291,7 @@ const usersUpdate: Handler = async (body, user) => {
     const [member] = await sql`SELECT member_id FROM members WHERE member_id = ${data.member_id}` as Array<{ member_id: string }>;
     if (!member) throw httpErr(`Member ${data.member_id} not found`, 404);
   }
-  if (data.access_level && !['superadmin','head','member','volunteer'].includes(data.access_level as string)) {
+  if (data.access_level && !['superadmin','admin','head','member','volunteer'].includes(data.access_level as string)) {
     throw httpErr(`invalid access_level: ${data.access_level}`, 400);
   }
 
@@ -278,7 +307,7 @@ const usersUpdate: Handler = async (body, user) => {
 
 // ─── `users.delete` — superadmin only ───────────────────────────────────
 const usersDelete: Handler = async (body, user) => {
-  requireSuperadmin(user);
+  requireAdmin(user);
   const id = body.id as number | undefined;
   // Pull auth_user_id along with the existing fields so we can cascade
   // the delete into auth.users for Supabase-Auth accounts. Without
@@ -296,6 +325,12 @@ const usersDelete: Handler = async (body, user) => {
     auth_user_id: string | null;
   }>;
   if (!target) return { id };
+  // Privilege ceiling — only the dev can delete a superadmin account.
+  // The "last superadmin" count check below still fires for the dev
+  // themselves attempting to delete the only remaining superadmin.
+  if (target.access_level === 'superadmin' && user!.access !== 'superadmin') {
+    throw httpErr('Only the dev (superadmin) can delete another superadmin account', 403);
+  }
   if (target.access_level === 'superadmin') {
     const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'` as Array<{ count: number }>;
     if (count <= 1) throw httpErr('Cannot delete the only remaining superadmin', 409);
@@ -351,13 +386,24 @@ const usersResetPassword: Handler = async (body, user) => {
   }>;
   if (!target) throw httpErr('User not found', 404);
 
+  // Role-system refactor (2026-05-15): three-tier ladder.
+  //   head  → can reset passwords for members in their own committee
+  //           only, AND only for member/volunteer-tier users
+  //           (no resetting another head, admin, or the dev).
+  //   admin → can reset anyone EXCEPT a superadmin (dev account).
+  //   super → can reset anyone (including other superadmins, though
+  //           there's only one right now).
   if (user!.access === 'head') {
     if (!target.member_id) throw httpErr('Forbidden', 403);
-    if (target.access_level === 'superadmin' || target.access_level === 'head') {
-      throw httpErr('Committee heads cannot reset admin or head passwords', 403);
+    if (target.access_level === 'superadmin' || target.access_level === 'admin' || target.access_level === 'head') {
+      throw httpErr('Committee heads cannot reset admin/dev/head passwords', 403);
     }
     if (target.member_committee_id !== user!.committee_id) {
       throw httpErr('Forbidden — that member is not in your committee', 403);
+    }
+  } else if (user!.access === 'admin') {
+    if (target.access_level === 'superadmin') {
+      throw httpErr('Only the dev (superadmin) can reset another superadmin password', 403);
     }
   } else if (user!.access !== 'superadmin') {
     throw httpErr('Forbidden', 403);

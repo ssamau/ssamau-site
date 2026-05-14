@@ -234,17 +234,42 @@ export function requireAuth(user: UserContext | null): asserts user is UserConte
   if (!user) throw httpErr('Unauthorized', 401);
 }
 
+// Role-system refactor (2026-05-15): split the old single-tier
+// `superadmin` into `superadmin` (dev-only) + `admin` (presidency).
+// Most existing call sites want "presidency or dev" semantics, which
+// is now requireAdmin(). requireSuperadmin() stays as a guard for
+// truly dev-only ops (handover flow + future dev tooling); call sites
+// that need it should be deliberate.
+
+// Dev tier ONLY (currently: faisal-admin). Reserve for ops where the
+// presidency shouldn't have the authority — e.g. transferring the dev
+// account itself, or future Supabase-config-shaped tools. Most current
+// callers that historically used requireSuperadmin() actually wanted
+// the presidency-or-above semantics; those should switch to requireAdmin().
 export function requireSuperadmin(user: UserContext | null): asserts user is UserContext {
   requireAuth(user);
   if (user.access !== 'superadmin') {
-    throw httpErr('Forbidden — superadmin only', 403);
+    throw httpErr('Forbidden — dev access required', 403);
   }
 }
 
-// `head` is allowed to write within their own committee; `superadmin` everywhere.
+// Presidency tier OR dev. This is the right guard for nearly every
+// "admin operation" that isn't dev-shaped — member CRUD, application
+// triage, project / event creation, hours final-approval, etc.
+export function requireAdmin(user: UserContext | null): asserts user is UserContext {
+  requireAuth(user);
+  if (user.access !== 'superadmin' && user.access !== 'admin') {
+    throw httpErr('Forbidden — admin access required', 403);
+  }
+}
+
+// Committee-scoped admin actions: `head` allowed within their own
+// committee; `admin` and `superadmin` allowed everywhere. Used for
+// things like "edit member in MY committee", "approve hours for one
+// of MY committee's projects".
 export function requireAdminScope(user: UserContext | null, committeeId: string | null | undefined): void {
   requireAuth(user);
-  if (user.access === 'superadmin') return;
+  if (user.access === 'superadmin' || user.access === 'admin') return;
   if (user.access === 'head') {
     if (!committeeId || user.committee_id === committeeId) return;
     throw httpErr('Forbidden — committee head can only modify their own committee', 403);
@@ -272,7 +297,13 @@ export const PUBLIC_ACTIONS = new Set<string>([
   'applications.submit',
 ]);
 
-export const SUPERADMIN_ACTIONS = new Set<string>([
+// Admin-tier actions: callable by `admin` (presidency) OR `superadmin`
+// (dev). Enforced at the dispatcher layer in index.ts so handlers
+// don't have to re-check the same thing on every entry. These are
+// the actions that USED to live in SUPERADMIN_ACTIONS before the
+// 2026-05-15 role split — the surface didn't shrink, just the
+// allowed audience widened.
+export const ADMIN_ACTIONS = new Set<string>([
   'createProject', 'deleteProject',
   'createAdvisor', 'updateAdvisor', 'deleteAdvisor',
   'createCommittee', 'updateCommittee', 'deleteCommittee',
@@ -280,6 +311,15 @@ export const SUPERADMIN_ACTIONS = new Set<string>([
   'setup.seedMembers',
   'hours.finalApprove',
   'users.create', 'users.update', 'users.delete',
+]);
+
+// Dev-tier actions: callable ONLY by `superadmin`. Reserved for
+// truly dev-shaped ops the presidency shouldn't be able to invoke.
+// Empty today — added pre-emptively for the future dev-account-
+// handover flow (which will need this), and any later Supabase-
+// config-shaped tooling we build.
+export const SUPERADMIN_ACTIONS = new Set<string>([
+  // (future: 'dev.transferDevAccount' etc.)
 ]);
 
 // ─── Handler type ───────────────────────────────────────────────────────
