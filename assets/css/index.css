@@ -19,6 +19,12 @@ nav{position:fixed;top:0;right:0;left:0;z-index:200;background:rgba(255,255,255,
 .nav-actions{display:flex;align-items:center;gap:.5rem;margin-inline-start:auto;flex-shrink:0;}
 .nav-lang{font-size:.7rem;color:var(--tl);cursor:pointer;padding:.28rem .55rem;border:1px solid var(--bd);border-radius:50px;transition:all .2s;background:none;font-family:inherit;}
 .nav-lang:hover{color:var(--g);border-color:var(--g);}
+/* Theme toggle — icon-only, sits next to .nav-lang in nav-actions.
+   Same circular shape, slightly larger touch target for the emoji.
+   On mobile this stays visible (single character, takes minimal width)
+   whereas .nav-lang is hidden into the drawer. */
+.nav-theme{font-size:.9rem;line-height:1;color:var(--tl);cursor:pointer;padding:.22rem .42rem;border:1px solid var(--bd);border-radius:50px;transition:all .2s;background:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;}
+.nav-theme:hover{border-color:var(--g);transform:scale(1.05);}
 .nav-join{background:var(--go);color:#fff !important;padding:.38rem 1rem;border-radius:50px;font-size:.76rem;font-weight:800 !important;white-space:nowrap;}
 .nav-join:hover{background:var(--gg) !important;}
 .nav-login{color:var(--go) !important;font-size:.73rem !important;border:1.5px solid var(--go);padding:.32rem .8rem;border-radius:50px;white-space:nowrap;}
@@ -308,7 +314,11 @@ html[dir="ltr"] html[dir="ltr"]
 .drwmg{font-size:.63rem;color:var(--tm)}
 @media(max-width:600px){.bgrid{grid-template-columns:1fr}.drwmbs{grid-template-columns:1fr}}
 
-nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
+/* Scroll-state nav: slightly more opaque + shadow once the user scrolls
+   past the hero. Dark-mode counterpart below in the @media + data-theme
+   blocks. The JS scroll handler in index.js just toggles this class —
+   the actual visual change lives here so dark mode can override it. */
+nav.scrolled{background:rgba(255,255,255,.99);box-shadow:0 2px 16px rgba(0,0,0,.1);}
 
 /* Language system */
 
@@ -595,3 +605,351 @@ nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.1);}
 .latest-ev-wrap{cursor:pointer;transition:box-shadow .2s;}
 .latest-ev-wrap:hover{box-shadow:0 8px 30px rgba(0,0,0,.15);}
 .gallery-trigger-hint{font-size:.68rem;color:rgba(255,255,255,.5);text-align:center;padding:.45rem;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;gap:.35rem;}
+
+/* ─── DARK MODE OVERRIDES ───────────────────────────────────────────
+ * The public homepage was originally designed light-only. Branch 3
+ * (feature/spa-and-pwa) added dark mode for the admin UI via a
+ * three-way toggle, but didn't audit the marketing pages. Result: on
+ * an OS-dark-mode visitor (or any visitor who toggled dark in admin —
+ * the preference persists via localStorage), section backgrounds stay
+ * white but card text colors collapse to invisible because they sit
+ * on top of dark variable backgrounds (e.g. .kpi-n in #1A5C2E green
+ * on a .kpi background of #18342a — 6 brightness points apart, fully
+ * unreadable).
+ *
+ * Two-mode pattern matches base.css:
+ *   - @media (prefers-color-scheme: dark) with `:root:not([data-theme="light"]):not([data-theme="dark"])` —
+ *     applies dark overrides only when theme is auto/unset
+ *   - :root[data-theme="dark"] — applies dark overrides unconditionally
+ *
+ * This pass is INTENTIONALLY minimal: covers only the visible-broken
+ * sections (about/kpi cards, .about background, .events section bg,
+ * .ev-card background, .committees + .leadership + .sponsors + .report
+ * + .contact + .membership section backgrounds). Deeper coverage
+ * (committee cards, leadership cards, contact form fields, etc.) is a
+ * follow-up if needed — flag the visible-broken element and we add
+ * targeted rules. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) body {
+    background-color: #0f1410;
+    color: #e5e7eb;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .about,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .membership,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sponsors,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .contact {
+    background-color: #0f1410;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .events,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .committees,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .leadership,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .report {
+    background-color: #161b16;
+  }
+  /* About-section stat cards: bg goes to a slightly-lighter-than-section
+     panel + numbers swap to brand gold for high contrast on dark green. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi {
+    background-color: #18342a;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-n   { color: #c9a032; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-l   { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .kpi-l-en{ color: #9ca3af; }
+  /* Event cards: white card backgrounds → invisible on white-ish events
+     section. Swap to dark card panels. The colored .ev-hdr (green/gold/
+     blue) doesn't need overrides — those gradients already have white
+     text and look correct in either mode. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-desc { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-meta-row { color: #9ca3af; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-card .ev-foot { border-top-color: rgba(255,255,255,.08); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ev-tag {
+    background-color: rgba(184,147,42,.15);
+    color: #c9a032;
+  }
+}
+
+/* Same overrides for the explicit data-theme="dark" case (when the
+   visitor toggled dark mode via the admin's theme switch — the
+   preference persists across pages). */
+:root[data-theme="dark"] body {
+  background-color: #0f1410;
+  color: #e5e7eb;
+}
+:root[data-theme="dark"] .about,
+:root[data-theme="dark"] .membership,
+:root[data-theme="dark"] .sponsors,
+:root[data-theme="dark"] .contact {
+  background-color: #0f1410;
+}
+:root[data-theme="dark"] .events,
+:root[data-theme="dark"] .committees,
+:root[data-theme="dark"] .leadership,
+:root[data-theme="dark"] .report {
+  background-color: #161b16;
+}
+:root[data-theme="dark"] .kpi {
+  background-color: #18342a;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .kpi-n   { color: #c9a032; }
+:root[data-theme="dark"] .kpi-l   { color: #e5e7eb; }
+:root[data-theme="dark"] .kpi-l-en{ color: #9ca3af; }
+:root[data-theme="dark"] .ev-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .ev-card .ev-desc { color: #cbd5e1; }
+:root[data-theme="dark"] .ev-card .ev-meta-row { color: #9ca3af; }
+:root[data-theme="dark"] .ev-card .ev-foot { border-top-color: rgba(255,255,255,.08); }
+:root[data-theme="dark"] .ev-tag {
+  background-color: rgba(184,147,42,.15);
+  color: #c9a032;
+}
+
+/* ─── Second-pass dark-mode coverage (May 15 follow-up) ──────────────
+ * The May 15 first pass covered .kpi cards + section backgrounds.
+ * User testing on a phone surfaced the rest: every other card class
+ * still had hardcoded `background:#fff` or near-white, producing
+ * white panels stamped on the dark sections — visually broken on
+ * Leadership, Sponsors, Universities, Past Events, Committee
+ * shortcut cards, Reports.
+ *
+ * Same value palette as the first pass: card surface `#1c241e`,
+ * nested-on-card surface `#252e26`, borders rgba(255,255,255,.06).
+ * Dark-green text (`color: var(--gd)`) inside cards swaps to light
+ * grey/white since --gd doesn't have a dark-mode variant (and
+ * shouldn't — it's the brand primary). We override per-element.
+ *
+ * Both the auto/unset and explicit data-theme="dark" cases are
+ * covered. Body of the rules is identical between the two blocks —
+ * duplicated rather than abstracted via a custom-property indirection
+ * because nesting is shallow and grep-ability matters more than DRY
+ * for this defensive CSS layer. */
+
+/* --- auto/unset (OS prefers dark) ------------------------------- */
+@media (prefers-color-scheme: dark) {
+  /* Past events strip — section uses var(--bg) which IS theme-aware,
+     but card BODY (.past-card itself) and the manager sub-block are
+     both hardcoded light. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .past-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-loc    { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-mgr    {
+    background-color: rgba(255,255,255,.04);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-mgr-n  { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-stat-n { color: #c9a032; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .pc-stat   { border-inline-start-color: rgba(255,255,255,.08); }
+
+  /* Committee cards (Governance → اللجان التنفيذية tab) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-card,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ccard {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-name-ar,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .com-head-name { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .cm-name {
+    background-color: rgba(255,255,255,.06);
+    color: #cbd5e1;
+  }
+
+  /* Board cards (مجلس الإدارة tab) — bcard.pres has a cream gradient
+     in light mode; reuse the same tinted concept with a gold-on-dark
+     gradient so the president card still stands out. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .bcard {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .bcard.pres {
+    background: linear-gradient(to bottom, #2a2418, #1c241e);
+    border-color: rgba(201,160,50,.5);
+  }
+
+  /* Leadership cards (Governance → مجلس الإدارة landing layout) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ld-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .ld-name { color: #e5e7eb; }
+  /* .ld-name-en uses var(--tm) which already adapts in dark mode */
+
+  /* Report KPIs (admin overview surfaced on homepage) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .rk {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .rk-n { color: #c9a032; }
+
+  /* Sponsor cards (الشركاء section) */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sp-card,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .sp-card-logo {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  /* University partner pills (lighter tint than other cards in light
+     mode → match a slightly lighter dark surface for consistency). */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .uni-card {
+    background-color: #252e26;
+    border-color: rgba(255,255,255,.06);
+  }
+}
+
+/* --- explicit data-theme="dark" (toggled via the new theme btn) -- */
+:root[data-theme="dark"] .past-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .pc-loc    { color: #cbd5e1; }
+:root[data-theme="dark"] .pc-mgr    { background-color: rgba(255,255,255,.04); }
+:root[data-theme="dark"] .pc-mgr-n  { color: #e5e7eb; }
+:root[data-theme="dark"] .pc-stat-n { color: #c9a032; }
+:root[data-theme="dark"] .pc-stat   { border-inline-start-color: rgba(255,255,255,.08); }
+
+:root[data-theme="dark"] .com-card,
+:root[data-theme="dark"] .ccard {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .com-name-ar,
+:root[data-theme="dark"] .com-head-name { color: #e5e7eb; }
+:root[data-theme="dark"] .cm-name {
+  background-color: rgba(255,255,255,.06);
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .bcard {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .bcard.pres {
+  background: linear-gradient(to bottom, #2a2418, #1c241e);
+  border-color: rgba(201,160,50,.5);
+}
+
+:root[data-theme="dark"] .ld-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .ld-name { color: #e5e7eb; }
+
+:root[data-theme="dark"] .rk {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .rk-n { color: #c9a032; }
+
+:root[data-theme="dark"] .sp-card,
+:root[data-theme="dark"] .sp-card-logo {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .uni-card {
+  background-color: #252e26;
+  border-color: rgba(255,255,255,.06);
+}
+
+/* ─── Third-pass: nav bar + latest-report section (May 15) ──────────
+ * User reported the past-events strip still looks light. Reading
+ * more carefully revealed the section in the screenshot is actually
+ * `.latest-report` with `.lrep-card` children — a SEPARATE section
+ * from .events / .past-card that I'd been styling. Also the <nav>
+ * top bar has its own hardcoded `background:rgba(255,255,255,.97)`
+ * that doesn't respect data-theme.
+ *
+ * Adds:
+ *   nav                    rgba(255,255,255,.97) → rgba(15,20,16,.92)
+ *   .latest-report         #f8faf8 → #161b16
+ *   .lrep-wrap             #fff    → #1c241e
+ *   .lrep-card             #fff    → #1c241e + light text overrides
+ *   .lrep-card-loc / .lrep-card-mgr / .lrep-card-mgr-n / .lrep-card-stat
+ *
+ * `.lrep-card-mgr` has a `var(--gl)` background in light mode (light
+ * green tint for the manager block); in dark mode --gl resolves to
+ * #18342a which is fine here but we explicitly set rgba white-alpha
+ * to match the other nested-on-dark-card patterns in this file. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) nav {
+    background-color: rgba(15,20,16,.92);
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) nav.scrolled {
+    background-color: rgba(15,20,16,.99);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-brand-text .t1 { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-menu a       { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .nav-hamburger    { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mobile-nav {
+    background-color: #0f1410;
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mobile-nav a {
+    color: #cbd5e1;
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .latest-report {
+    background-color: #161b16;
+    border-top-color: rgba(255,255,255,.08);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-wrap,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card {
+    background-color: #1c241e;
+    border-color: rgba(255,255,255,.06);
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-loc   { color: #cbd5e1; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-mgr   { background-color: rgba(255,255,255,.04); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-mgr-n { color: #e5e7eb; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .lrep-card-stat  {
+    background-color: rgba(184,147,42,.15);
+    color: #c9a032;
+  }
+}
+
+:root[data-theme="dark"] nav {
+  background-color: rgba(15,20,16,.92);
+  border-bottom-color: rgba(255,255,255,.08);
+}
+/* Scrolled-state opacity bump, dark counterpart. Has to be a more
+   specific selector than `nav.scrolled` to win the cascade — both
+   are class-level. `:root[data-theme="dark"]` adds (0,0,1,1)
+   specificity, so this beats the plain `nav.scrolled` rule above. */
+:root[data-theme="dark"] nav.scrolled {
+  background-color: rgba(15,20,16,.99);
+}
+:root[data-theme="dark"] .nav-brand-text .t1 { color: #e5e7eb; }
+:root[data-theme="dark"] .nav-menu a       { color: #cbd5e1; }
+:root[data-theme="dark"] .nav-hamburger    { color: #e5e7eb; }
+:root[data-theme="dark"] .mobile-nav {
+  background-color: #0f1410;
+  border-bottom-color: rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .mobile-nav a {
+  color: #cbd5e1;
+  border-bottom-color: rgba(255,255,255,.08);
+}
+
+:root[data-theme="dark"] .latest-report {
+  background-color: #161b16;
+  border-top-color: rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .lrep-wrap,
+:root[data-theme="dark"] .lrep-card {
+  background-color: #1c241e;
+  border-color: rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .lrep-card-loc   { color: #cbd5e1; }
+:root[data-theme="dark"] .lrep-card-mgr   { background-color: rgba(255,255,255,.04); }
+:root[data-theme="dark"] .lrep-card-mgr-n { color: #e5e7eb; }
+:root[data-theme="dark"] .lrep-card-stat  {
+  background-color: rgba(184,147,42,.15);
+  color: #c9a032;
+}

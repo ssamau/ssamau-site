@@ -33,7 +33,7 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-const CACHE_VERSION = 'v1-2026-05-14';
+const CACHE_VERSION = 'v2-2026-05-15-darkmode';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
