@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SSAM — لوحة العضو</title>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/base.css"/>
+<link rel="stylesheet" href="assets/css/login.css"/>
+<link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
+</head>
+<body>
+
+<!--
+  Placeholder member portal landing — Phase 4 of Branch 4.
+
+  At this point we've shipped:
+   - Migration scaffolding (Phase 1)
+   - Invite actions + admin UI (Phase 2)
+   - Public signup endpoints + signup.html (Phase 3)
+   - Login routing (this commit, Phase 4) — superadmin/head land on
+     admin.html, member/volunteer land HERE
+   - The actual member portal (Phase 5) — own hours, profile,
+     opportunities, assignments — is the next piece of work
+
+  Until Phase 5 lands, this page exists so a freshly-activated member
+  has somewhere to land that:
+   - Doesn't 404
+   - Doesn't dump them on admin.html where RBAC hides everything
+   - Confirms their account is real (greeting with their name)
+   - Lets them log out cleanly
+
+  Reuses the .login-card class from login.css for visual consistency
+  with the rest of the auth-flow surfaces (login + signup + reset).
+-->
+
+<div class="login-card">
+  <div class="lc-header">
+    <div class="lc-logo"><img src="assets/img/logo-200.png" alt="شعار النادي"/></div>
+    <div class="lc-title">نادي الطلبة السعوديين في ملبورن</div>
+    <div class="lc-sub">Saudi Students Association in Melbourne</div>
+  </div>
+
+  <div class="lc-body" style="text-align:center">
+    <div style="font-size:3.2rem;line-height:1;margin-bottom:.6rem">👋</div>
+    <p class="lc-welcome" id="greeting">أهلًا بك في نادي الطلبة السعوديين في ملبورن</p>
+
+    <div style="background:var(--gl,#e8f5e9);border-radius:12px;padding:1rem 1.1rem;margin:1.25rem 0;text-align:start">
+      <p style="margin:0 0 .5rem 0;font-size:.86rem;font-weight:700;color:var(--g,#1A5C2E)">
+        🚧 لوحة الأعضاء قيد التطوير
+      </p>
+      <p style="margin:0;font-size:.78rem;color:var(--tl,#4b5563);line-height:1.7">
+        تم تفعيل حسابك بنجاح. لوحة الأعضاء التي ستضم ساعاتك التطوعية،
+        ملفك الشخصي، الفرص التطوعية المتاحة، والشهادات — قيد التطوير
+        وستكون متاحة قريباً.
+      </p>
+    </div>
+
+    <p style="font-size:.75rem;color:var(--tm,#9ca3af);margin:1rem 0 .4rem 0">
+      حسابك جاهز وستتلقى إشعاراً عند توفّر اللوحة الكاملة.
+    </p>
+
+    <button class="login-btn" id="logout-btn" type="button" style="margin-top:1rem">
+      🚪 تسجيل الخروج
+    </button>
+  </div>
+
+  <div class="lc-footer">
+    <a href="index.html" class="lc-back">← العودة إلى الصفحة الرئيسية</a>
+    <div class="lc-footer-txt">لوحة العضو — قيد التطوير</div>
+    <div class="lc-version">v3.0 · 2026</div>
+  </div>
+</div>
+
+<script type="module" src="assets/js/member.js"></script>
+<script type="module" src="assets/js/lib/sw-register.js"></script>
+</body>
+</html>

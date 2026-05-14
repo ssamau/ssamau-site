@@ -18,7 +18,7 @@
 //      The strict-CSP commit later replaces inline handlers with
 //      addEventListener bindings, at which point the shim is gone.
 
-import { getSession, clearSession, isLoggedIn, signOut } from '../lib/auth.js';
+import { getSession, clearSession, isLoggedIn, signOut, landingPageForAccess } from '../lib/auth.js';
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 
 import { DB } from '../lib/state.js';
@@ -122,6 +122,18 @@ function _requireAuthOrRedirect() {
     clearSession();
     window.location.replace('login.html');  // replace, not href, so back
                                             // doesn't reopen admin again
+    return false;
+  }
+  // Wrong-portal guard (Phase 4 of Branch 4). A member-tier user
+  // who manually navigates to /admin.html (typed URL, stale bookmark,
+  // shared link) gets bounced to /member.html. landingPageForAccess
+  // returns 'admin.html' for superadmin/head and 'member.html' for
+  // member/volunteer. If we're already on the right one, this is a
+  // no-op (returns the current page, the comparison below skips).
+  // Use replace() so back-button doesn't re-strand them on admin.
+  const landing = landingPageForAccess(user.access);
+  if (landing !== 'admin.html') {
+    window.location.replace(landing);
     return false;
   }
   window.CURRENT_USER = user;

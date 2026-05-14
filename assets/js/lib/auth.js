@@ -100,6 +100,31 @@ export function isLoggedIn() {
   return !!getToken();
 }
 
+// Pick the right post-login landing page based on the access_level
+// stamped on the session profile. The 19 leadership users
+// (superadmin + head) land on admin.html where they can see the
+// full operational dashboard (members, committees, hours, etc).
+// The 98 regular members + future volunteers land on member.html
+// — their own simpler portal with their hours / opportunities /
+// profile.
+//
+// Used in three places:
+//  1. login.js — immediately after a successful sign-in
+//  2. login.js — on page load if the user already has a session
+//     (prevents them from sitting on the login form after they
+//     hit Back from inside their portal)
+//  3. admin/main.js and member.html — as a "wrong-portal guard"
+//     so a member who manually types /admin.html in the URL bar
+//     gets bounced to member.html, and vice versa
+//
+// Defaults to admin.html when the access value is missing or
+// unrecognised — fail safe, the admin portal has its own RBAC
+// layer that hides what the user shouldn't see.
+export function landingPageForAccess(access) {
+  if (access === 'member' || access === 'volunteer') return 'member.html';
+  return 'admin.html';
+}
+
 // ─── Writes ─────────────────────────────────────────────────────────
 
 // Save a Supabase session. authResponse comes from POST /auth/v1/token,

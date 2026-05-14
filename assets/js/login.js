@@ -29,12 +29,16 @@ import { callApi, apiOrThrow } from './lib/api.js';
 import {
   saveSession, saveSupabaseSession,
   supabaseSignIn, getLastUsername, isLoggedIn,
+  getSession, landingPageForAccess,
 } from './lib/auth.js';
 import { $ } from './lib/dom.js';
 
-// Already logged in → straight to admin. Runs on module load.
+// Already logged in → straight to their portal. Runs on module load.
+// Routing splits by access_level: superadmin/head → admin.html;
+// member/volunteer → member.html. See landingPageForAccess in auth.js.
 if (isLoggedIn()) {
-  window.location.href = 'admin.html';
+  const session = getSession();
+  window.location.href = landingPageForAccess(session?.access);
 }
 
 // Pre-fill the last successful identifier. Could be email/NID/username,
@@ -92,7 +96,7 @@ async function doLogin() {
       // Re-save with the full profile. saveSupabaseSession overwrites
       // the previous entry cleanly.
       saveSupabaseSession(session, whoami);
-      window.location.href = 'admin.html';
+      window.location.href = landingPageForAccess(whoami.access);
       return;
     }
 
@@ -104,7 +108,7 @@ async function doLogin() {
       });
       if (!r.token || !r.user) throw new Error('bad response shape');
       saveSession(r.user, r.token);
-      window.location.href = 'admin.html';
+      window.location.href = landingPageForAccess(r.user.access);
       return;
     }
 
