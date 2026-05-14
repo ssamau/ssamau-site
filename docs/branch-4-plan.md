@@ -51,8 +51,9 @@ and defer the rest to a follow-up branch if priorities shift.
 
 | Phase | Scope | Status |
 |---|---|---|
-| **1** | DB migration for invite/signup state on `public.users` | 🚧 In progress |
-| **2** | Edge Function invite actions (`auth.invite.byEmail`, `.byPin`, `.revoke`) + admin "Invite" button in Members tab | ⏳ Pending |
+| **1** | DB migration for invite/signup state on `public.users` | ✅ Done — migration `20260514130001` applied to prod, columns verified |
+| **2a** | Edge Function invite actions (`auth.invite.byEmail`, `.byPin`, `.revoke`) | ✅ Done — deployed, schema smoke-test passes |
+| **2b** | Admin "Invite to portal" button in Members tab | 🚧 In progress |
 | **3** | Public signup endpoints (`auth.signup.completeByToken`, `.completeByPin`) + `signup.html` page | ⏳ Pending |
 | **4** | Login routing: `access_level='member'` redirects to `member.html` instead of `admin.html` | ⏳ Pending |
 | **5** | Member portal SPA shell + 4 tabs (profile, own hours, opportunities, assignments) | ⏳ Pending |
