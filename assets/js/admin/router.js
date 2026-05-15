@@ -30,6 +30,7 @@ export const PAGE_TITLES = {
   opportunities:   '🎯 الفرص التطوعية',
   applications:    '📥 طلبات العضوية',
   accounts:        '🔑 حسابات المستخدمين',
+  'my-profile':    '🪪 ملفي الشخصي',
 };
 
 // Loader dispatch — filled in by main.js after every tab module has been

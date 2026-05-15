@@ -94,6 +94,11 @@
     <div class="sb-item" data-page="profile" data-action="showPage">
       <span class="sb-ic">👤</span>ملف العضو
     </div>
+
+    <div class="sb-section">حسابي</div>
+    <div class="sb-item" data-page="my-profile" data-action="showPage">
+      <span class="sb-ic">🪪</span>ملفي الشخصي
+    </div>
   </nav>
 
   <!-- Theme toggle. Sits at the bottom of the sidebar so it's
@@ -431,6 +436,24 @@
       </div>
       <div id="profile-content">
         <div style="text-align:center;padding:3rem;color:var(--tm);font-size:.9rem">اختر عضواً لعرض ملفه الشخصي</div>
+      </div>
+    </div>
+
+    <!-- ══════════ MY PROFILE (admin's own self-edit) ══════════ -->
+    <!-- Reuses the member portal's profile module — same form +
+         uploaders, calls `members.getOwn` / `members.updateOwn`. The
+         element ids inside match the module's selectors. -->
+    <div class="page" id="page-my-profile">
+      <div class="card">
+        <div class="card-head">
+          <h3>🪪 ملفي الشخصي</h3>
+          <div class="card-head-right">
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+          </div>
+        </div>
+        <div class="card-body" id="profile-form-wrap">
+          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+        </div>
       </div>
     </div>
 

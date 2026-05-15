@@ -194,6 +194,14 @@ const loaderMap = {
   attendance:       async () => { await ensureProjects(); populateProjectSelects(); loadAttendance(); },
   hours:            async () => { await ensureProjects(); loadHours(); },
   profile:          loadProfileSelect,
+  'my-profile':     async () => {
+    // Lazy import — the self-edit profile module lives under member/
+    // since member.html owns it primarily. Loading it on demand keeps
+    // the admin bundle smaller for the (common) case where the admin
+    // never opens their own profile tab.
+    const m = await import('../member/tabs/profile.js');
+    return m.loadProfile();
+  },
   'project-detail': () => {},
   interest:         loadInterestAll,
   emails:           () => { loadThanks(''); },
@@ -349,6 +357,14 @@ setHandlers({
   loadApplications, loadOpportunities,
   openAccountModal,
   sendInviteByEmail, sendInviteByPin,
+
+  // Self-edit profile (admin's own #/admin/my-profile tab). Lazy-load
+  // the module so the admin bundle doesn't pull profile.js eagerly —
+  // handlers are dispatched only when the user opens the tab.
+  'profile.save': async ()    => { const m = await import('../member/tabs/profile.js'); return m.saveProfile(); },
+  onUploaderChange: async (el) => { const m = await import('../member/tabs/profile.js'); return m.onUploaderChange(el); },
+  submitUploader:   async (el) => { const m = await import('../member/tabs/profile.js'); return m.submitUploader(el); },
+  deleteUploader:   async (el) => { const m = await import('../member/tabs/profile.js'); return m.deleteUploader(el); },
 
   // ── Hardcoded-string args via data-attribute ────────────────────
   closeModal:       (el) => closeModal(el.dataset.modal),

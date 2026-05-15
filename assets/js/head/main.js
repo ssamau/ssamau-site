@@ -26,6 +26,13 @@ import {
 import {
   loadHeadApplications, acceptApplication, rejectApplication, requestInterview,
 } from './tabs/applications.js';
+// Reuse the member-portal self-edit profile module — same form, same
+// uploaders, same backend endpoints. The "my-profile" tab on head.html
+// has matching element ids so this module works as-is.
+import {
+  loadProfile, saveProfile,
+  onUploaderChange, submitUploader, deleteUploader,
+} from '../member/tabs/profile.js';
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -70,6 +77,7 @@ const loaderMap = {
   opportunities: loadHeadOpportunities,
   hours:         loadHeadHours,
   applications:  loadHeadApplications,
+  'my-profile':  loadProfile,
 };
 setLoaders(loaderMap);
 
@@ -128,6 +136,11 @@ document.addEventListener('click', (e) => {
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
     case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
     case 'hd.opps.create':           createOpportunity(); break;
+    case 'profile.save':             saveProfile(); break;
+    // onUploaderChange is a CHANGE event on a file <input>, handled in
+    // the separate change listener below — not here.
+    case 'submitUploader':           submitUploader(el); break;
+    case 'deleteUploader':           deleteUploader(el); break;
   }
 });
 
@@ -135,6 +148,15 @@ document.addEventListener('input', (e) => {
   const el = e.target.closest('[data-action="filterTable"][data-event="input"]');
   if (!el) return;
   filterTable(el.dataset.target, el.value);
+});
+
+// File-input change events for the profile uploader widgets.
+// The input declares `data-event="change"` so the click-only path
+// above wouldn't pick it up.
+document.addEventListener('change', (e) => {
+  const el = e.target.closest('[data-action="onUploaderChange"][data-event="change"]');
+  if (!el) return;
+  onUploaderChange(el);
 });
 
 

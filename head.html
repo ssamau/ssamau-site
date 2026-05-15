@@ -58,6 +58,11 @@
     <div class="sb-item" data-page="applications" data-action="showPage">
       <span class="sb-ic">📥</span>طلبات الانضمام
     </div>
+
+    <div class="sb-section">حسابي</div>
+    <div class="sb-item" data-page="my-profile" data-action="showPage">
+      <span class="sb-ic">👤</span>ملفي الشخصي
+    </div>
   </nav>
 
   <div class="sb-theme">
@@ -291,6 +296,26 @@
             </thead>
             <tbody id="hd-hours-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ MY PROFILE ══════════ -->
+    <!-- Self-edit profile for the head. Reuses the member portal's
+         profile module (assets/js/member/tabs/profile.js) — same form,
+         same uploaders, same `members.getOwn` / `members.updateOwn`
+         endpoints. The element ids inside (profile-form-wrap, etc.)
+         match what the module reads/writes. -->
+    <div class="page" id="page-my-profile">
+      <div class="card">
+        <div class="card-head">
+          <h3>👤 ملفي الشخصي</h3>
+          <div class="card-head-right">
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+          </div>
+        </div>
+        <div class="card-body" id="profile-form-wrap">
+          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
         </div>
       </div>
     </div>

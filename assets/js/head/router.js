@@ -7,6 +7,7 @@ export const PAGE_TITLES = {
   opportunities: 'الفرص التطوعية',
   hours:         'الساعات',
   applications:  'طلبات الانضمام',
+  'my-profile':  'ملفي الشخصي',
 };
 
 let _loaders = {};
