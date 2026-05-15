@@ -192,3 +192,56 @@
   .hd-welcome           { flex-direction: column; align-items: flex-start; text-align: right; }
   .hd-welcome-emoji     { font-size: 2rem; align-self: flex-end; }
 }
+
+/* ── Inline create-opportunity form ─────────────────────────────────
+   Lives above the opportunities table; toggled by data-action="hd.opps
+   .toggleCreate". Two-column rows on desktop, single column on mobile. */
+.hd-create-form {
+  background: var(--bg-soft, #f9fafb);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+}
+.hd-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .65rem;
+}
+.hd-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--tm);
+}
+.hd-form-field span { font-size: .75rem; }
+.hd-form-field input,
+.hd-form-field select,
+.hd-form-field textarea {
+  font-family: inherit;
+  font-size: .92rem;
+  padding: .5rem .7rem;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--c);
+  color: var(--tx);
+}
+.hd-form-field input:focus,
+.hd-form-field select:focus,
+.hd-form-field textarea:focus {
+  outline: 2px solid var(--g);
+  outline-offset: -1px;
+}
+.hd-form-actions {
+  display: flex;
+  gap: .5rem;
+  padding-top: .25rem;
+}
+@media (max-width: 720px) {
+  .hd-form-row { grid-template-columns: 1fr; }
+}

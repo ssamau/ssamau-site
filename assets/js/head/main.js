@@ -16,7 +16,10 @@ import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from
 
 import { loadDashboard }       from './tabs/dashboard.js';
 import { loadHeadMembers }     from './tabs/members.js';
-import { loadHeadOpportunities } from './tabs/opportunities.js';
+import {
+  loadHeadOpportunities,
+  toggleOpportunityCreateForm, createOpportunity,
+} from './tabs/opportunities.js';
 import {
   loadHeadHours, primaryApproveHours, rejectHours,
 } from './tabs/hours.js';
@@ -121,6 +124,8 @@ document.addEventListener('click', (e) => {
     case 'hd.hours.reject':          rejectHours(el.dataset.id); break;
     case 'hd.apps.accept':           acceptApplication(el.dataset.id); break;
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
+    case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
+    case 'hd.opps.create':           createOpportunity(); break;
   }
 });
 

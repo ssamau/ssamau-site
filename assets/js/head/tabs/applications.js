@@ -29,9 +29,16 @@ export async function loadHeadApplications() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="5">⚠️ تعذّر تحميل الطلبات</td></tr>';
     return;
   }
-  const apps = res.data || [];
+  // The server lets heads see "PendingTriage" applications too — that's
+  // intentional for presidency triage, but for the head's own queue we
+  // only care about applications actually routed to THEIR committee.
+  // Pending-triage stays in presidency's queue (admin.html).
+  const myCommittee = window.CURRENT_USER?.committee_id;
+  const apps = (res.data || []).filter(a =>
+    a.assigned_committee_id && (!myCommittee || a.assigned_committee_id === myCommittee),
+  );
   if (!apps.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">لا توجد طلبات بعد</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">لا توجد طلبات موجّهة للجنتك حالياً</td></tr>';
     return;
   }
   // Pending first.
@@ -47,7 +54,9 @@ export async function loadHeadApplications() {
 function _renderRow(a) {
   const name = esc(a.preferred_name || a.full_name || '—');
   const uni = [a.university, a.major].filter(Boolean).map(esc).join(' / ') || '—';
-  const when = fmtDate(a.created_at) || '—';
+  // fmtDate already returns safe HTML (<span dir="ltr">...</span>) — don't
+  // double-escape it. Same fix for the dashboard's queue rows.
+  const when = fmtDate(a.created_at) || '<span style="color:var(--tm)">—</span>';
   const statusTag = tag(STATUS_AR[a.status] || a.status || '—', STATUS_CLS[a.status] || 't-gr');
   const actions = [];
   const isPending = a.status !== 'Accepted' && a.status !== 'Rejected';
@@ -58,7 +67,7 @@ function _renderRow(a) {
   return `<tr>
     <td><strong>${name}</strong><div style="font-size:.7rem;color:var(--tm)">${esc(a.email || '')}</div></td>
     <td style="color:var(--tm);font-size:.85rem">${uni}</td>
-    <td>${esc(when)}</td>
+    <td>${when}</td>
     <td>${statusTag}</td>
     <td>${actions.join(' ') || '<span style="color:var(--tm)">—</span>'}</td>
   </tr>`;

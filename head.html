@@ -209,12 +209,48 @@
         <div class="card-head">
           <h3>🎯 الفرص التطوعية</h3>
           <div class="card-head-right">
-            <a class="btn btn-g btn-sm" href="admin.html#/admin/opportunities" style="text-decoration:none">➕ إنشاء فرصة (عبر الإدارة)</a>
+            <button class="btn btn-g btn-sm" data-action="hd.opps.toggleCreate">➕ إنشاء فرصة جديدة</button>
           </div>
         </div>
         <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
-          الفرص الخاصة بلجنتك. إنشاء فرصة جديدة وإدارة الحالة تتم عبر لوحة الإدارة.
+          الفرص الخاصة بلجنتك. الفرصة الجديدة تخص لجنتك تلقائياً.
         </p>
+
+        <!-- Inline create form, toggled by the button above. Hidden by
+             default; populates the project dropdown on first open. -->
+        <div id="hd-opps-create-form" class="hd-create-form" style="display:none">
+          <div class="hd-form-row">
+            <label class="hd-form-field">
+              <span>المشروع/الفعالية</span>
+              <select id="hd-opp-project">
+                <option value="">— اختر المشروع —</option>
+              </select>
+            </label>
+            <label class="hd-form-field">
+              <span>اسم الدور</span>
+              <input type="text" id="hd-opp-role" placeholder="مثال: منسق لوجستي"/>
+            </label>
+          </div>
+          <div class="hd-form-row">
+            <label class="hd-form-field">
+              <span>الساعات التقديرية</span>
+              <input type="number" id="hd-opp-hours" step="0.5" min="0" value="0"/>
+            </label>
+            <label class="hd-form-field">
+              <span>عدد المتطوعين المطلوبين</span>
+              <input type="number" id="hd-opp-headcount" min="1" value="1"/>
+            </label>
+          </div>
+          <label class="hd-form-field">
+            <span>ملاحظات (اختياري)</span>
+            <textarea id="hd-opp-notes" rows="2" placeholder="تفاصيل إضافية..."></textarea>
+          </label>
+          <div class="hd-form-actions">
+            <button class="btn btn-g btn-sm" data-action="hd.opps.create">💾 حفظ الفرصة</button>
+            <button class="btn btn-ol btn-sm" data-action="hd.opps.toggleCreate">إلغاء</button>
+          </div>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>

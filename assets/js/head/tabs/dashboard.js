@@ -62,16 +62,18 @@ function _setKpi(elId, n) {
   if (el) el.textContent = (n == null ? '—' : String(n));
 }
 
-// One row in the pending-applications list. Click-through routes to the
-// admin Applications tab where the head can actually decide.
+// One row in the pending-applications list. Click-through stays inside
+// the head portal (#/head/applications), no admin.html jump.
 function _renderApplicationRow(a) {
   const name = a.preferred_name || a.full_name || '—';
+  // fmtDate already returns safe HTML; don't wrap in esc() or the <span>
+  // shows up as literal text instead of formatting the date.
   const when = fmtDate(a.created_at) || '';
   const status = _appStatusLabel(a.status);
-  return `<a class="hd-queue-row" href="admin.html#/admin/applications">
+  return `<a class="hd-queue-row" href="#/head/applications" data-action="showPage" data-page="applications">
     <div class="hd-queue-main">
       <div class="hd-queue-title">${esc(name)}</div>
-      <div class="hd-queue-sub">${esc(status)}${when ? ` · ${esc(when)}` : ''}</div>
+      <div class="hd-queue-sub">${esc(status)}${when ? ` · ${when}` : ''}</div>
     </div>
     <div class="hd-queue-action">قرّر ←</div>
   </a>`;
@@ -91,10 +93,10 @@ function _renderHoursRow(h) {
   const proj = h.project_name || '—';
   const when = fmtDate(h.event_date || h.recorded_at) || '';
   const hours = h.total_hours != null ? `${h.total_hours} ساعة` : '';
-  return `<a class="hd-queue-row" href="admin.html#/admin/hours">
+  return `<a class="hd-queue-row" href="#/head/hours" data-action="showPage" data-page="hours">
     <div class="hd-queue-main">
       <div class="hd-queue-title">${esc(name)}</div>
-      <div class="hd-queue-sub">${esc(proj)}${when ? ` · ${esc(when)}` : ''}</div>
+      <div class="hd-queue-sub">${esc(proj)}${when ? ` · ${when}` : ''}</div>
     </div>
     <div class="hd-queue-action">${esc(hours)} ←</div>
   </a>`;

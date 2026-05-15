@@ -21,7 +21,13 @@ export async function loadHeadMembers() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="5">⚠️ تعذّر تحميل قائمة الأعضاء</td></tr>';
     return;
   }
-  const members = (res.data || []).filter(m => m.status !== 'Inactive');
+  // `getMembers` is public + unscoped (admin's UI also filters client-side
+  // via RBAC.filterMembers). For heads we just want members of their own
+  // committee — committee_id match, no leadership-tier inclusion.
+  const myCommittee = window.CURRENT_USER?.committee_id;
+  const members = (res.data || [])
+    .filter(m => m.status !== 'Inactive')
+    .filter(m => myCommittee ? m.committee_id === myCommittee : true);
   if (!members.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="5">لا يوجد أعضاء في لجنتك بعد</td></tr>';
     return;
