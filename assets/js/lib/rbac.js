@@ -46,11 +46,13 @@ export const RBAC = {
   },
 
   // هل يمكن رؤية هذه الصفحة؟
+  // 2026-05-16: tightened. Heads no longer see the accounts tab — every
+  // server-side users.* action they could call from there 403s anyway,
+  // so the page is dead weight in their UI. Advisors stays admin-only
+  // as before.
   canSeePage(page) {
     if (this.isAdmin()) return true;
-    // رؤساء اللجان: يشوفون كل شيء عدا المستشارين. تبويب الحسابات متاح لهم
-    // (مع تصفية إلى أعضاء لجنتهم فقط) لإعادة تعيين كلمات المرور.
-    const restricted = ['advisors'];
+    const restricted = ['advisors', 'accounts'];
     return !restricted.includes(page);
   },
 
@@ -76,9 +78,11 @@ export const RBAC = {
   applyUIRestrictions() {
     if (this.isAdmin()) return; // الإدارة والديف يشوفون كل شيء
 
-    // إخفاء بعض خيارات الـ sidebar (المستشارون للسوبر أدمن فقط؛
-    // تبويب الحسابات متاح للرؤساء بنطاق لجنتهم)
-    const hidePages = ['advisors'];
+    // إخفاء بعض خيارات الـ sidebar — المستشارون وتبويب حسابات
+    // المستخدمين كلاهما للإدارة والمطوّر فقط. كل إجراءات users.*
+    // ترفض من قبل الخادم لو حاول الرئيس استدعاءها (admin-tier action),
+    // فإظهار التبويب لرؤساء اللجان كان مجرد فوضى بصرية.
+    const hidePages = ['advisors', 'accounts'];
     hidePages.forEach(page => {
       const el = document.querySelector(`[data-page="${page}"]`);
       if (el) el.style.display = 'none';
