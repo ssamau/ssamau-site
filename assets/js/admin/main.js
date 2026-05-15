@@ -92,6 +92,7 @@ import {
   loadCerts, switchCertTab, issueCert, saveBulkCerts,
   previewCertCard, verifyCert,
 } from './tabs/certificates.js';
+import { attachTypeaheadByIds } from '../lib/typeahead.js';
 
 
 // ================================================================
@@ -259,6 +260,23 @@ function _initAdmin() {
     // the loads above have run so the initial tbodies exist —
     // before that there's nothing for `applyTableLabels` to walk.
     watchTableLabels();
+
+    // Phase C — wire typeahead onto every member-picker <select> so
+    // admins can search-as-they-type instead of scrolling a 100-item
+    // dropdown. The typeahead reads .options dynamically so even if
+    // populateNewSelects fills them later, the suggestions stay live.
+    attachTypeaheadByIds(
+      'profile-member-select',
+      'cert-mbr-sel',
+      'int-mbr-sel',
+      'thx-mbr',
+      'acc-member',
+      'opp-assign-member',
+      'par-member',
+      'att-member',
+      'hrs-member',
+    );
+
     // Respect the URL hash if it's a valid admin route — lets a
     // refresh / bookmark / shared link land on the intended tab
     // instead of always bouncing to dashboard.
