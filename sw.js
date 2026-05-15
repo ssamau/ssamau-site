@@ -33,7 +33,11 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-const CACHE_VERSION = 'v7-2026-05-15-storage-uploads';
+// Bumped to v8 here because main now has v7-storage-uploads from PR #23
+// (Phase A) and this branch is layering Phase B on top — they each
+// introduced their own v7 string, so unify under a v8 marker that
+// covers both.
+const CACHE_VERSION = 'v8-2026-05-15-storage-and-events';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 

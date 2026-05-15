@@ -49,6 +49,7 @@ import { loadCommittees, saveCommittee, editCommittee } from './tabs/committees.
 import {
   loadProjects, saveProject, editProject,
   filterProjectsByStatus, openModalWithPrj,
+  onProjectPhotoChange, uploadProjectPhotoFromForm,
 } from './tabs/projects.js';
 import {
   loadParticipants, saveParticipant, toggleParticipantFields,
@@ -382,6 +383,9 @@ setHandlers({
   editMember:                  (el) => editMember(el.dataset.id),
   editOpportunity:             (el) => editOpportunity(el.dataset.id),
   editProject:                 (el) => editProject(el.dataset.id),
+  // Phase B — project cover photo uploader (inside project edit modal)
+  onProjectPhotoChange:        (el) => onProjectPhotoChange(el),
+  uploadProjectPhoto:          uploadProjectPhotoFromForm,
   openApplicationReview:       (el) => openApplicationReview(el.dataset.id),
   openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
   viewProfile:                 (el) => viewProfile(el.dataset.id),

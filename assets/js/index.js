@@ -925,24 +925,43 @@ function renderRecentEvents(projects, members) {
     .sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
   if (!recent.length) { grid.innerHTML = ''; return; }
 
+  // Colour rotation for cards without a cover photo. Used as a fallback
+  // gradient header so the grid stays visually rich even before all
+  // events have photos uploaded.
   const colors = ['#B8932A', '#1A5C2E', '#0e3a1c', '#185FA5', '#0D7377', '#2A7D42'];
 
   grid.innerHTML = recent.map((p, i) => {
+    // Stats from the notes JSON (legacy hack) — fallback for events
+    // that didn't have a real attendee count back then. New events
+    // surface attendee_count (real participants row count) instead.
     let stats = {};
     try {
       const raw = (p.notes || '').trim().replace(/^[﻿]+/, '');
       if (raw && raw[0] === '{') stats = JSON.parse(raw);
-    } catch { /* notes wasn't JSON — that's fine, render with no extra stats */ }
+    } catch { /* notes wasn't JSON — render with no legacy stats */ }
 
     const d = p.event_date ? new Date(p.event_date) : null;
     let dateAr = d ? d.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' }) : '';
     if (stats.hijri_date) dateAr += ' | ' + stats.hijri_date;
 
+    // Manager: event manager wins over project manager when both exist
+    // (matches the static markup convention). Display name via
+    // shortName() for consistency with the rest of the homepage.
     const mgrId   = p.assigned_event_manager_member_id || p.assigned_project_manager_member_id || '';
     const mgr     = members && mgrId ? members.find((m) => m.member_id === mgrId) : null;
     const mgrName = mgr ? shortName(mgr.full_name) : '';
     const mgrIni  = mgr && mgr.full_name ? mgr.full_name[0] : '';
+    const mgrRole = p.assigned_event_manager_member_id ? 'مدير الفعالية' : 'مدير المشروع';
 
+    // Attendee count: prefer the real participants count (attendee_count
+    // from the API row); fall back to the legacy notes-JSON stat for
+    // events that pre-date the participants table.
+    const attendees = (p.attendee_count != null && p.attendee_count > 0)
+      ? p.attendee_count
+      : (stats.attendance || 0);
+
+    // Gallery click — keep the existing openGallery flow for events
+    // that have a configured gallery_folder.
     const folderId    = stats.gallery_folder || '';
     const safeTitle   = (p.project_name || '').replace(/"/g, '&quot;');
     const safeDateStr = dateAr.replace(/"/g, '&quot;');
@@ -950,26 +969,36 @@ function renderRecentEvents(projects, members) {
       ? ' class="lrep-card has-gallery" data-gid="' + folderId + '" data-gtitle="' + safeTitle + '" data-gdate="' + safeDateStr + '" onclick="var el=this;openGallery(el.dataset.gid,el.dataset.gtitle,el.dataset.gdate)"'
       : ' class="lrep-card"';
 
-    let statHTML = '';
-    if (stats.attendance) statHTML += '<span class="lrep-card-stat">👥 ' + stats.attendance + ' حضور</span>';
-    if (stats.tickets)    statHTML += '<span class="lrep-card-stat">🎫 ' + stats.tickets    + ' تذكرة</span>';
-    if (stats.rating)     statHTML += '<span class="lrep-card-stat">⭐ ' + stats.rating     + '/5</span>';
+    // Header: if cover_photo_url is set, render the photo as a
+    // background image with the existing gradient on top for text
+    // legibility. Otherwise fall back to the solid colour rotation.
+    const headerStyle = p.cover_photo_url
+      ? 'background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.55) 100%),url("' + esc(p.cover_photo_url) + '") center/cover'
+      : 'background:' + colors[i % colors.length];
+
+    // Per-event tags surface event_type / role pill. Project type is
+    // either "Project" or "Event"; we use the Arabic label.
+    const typeAr = p.project_type === 'Project' ? 'مشروع' : 'فعالية';
 
     return '<div' + clickAttr + '>' +
-      '<div class="lrep-card-hdr" style="background:' + colors[i % colors.length] + '">' +
+      '<div class="lrep-card-hdr" style="' + headerStyle + '">' +
         '<div class="lrep-card-done">✓ منتهية</div>' +
         '<div class="lrep-card-date">' + dateAr + '</div>' +
-        '<div class="lrep-card-name">' + (p.project_name || '') + '</div>' +
+        '<div class="lrep-card-name">' + esc(p.project_name || '') + '</div>' +
         (folderId ? '<div class="lrep-card-gallery-tag">📷 معرض الصور</div>' : '') +
       '</div>' +
       '<div class="lrep-card-body">' +
-        '<div class="lrep-card-loc">📍 ' + (p.location || 'Melbourne, Victoria') + '</div>' +
+        '<div class="lrep-card-loc">📍 ' + esc(p.location || 'Melbourne, Victoria') + '</div>' +
         (mgrName ? '<div class="lrep-card-mgr">' +
-          '<div class="lrep-card-mgr-av">' + mgrIni + '</div>' +
-          '<div><div class="lrep-card-mgr-t">مدير الفعالية</div>' +
-          '<div class="lrep-card-mgr-n">' + mgrName + '</div></div>' +
+          '<div class="lrep-card-mgr-av">' + esc(mgrIni) + '</div>' +
+          '<div><div class="lrep-card-mgr-t">' + mgrRole + '</div>' +
+          '<div class="lrep-card-mgr-n">' + esc(mgrName) + '</div></div>' +
         '</div>' : '') +
-        (statHTML ? '<div class="lrep-card-stats">' + statHTML + '</div>' : '') +
+        '<div class="lrep-card-stats">' +
+          (attendees ? '<span class="lrep-card-stat">👥 ' + attendees + ' حضور</span>' : '') +
+          '<span class="lrep-card-stat">📌 ' + typeAr + '</span>' +
+          (stats.rating  ? '<span class="lrep-card-stat">⭐ ' + stats.rating + '/5</span>' : '') +
+        '</div>' +
       '</div>' +
     '</div>';
   }).join('');
