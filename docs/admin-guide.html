@@ -95,8 +95,11 @@
   p { margin: .35rem 0 .55rem; }
 
   /* ── Lists ─────────────────────────────────────────────────────── */
-  ul, ol { padding-inline-start: 1.4rem; margin: .25rem 0 .65rem; }
-  li { margin-bottom: .25rem; }
+  /* Wider start-gutter so 2-digit list markers (10., 11., 12., 13.)
+   * have room without crowding the first word, and bumped li spacing
+   * so wrapped lines stay readable. */
+  ul, ol { padding-inline-start: 2rem; margin: .25rem 0 .75rem; }
+  li { margin-bottom: .35rem; padding-inline-start: .25rem; }
 
   /* ── Numbered step boxes ───────────────────────────────────────── */
   .steps {
@@ -105,11 +108,21 @@
     padding: 0;
     margin: .5rem 0 1rem;
   }
+  /* Use logical properties (padding-block / padding-inline) instead
+   * of the physical shorthand. In LTR, padding-inline-start = left;
+   * in RTL it's right — so the number circle's side gets the wide
+   * 2.4rem clear-area regardless of direction. The old shorthand
+   * (`padding: .6rem .85rem .6rem 2.4rem`) hard-coded LEFT as wide
+   * which is correct in LTR but wrong in RTL — the circle sits on
+   * the right in RTL but the wide gutter was on the left, so the
+   * first words of every step were rendered behind the circle. */
   .steps > li {
     counter-increment: step;
     background: var(--bg-soft);
     border-inline-start: 4px solid var(--green);
-    padding: .6rem .85rem .6rem 2.4rem;
+    padding-block: .6rem;
+    padding-inline-start: 2.6rem;
+    padding-inline-end: .9rem;
     position: relative;
     margin-bottom: .55rem;
     border-radius: 6px;
