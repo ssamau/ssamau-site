@@ -108,11 +108,12 @@ function showCertificate(cert) {
   // Issuing signer — currently hardcoded to the president for every
   // cert. When the rest of the leadership send in their signatures,
   // this can switch to a per-row issued_by → users → members lookup
-  // and pick the signer's actual sig + name + title. The signer name
-  // matches the spec ("ابو جمان عبدالمحسن" — the kunya + given name
-  // the president signs under) and the title is الرئيس.
+  // and pick the signer's actual sig + name + title. Name is the
+  // president's full given name as it appears on his ID (not the
+  // kunya "أبو جمان") so the printed cert can be verified against
+  // the official signer record.
   const signerSig   = 'assets/img/signatures/president.gif';
-  const signerName  = 'أبو جمان عبدالمحسن';
+  const signerName  = 'عبدالمحسن محمد صالح سادس';
   const signerTitle = 'رئيس النادي';
 
   document.body.innerHTML = `
