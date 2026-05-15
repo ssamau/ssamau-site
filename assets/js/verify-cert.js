@@ -103,6 +103,17 @@ function showCertificate(cert) {
   const isFemale  = cert.member_gender === 'أنثى';
   const efforts   = isFemale ? 'لجهودها الكريمة'     : 'لجهوده الكريمة';
   const partake   = isFemale ? 'ومشاركتها الفاعلة'  : 'ومشاركته الفاعلة';
+  const committee = cert.committee_name || '';
+
+  // Issuing signer — currently hardcoded to the president for every
+  // cert. When the rest of the leadership send in their signatures,
+  // this can switch to a per-row issued_by → users → members lookup
+  // and pick the signer's actual sig + name + title. The signer name
+  // matches the spec ("ابو جمان عبدالمحسن" — the kunya + given name
+  // the president signs under) and the title is الرئيس.
+  const signerSig   = 'assets/img/signatures/president.gif';
+  const signerName  = 'أبو جمان عبدالمحسن';
+  const signerTitle = 'رئيس النادي';
 
   document.body.innerHTML = `
     <div class="cert-stage">
@@ -122,14 +133,21 @@ function showCertificate(cert) {
 
         <div class="cert-stats">
           <div class="cert-stat">الدور: <strong>${escapeHtml(role)}</strong></div>
+          ${committee ? `<div class="cert-stat">اللجنة: <strong>${escapeHtml(committee)}</strong></div>` : ''}
           <div class="cert-stat">عدد الساعات: <strong>${escapeHtml(hours)}</strong></div>
         </div>
 
         <div class="cert-footer">
           <div class="cert-date">${escapeHtml(issuedAt)}</div>
-          <div class="seal">
-            <div class="seal-mark">🌿</div>
-            نادي الطلبة السعوديين<br/>في ملبورن
+          <!-- Signer block — replaces the standalone "SSAM seal" that
+               used to live here. The page logo at the top already
+               establishes the SSAM identity; the footer's job is to
+               carry the official "signed by" piece, which is the
+               actual hallmark of a diploma-style certificate. -->
+          <div class="cert-signer">
+            <img src="${signerSig}" alt="signature" class="cert-sig"/>
+            <div class="cert-signer-name">${escapeHtml(signerName)}</div>
+            <div class="cert-signer-title">${escapeHtml(signerTitle)}</div>
           </div>
           <div class="cert-code">${escapeHtml(code)}</div>
         </div>

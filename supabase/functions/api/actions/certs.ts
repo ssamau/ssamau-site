@@ -205,13 +205,19 @@ const certsVerify: Handler = async (body) => {
   // the correct pronoun via a lookup. NULL = no member row (e.g.
   // volunteer cert) → frontend falls back to the masculine form
   // (Arabic's default neutral when speaker is uncertain).
+  // Joins go through members → committees so the cert can display
+  // "Committee: لجنة الفعاليات" under the role (president's spec —
+  // "والمنصب تحت الدور = اللجنة"). committee_name is NULL for
+  // volunteer certs where the recipient isn't a club member.
   const [c] = await sql`
     SELECT c.cert_code, c.recipient_name, c.role, c.hours, c.issued_at,
            m.full_name AS member_full_name, m.preferred_name, m.gender AS member_gender,
+           cm.committee_name,
            p.project_name, p.event_date
     FROM certificates c
-    LEFT JOIN members  m ON m.member_id  = c.member_id
-    LEFT JOIN projects p ON p.project_id = c.project_id
+    LEFT JOIN members    m  ON m.member_id     = c.member_id
+    LEFT JOIN committees cm ON cm.committee_id = m.committee_id
+    LEFT JOIN projects   p  ON p.project_id    = c.project_id
     WHERE c.cert_code = ${cert_code}
     LIMIT 1
   ` as Array<Record<string, unknown>>;

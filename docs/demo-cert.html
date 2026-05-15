@@ -150,20 +150,37 @@
     color: #6b7280;
     z-index: 1;
   }
-  .cert-footer .seal {
+  /* Signer block — sits in the centre of the footer (where the SSAM
+   * seal used to be). Page logo carries the identity; this is the
+   * "signed by" piece. */
+  .cert-signer {
     text-align: center;
     color: #1A5C2E;
-    font-weight: 800;
     line-height: 1.4;
+    min-width: 0;
   }
-  .cert-footer .seal-mark {
-    width: 56px; height: 56px;
-    border: 2px solid #b8932a;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem;
-    margin: 0 auto .25rem;
-    background: #fff;
+  .cert-sig {
+    max-height: 60px;
+    max-width: 180px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto .2rem;
+  }
+  .cert-signer-name {
+    font-weight: 800;
+    font-size: .88rem;
+    color: #0e3a1c;
+    border-top: 1px solid #b8932a;
+    padding-top: .2rem;
+    min-width: 140px;
+  }
+  .cert-signer-title {
+    font-size: .72rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin-top: .1rem;
   }
   .cert-code {
     font-family: ui-monospace, monospace;
@@ -216,14 +233,16 @@
 
     <div class="cert-stats">
       <div class="cert-stat">الدور: <strong>منسق لوجستي</strong></div>
+      <div class="cert-stat">اللجنة: <strong>اللجنة اللوجستية</strong></div>
       <div class="cert-stat">عدد الساعات: <strong>12</strong></div>
     </div>
 
     <div class="cert-footer">
       <div class="cert-date">2026-05-15</div>
-      <div class="seal">
-        <div class="seal-mark">🌿</div>
-        نادي الطلبة السعوديين<br/>في ملبورن
+      <div class="cert-signer">
+        <img src="../assets/img/signatures/president.gif" alt="signature" class="cert-sig"/>
+        <div class="cert-signer-name">أبو جمان عبدالمحسن</div>
+        <div class="cert-signer-title">رئيس النادي</div>
       </div>
       <div class="cert-code">CRT_DEMO_001</div>
     </div>
@@ -250,14 +269,16 @@
 
     <div class="cert-stats">
       <div class="cert-stat">الدور: <strong>مصوّرة</strong></div>
+      <div class="cert-stat">اللجنة: <strong>لجنة الفعاليات</strong></div>
       <div class="cert-stat">عدد الساعات: <strong>8</strong></div>
     </div>
 
     <div class="cert-footer">
       <div class="cert-date">2026-05-15</div>
-      <div class="seal">
-        <div class="seal-mark">🌿</div>
-        نادي الطلبة السعوديين<br/>في ملبورن
+      <div class="cert-signer">
+        <img src="../assets/img/signatures/president.gif" alt="signature" class="cert-sig"/>
+        <div class="cert-signer-name">أبو جمان عبدالمحسن</div>
+        <div class="cert-signer-title">رئيس النادي</div>
       </div>
       <div class="cert-code">CRT_DEMO_002</div>
     </div>
