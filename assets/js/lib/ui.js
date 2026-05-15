@@ -284,6 +284,14 @@ export async function refreshData() {
 
   btn?.classList.add('refreshing');
   if (btn) btn.disabled = true;
+  // Flip the status pill into pending state up-front so the user gets
+  // a visible "the refresh is doing something" cue. Without this, when
+  // the loader's API call returns the same error it returned before,
+  // the pill text was identical to its prior state and the click felt
+  // like a no-op even though the request did fire. api() inside the
+  // loader will update this to 'ok' or 'err' as appropriate when the
+  // call resolves.
+  setApiStatus('pending', 'جاري التحديث...');
 
   try {
     // Awaiting the loader directly (rather than _showPage which is
@@ -295,6 +303,7 @@ export async function refreshData() {
     toast('✅ تم التحديث');
   } catch (e) {
     toast('فشل التحديث: ' + (e?.message || 'unknown'), 'terr');
+    setApiStatus('err', e?.message || 'unknown');
   } finally {
     btn?.classList.remove('refreshing');
     if (btn) btn.disabled = false;
