@@ -12,6 +12,7 @@
 import { DB } from '../../lib/state.js';
 import { esc, gv, tag } from '../../lib/format.js';
 import { api, toast, closeModal, populateNewSelects } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
 
 // ── CERTIFICATES ─────────────────────────────────────────────
 export async function loadCerts(pid) {
@@ -20,7 +21,8 @@ export async function loadCerts(pid) {
   const list = d.data || [];
   const tb = document.getElementById('tb-certs');
   if (!tb) return;
-  if (!list.length) { tb.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد شهادات</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.cert.empty'))}</td></tr>`; return; }
+  const previewTitle = t('ap.cert.row_preview_title');
   // The Edge Function backend returns the raw `certificates` table columns
   // via `c.*` (cert_code / recipient_name / role / hours / issued_at) plus
   // joined `member_full_name`, `member_preferred_name`, `project_name`.
@@ -37,7 +39,7 @@ export async function loadCerts(pid) {
       <td><strong style="color:var(--g)">${c.hours || 0}</strong></td>
       <td><code style="font-size:.7rem;background:#f3f4f6;padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block">${esc(c.cert_code || '—')}</code></td>
       <td style="font-size:.71rem;color:var(--tm)">${String(c.issued_at || '').split('T')[0] || '—'}</td>
-      <td><button class="btn-icon" data-action="previewCertCard" data-card="${JSON.stringify(c).replace(/"/g,'&quot;')}" title="معاينة">👁️</button></td>
+      <td><button class="btn-icon" data-action="previewCertCard" data-card="${JSON.stringify(c).replace(/"/g,'&quot;')}" title="${esc(previewTitle)}">👁️</button></td>
     </tr>`;
   }).join('');
 }
@@ -54,7 +56,7 @@ export function switchCertTab(tab) {
 export async function issueCert() {
   const pid = gv('cert-proj-sel');
   const mid = gv('cert-mbr-sel');
-  if (!pid || !mid) { toast('المشروع والعضو مطلوبان', 'twarn'); return; }
+  if (!pid || !mid) { toast(t('ap.cert.err_required'), 'twarn'); return; }
   const m = DB.members.find(mb => mb.member_id === mid);
   // Edge Function `certs.issue` expects: recipient_name / recipient_email
   // / role / hours. The form was sending `participant_name` /
@@ -67,7 +69,7 @@ export async function issueCert() {
   const recipient_email = m ? (m.email || '') : '';
   const recipient_name  = m ? (m.preferred_name || m.full_name) : '';
   if (!recipient_email) {
-    toast('⚠️ العضو المختار ليس له بريد مسجّل — لن يستلم الشهادة بالإيميل', 'twarn');
+    toast(t('ap.cert.warn_no_email'), 'twarn');
     // Still proceed — the cert row + verification page work without
     // the email. Admin can hand over the cert code manually.
   }
@@ -76,11 +78,11 @@ export async function issueCert() {
     member_id:       mid,
     recipient_name,
     recipient_email,
-    role:            'متطوع',
+    role:            t('ap.cert.default_role'),
     hours:           m ? (m.total_hours || 0) : 0,
   });
   if (r && r.success) {
-    toast('🏅 تم إصدار الشهادة' + (recipient_email ? ' وإرسالها بالبريد' : ''));
+    toast(recipient_email ? t('ap.cert.success_issue_emailed') : t('ap.cert.success_issue_no_email'));
     loadCerts('');
     switchCertTab('list');
   }
@@ -88,13 +90,13 @@ export async function issueCert() {
 
 export async function saveBulkCerts() {
   const pid = gv('bcert-prj');
-  if (!pid) { toast('اختر مشروعاً', 'twarn'); return; }
+  if (!pid) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
   const r = await api('certs.bulkIssue', { project_id: pid, options: {} });
   // Backend returns { count, emailed }. count = certs created (the SQL
   // filter excludes participants who already have a cert for this project,
   // so we don't need a separate "skipped" tally to surface here).
   if (r && r.success) {
-    toast(`🏅 صدر: ${r.count || 0} | تم الإرسال: ${r.emailed || 0}`);
+    toast(t('ap.cert.bulk_result', { count: r.count || 0, emailed: r.emailed || 0 }));
     closeModal('bulk-certs');
     loadCerts('');
     switchCertTab('list');
@@ -141,12 +143,20 @@ export function buildCertHTML(c) {
 
 export function previewCertCard(c) {
   const w = window.open('','_blank','width=540,height=600');
-  if (!w) { toast('يرجى السماح بالنوافذ المنبثقة', 'twarn'); return; }
+  if (!w) { toast(t('ap.cert.popup_blocked'), 'twarn'); return; }
   // No <style> block here — CSP `style-src 'self'` (inherited by the
   // about:blank popup in Chromium) blocks inline <style> contents. All
   // styles live as `style=` attrs on individual elements, which fall
   // under `style-src-attr 'unsafe-inline'` and render correctly.
-  w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>شهادة</title>
+  //
+  // The popup chrome (lang/dir/title) follows the admin UI language so
+  // the browser tab + scrollbar direction match the rest of the app;
+  // the certificate body itself stays bilingual (Arabic + English brand)
+  // by design — see the buildCertHTML comment for the rationale.
+  const lang = (document.documentElement.lang === 'en') ? 'en' : 'ar';
+  const dir  = lang === 'en' ? 'ltr' : 'rtl';
+  const title = esc(t('ap.cert.preview_window_title'));
+  w.document.write(`<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="UTF-8"><title>${title}</title>
     <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
     </head><body style="margin:0;padding:2rem;background:#111;font-family:Almarai,Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center">${buildCertHTML(c)}</body></html>`);
   w.document.close();
@@ -154,7 +164,7 @@ export function previewCertCard(c) {
 
 export async function verifyCert() {
   const code = (document.getElementById('verify-code-input')?.value || '').toUpperCase().trim();
-  if (!code) { toast('أدخل رمز الشهادة', 'twarn'); return; }
+  if (!code) { toast(t('ap.cert.verify_err_no_code'), 'twarn'); return; }
   // Backend param is `cert_code` (not `code`); response shape is
   // { valid, certificate }. The certificate row already includes
   // `project_name` from the LEFT JOIN, so no extra mapping needed.
@@ -165,7 +175,7 @@ export async function verifyCert() {
     area.innerHTML = buildCertHTML(r.certificate);
   } else {
     area.innerHTML = `<div style="background:var(--dnb);border:1.5px solid rgba(220,38,38,.25);border-radius:var(--rs);padding:1rem;font-size:.84rem;color:var(--dn);text-align:center">
-      ❌ ${r?.error || 'الشهادة غير موجودة أو ملغاة'}
+      ❌ ${esc(r?.error || t('ap.cert.verify_invalid'))}
     </div>`;
   }
 }

@@ -503,16 +503,16 @@
     <div class="page" id="page-profile">
       <div class="card" style="padding:1rem">
         <div class="card-head">
-          <h3>👤 ملف العضو</h3>
+          <h3>👤 <span data-i18n="ap.sb.tab_profile">ملف العضو</span></h3>
           <div class="card-head-right">
             <select class="filter-select" id="profile-member-select" data-action="loadMemberProfile">
-              <option value="">اختر عضواً</option>
+              <option value="" data-i18n="ap.prf.pick_member_placeholder">اختر عضواً</option>
             </select>
           </div>
         </div>
       </div>
       <div id="profile-content">
-        <div style="text-align:center;padding:3rem;color:var(--tm);font-size:.9rem">اختر عضواً لعرض ملفه الشخصي</div>
+        <div data-i18n="ap.prf.empty_select_prompt" style="text-align:center;padding:3rem;color:var(--tm);font-size:.9rem">اختر عضواً لعرض ملفه الشخصي</div>
       </div>
     </div>
 
@@ -581,62 +581,77 @@
     <div class="page" id="page-emails">
       <div class="card">
         <div class="card-head">
-          <h3>💌 الإيميلات ورسائل الشكر</h3>
+          <h3 data-i18n="ap.title.emails">💌 الإيميلات ورسائل الشكر</h3>
           <div class="card-head-right">
-            <select class="filter-select" id="flt-thx-prj" data-action="loadThanks"><option value="">كل المشاريع</option></select>
-            <button class="btn btn-g" data-action="openModal" data-modal="bulk-thanks">📧 إرسال جماعي</button>
-            <button class="btn btn-ol" data-action="openModal" data-modal="thanks">+ فردي</button>
+            <select class="filter-select" id="flt-thx-prj" data-action="loadThanks"><option value="" data-i18n="ap.eml.filter_all_projects">كل المشاريع</option></select>
+            <button class="btn btn-g" data-action="openModal" data-modal="bulk-thanks" data-i18n="ap.eml.bulk_btn">📧 إرسال جماعي</button>
+            <button class="btn btn-ol" data-action="openModal" data-modal="thanks" data-i18n="ap.eml.single_btn">+ فردي</button>
           </div>
         </div>
         <div class="sum-row">
-          <div class="sum-box"><div class="sum-n" id="thx-total">—</div><div class="sum-l">إجمالي</div></div>
-          <div class="sum-box"><div class="sum-n" id="thx-sent" style="color:var(--sc)">—</div><div class="sum-l">أُرسل</div></div>
-          <div class="sum-box"><div class="sum-n" id="thx-pending" style="color:var(--wn)">—</div><div class="sum-l">معلّق</div></div>
-          <div class="sum-box"><div class="sum-n" id="thx-failed" style="color:var(--dn)">—</div><div class="sum-l">فشل</div></div>
+          <div class="sum-box"><div class="sum-n" id="thx-total">—</div><div class="sum-l" data-i18n="ap.eml.sum_total">إجمالي</div></div>
+          <div class="sum-box"><div class="sum-n" id="thx-sent" style="color:var(--sc)">—</div><div class="sum-l" data-i18n="ap.eml.sum_sent">أُرسل</div></div>
+          <div class="sum-box"><div class="sum-n" id="thx-pending" style="color:var(--wn)">—</div><div class="sum-l" data-i18n="ap.eml.sum_pending">معلّق</div></div>
+          <div class="sum-box"><div class="sum-n" id="thx-failed" style="color:var(--dn)">—</div><div class="sum-l" data-i18n="ap.eml.sum_failed">فشل</div></div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>المستلم</th><th>المشروع</th><th>الموضوع</th><th>ساعات</th><th>الحالة</th><th>أُرسل في</th></tr></thead>
-        <tbody id="tb-thanks"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th data-i18n="ap.eml.col_recipient">المستلم</th>
+          <th data-i18n="ap.eml.col_project">المشروع</th>
+          <th data-i18n="ap.eml.col_subject">الموضوع</th>
+          <th data-i18n="ap.eml.col_hours">ساعات</th>
+          <th data-i18n="ap.eml.col_status">الحالة</th>
+          <th data-i18n="ap.eml.col_sent_at">أُرسل في</th>
+        </tr></thead>
+        <tbody id="tb-thanks"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
       </div>
     </div>
 
     <!-- ══ CERTIFICATES ══ -->
     <div class="page" id="page-certificates">
       <div class="tab-row">
-        <button class="tab-btn active" data-action="switchCertTab" data-tab="list">📋 الشهادات الصادرة</button>
-        <button class="tab-btn" data-action="switchCertTab" data-tab="issue">🏅 إصدار شهادة</button>
-        <button class="tab-btn" data-action="switchCertTab" data-tab="verify">🔍 التحقق</button>
+        <button class="tab-btn active" data-action="switchCertTab" data-tab="list"   data-i18n="ap.cert.subtab_list">📋 الشهادات الصادرة</button>
+        <button class="tab-btn"        data-action="switchCertTab" data-tab="issue"  data-i18n="ap.cert.subtab_issue">🏅 إصدار شهادة</button>
+        <button class="tab-btn"        data-action="switchCertTab" data-tab="verify" data-i18n="ap.cert.subtab_verify">🔍 التحقق</button>
       </div>
       <div class="tab-content active" id="cert-tab-list">
         <div class="card">
-          <div class="card-head"><h3>🏅 الشهادات الصادرة</h3>
+          <div class="card-head"><h3 data-i18n="ap.cert.list_card_title">🏅 الشهادات الصادرة</h3>
             <div class="card-head-right">
-              <select class="filter-select" id="flt-cert-prj" data-action="loadCerts"><option value="">كل المشاريع</option></select>
-              <button class="btn btn-g" data-action="openModal" data-modal="bulk-certs">⚡ إصدار جماعي</button>
+              <select class="filter-select" id="flt-cert-prj" data-action="loadCerts"><option value="" data-i18n="ap.cert.filter_all_projects">كل المشاريع</option></select>
+              <button class="btn btn-g" data-action="openModal" data-modal="bulk-certs" data-i18n="ap.cert.bulk_btn">⚡ إصدار جماعي</button>
             </div>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>المشارك</th><th>المشروع</th><th>الدور</th><th>الساعات</th><th>رمز التحقق</th><th>تاريخ الإصدار</th><th></th></tr></thead>
-          <tbody id="tb-certs"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr>
+            <th data-i18n="ap.cert.col_recipient">المشارك</th>
+            <th data-i18n="ap.cert.col_project">المشروع</th>
+            <th data-i18n="ap.cert.col_role">الدور</th>
+            <th data-i18n="ap.cert.col_hours">الساعات</th>
+            <th data-i18n="ap.cert.col_code">رمز التحقق</th>
+            <th data-i18n="ap.cert.col_issued">تاريخ الإصدار</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tb-certs"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
         </div>
       </div>
       <div class="tab-content" id="cert-tab-issue">
-        <div class="card"><div class="card-head"><h3>🏅 إصدار شهادة جديدة</h3></div>
+        <div class="card"><div class="card-head"><h3 data-i18n="ap.cert.issue_card_title">🏅 إصدار شهادة جديدة</h3></div>
           <div class="card-body">
             <div class="fg-row">
-              <div class="fg"><label>المشروع <span class="required">*</span></label><select id="cert-proj-sel"><option value="">— اختر —</option></select></div>
-              <div class="fg"><label>العضو <span class="required">*</span></label><select id="cert-mbr-sel"><option value="">— اختر —</option></select></div>
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_project">المشروع</span> <span class="required">*</span></label><select id="cert-proj-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_member">العضو</span> <span class="required">*</span></label><select id="cert-mbr-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
             </div>
-            <div style="margin-top:1rem"><button class="btn btn-g" data-action="issueCert">🏅 إصدار</button></div>
+            <div style="margin-top:1rem"><button class="btn btn-g" data-action="issueCert" data-i18n="ap.cert.issue_btn">🏅 إصدار</button></div>
           </div>
         </div>
       </div>
       <div class="tab-content" id="cert-tab-verify">
-        <div class="card"><div class="card-head"><h3>🔍 التحقق من شهادة</h3></div>
+        <div class="card"><div class="card-head"><h3 data-i18n="ap.cert.verify_card_title">🔍 التحقق من شهادة</h3></div>
           <div class="card-body">
             <div class="fg" style="max-width:360px">
-              <label>رمز الشهادة</label>
-              <input id="verify-code-input" dir="ltr" placeholder="SSAM-XXXXXXXX" style="font-family:monospace;letter-spacing:.1em"/>
+              <label data-i18n="ap.cert.verify_lbl_code">رمز الشهادة</label>
+              <input id="verify-code-input" dir="ltr" data-i18n-placeholder="ap.cert.verify_ph_code" placeholder="SSAM-XXXXXXXX" style="font-family:monospace;letter-spacing:.1em"/>
             </div>
-            <button class="btn btn-g" data-action="verifyCert" style="margin-top:.5rem">🔍 تحقق</button>
+            <button class="btn btn-g" data-action="verifyCert" data-i18n="ap.cert.verify_btn" style="margin-top:.5rem">🔍 تحقق</button>
             <div id="verify-result" style="margin-top:1.25rem"></div>
           </div>
         </div>
@@ -1437,49 +1452,52 @@
 <!-- THANKS SINGLE -->
 <div class="overlay" id="ov-thanks">
   <div class="modal">
-    <div class="modal-head"><h3>💌 رسالة شكر فردية</h3><button class="modal-close" data-action="closeModal" data-modal="thanks">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.eml.single_modal_title">💌 رسالة شكر فردية</h3><button class="modal-close" data-action="closeModal" data-modal="thanks">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="thx-prj"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>نوع المستلم</label><select id="thx-tp"><option value="Member">عضو</option><option value="Volunteer">متطوع</option></select></div>
-      <div class="fg"><label>العضو</label><select id="thx-mbr"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>الموضوع</label><input id="thx-sb" placeholder="شكراً على مشاركتك..."/></div>
-      <div class="fg"><label>نص الرسالة</label><textarea id="thx-bd" style="height:110px"></textarea></div>
+      <div class="fg"><label><span data-i18n="ap.eml.lbl_project">المشروع</span> <span class="required">*</span></label><select id="thx-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_type">نوع المستلم</label><select id="thx-tp">
+        <option value="Member"    data-i18n="ap.eml.type_member">عضو</option>
+        <option value="Volunteer" data-i18n="ap.eml.type_volunteer">متطوع</option>
+      </select></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_member">العضو</label><select id="thx-mbr"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_subject">الموضوع</label><input id="thx-sb" data-i18n-placeholder="ap.eml.ph_subject" placeholder="شكراً على مشاركتك..."/></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_body">نص الرسالة</label><textarea id="thx-bd" style="height:110px"></textarea></div>
       <div style="display:flex;gap:.85rem;margin-top:.35rem">
-        <label class="fg-check"><input type="checkbox" id="thx-hi"/>تضمين الساعات</label>
-        <label class="fg-check"><input type="checkbox" id="thx-oi"/>تضمين التميّز</label>
+        <label class="fg-check"><input type="checkbox" id="thx-hi"/><span data-i18n="ap.eml.lbl_include_hours">تضمين الساعات</span></label>
+        <label class="fg-check"><input type="checkbox" id="thx-oi"/><span data-i18n="ap.eml.lbl_include_outstanding">تضمين التميّز</span></label>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="thanks">إلغاء</button><button class="btn btn-g" data-action="saveThanks">📧 إرسال</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="thanks" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="saveThanks" data-i18n="ap.eml.single_send_btn">📧 إرسال</button></div>
   </div>
 </div>
 
 <!-- BULK THANKS -->
 <div class="overlay" id="ov-bulk-thanks">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>📧 إرسال رسائل شكر جماعية</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-thanks">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.eml.bulk_modal_title">📧 إرسال رسائل شكر جماعية</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-thanks">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="bthx-prj"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>موضوع مخصص</label><input id="bthx-sb" placeholder="اتركه فارغاً للافتراضي"/></div>
-      <div class="fg"><label>رسالة مخصصة</label><textarea id="bthx-msg"></textarea></div>
+      <div class="fg"><label><span data-i18n="ap.eml.lbl_project">المشروع</span> <span class="required">*</span></label><select id="bthx-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.bulk_lbl_subject">موضوع مخصص</label><input id="bthx-sb" data-i18n-placeholder="ap.eml.bulk_ph_subject" placeholder="اتركه فارغاً للافتراضي"/></div>
+      <div class="fg"><label data-i18n="ap.eml.bulk_lbl_message">رسالة مخصصة</label><textarea id="bthx-msg"></textarea></div>
       <div style="display:flex;gap:.85rem;margin-top:.35rem">
-        <label class="fg-check"><input type="checkbox" id="bthx-hi" checked/>تضمين الساعات</label>
-        <label class="fg-check"><input type="checkbox" id="bthx-oi" checked/>تضمين التميّز</label>
+        <label class="fg-check"><input type="checkbox" id="bthx-hi" checked/><span data-i18n="ap.eml.lbl_include_hours">تضمين الساعات</span></label>
+        <label class="fg-check"><input type="checkbox" id="bthx-oi" checked/><span data-i18n="ap.eml.lbl_include_outstanding">تضمين التميّز</span></label>
       </div>
-      <div class="fg-note" style="color:var(--wn);margin-top:.65rem">⚠️ سيُرسل لكل مشارك لم يسبق إرساله</div>
+      <div class="fg-note" data-i18n="ap.eml.bulk_warning" style="color:var(--wn);margin-top:.65rem">⚠️ سيُرسل لكل مشارك لم يسبق إرساله</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-thanks">إلغاء</button><button class="btn btn-o" data-action="saveBulkThanks">📧 إرسال للجميع</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-thanks" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-o" data-action="saveBulkThanks" data-i18n="ap.eml.bulk_send_btn">📧 إرسال للجميع</button></div>
   </div>
 </div>
 
 <!-- BULK CERTS -->
 <div class="overlay" id="ov-bulk-certs">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>⚡ إصدار شهادات جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-certs">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.cert.bulk_modal_title">⚡ إصدار شهادات جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-certs">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="bcert-prj"><option value="">— اختر —</option></select></div>
-      <div class="fg-note">سيتم إصدار شهادة لكل مشارك لم تصدر له شهادة بعد.</div>
+      <div class="fg"><label><span data-i18n="ap.cert.bulk_lbl_project">المشروع</span> <span class="required">*</span></label><select id="bcert-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg-note" data-i18n="ap.cert.bulk_hint">سيتم إصدار شهادة لكل مشارك لم تصدر له شهادة بعد.</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-certs">إلغاء</button><button class="btn btn-g" data-action="saveBulkCerts">🏅 إصدار</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-certs" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="saveBulkCerts" data-i18n="ap.cert.bulk_issue_btn">🏅 إصدار</button></div>
   </div>
 </div>
 
