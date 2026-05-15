@@ -38,6 +38,7 @@ import { opportunitiesActions } from './actions/opportunities.ts';
 import { assignmentsActions }   from './actions/assignments.ts';
 import { applicationsActions }  from './actions/applications.ts';
 import { setupActions }         from './actions/setup.ts';
+import { storageActions }       from './actions/storage.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────
 // Frontend (ssamau.com) and the function (functions.supabase.co) are
@@ -95,6 +96,7 @@ const actions: Record<string, Handler> = {
   ...assignmentsActions,
   ...applicationsActions,
   ...setupActions,
+  ...storageActions,
 };
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────

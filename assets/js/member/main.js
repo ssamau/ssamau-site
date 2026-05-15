@@ -30,6 +30,7 @@ import { setHandlers, setupDispatch } from './dispatch.js';
 // ── Per-tab modules ────────────────────────────────────────────────────────
 import {
   loadProfile, saveProfile,
+  onUploaderChange, submitUploader, deleteUploader,
 } from './tabs/profile.js';
 import { loadHours } from './tabs/hours.js';
 import {
@@ -210,5 +211,10 @@ setHandlers({
   ),
   closeLogHoursModal:  closeLogHoursModal,
   submitLogHours:      submitLogHours,
+
+  // ── Phase A storage uploaders (profile tab → CV + photo) ───────────
+  onUploaderChange:    onUploaderChange,
+  submitUploader:      submitUploader,
+  deleteUploader:      deleteUploader,
 });
 setupDispatch();
