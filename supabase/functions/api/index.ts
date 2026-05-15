@@ -37,6 +37,7 @@ import { dashboardActions }     from './actions/dashboard.ts';
 import { opportunitiesActions } from './actions/opportunities.ts';
 import { assignmentsActions }   from './actions/assignments.ts';
 import { applicationsActions }  from './actions/applications.ts';
+import { headActions }          from './actions/head.ts';
 import { setupActions }         from './actions/setup.ts';
 // Phase A's storage actions (member CV / photo uploaders + signed-URL
 // fetchers) + Phase B's project-photo uploader (kept in its own file
@@ -101,6 +102,7 @@ const actions: Record<string, Handler> = {
   ...opportunitiesActions,
   ...assignmentsActions,
   ...applicationsActions,
+  ...headActions,
   ...setupActions,
   ...storageActions,
   ...projectStorageActions,

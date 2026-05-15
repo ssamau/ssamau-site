@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SSAM — لوحة رئيس اللجنة</title>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/base.css"/>
+<link rel="stylesheet" href="assets/css/admin.css"/>
+<link rel="stylesheet" href="assets/css/head.css"/>
+<link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
+</head>
+<body>
+<a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
+<div id="app">
+
+<!--
+  Heads' SPA shell. MVP scope is a single tab — لوحتي (Dashboard) —
+  scoped to the head's committee. Heads still navigate to admin.html
+  for management actions (create event, opportunity, assignment, etc.);
+  this page is their entry point and "what needs my attention" view.
+-->
+
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">🌿</div>
+    <div class="sb-brand-text">
+      <div class="t1">SSAM</div>
+      <div class="t2">لوحة رئيس اللجنة</div>
+    </div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-avatar" id="sb-av">H</div>
+    <div>
+      <div class="sb-user-name" id="sb-name">Loading...</div>
+      <div class="sb-user-role" id="sb-role">رئيس لجنة</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">لوحة الرئاسة</div>
+    <div class="sb-item active" data-page="dashboard" data-action="showPage">
+      <span class="sb-ic">📊</span>لوحتي
+    </div>
+    <div class="sb-section">أدوات إدارية</div>
+    <a class="sb-item" href="admin.html#/admin/members" style="text-decoration:none;color:inherit">
+      <span class="sb-ic">👥</span>أعضاء اللجنة
+    </a>
+    <a class="sb-item" href="admin.html#/admin/opportunities" style="text-decoration:none;color:inherit">
+      <span class="sb-ic">🎯</span>الفرص التطوعية
+    </a>
+    <a class="sb-item" href="admin.html#/admin/hours" style="text-decoration:none;color:inherit">
+      <span class="sb-ic">⏱️</span>الساعات
+    </a>
+    <a class="sb-item" href="admin.html#/admin/applications" style="text-decoration:none;color:inherit">
+      <span class="sb-ic">📥</span>طلبات الانضمام
+    </a>
+  </nav>
+
+  <div class="sb-theme">
+    <div class="sb-theme-label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    </div>
+  </div>
+</aside>
+
+<div class="sb-backdrop" id="sb-backdrop" aria-hidden="true"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <span class="topbar-title" id="page-title">لوحتي</span>
+    <div class="topbar-right">
+      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <div class="api-status pending" id="api-status">
+        <div class="api-dot"></div>
+        <span id="api-status-text">غير متصل</span>
+      </div>
+    </div>
+  </header>
+  <main class="content" id="main-content">
+
+    <!-- ══════════ DASHBOARD (landing) ══════════ -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- Welcome card -->
+      <div class="hd-welcome">
+        <div class="hd-welcome-text">
+          <div class="hd-welcome-greeting" id="hd-greeting">مرحباً</div>
+          <div class="hd-welcome-committee" id="hd-committee">—</div>
+        </div>
+        <div class="hd-welcome-emoji">🌿</div>
+      </div>
+
+      <!-- KPI grid -->
+      <div class="hd-kpi-grid" id="hd-kpi-grid">
+        <div class="hd-kpi-card" data-kind="members">
+          <div class="hd-kpi-icon">👥</div>
+          <div class="hd-kpi-label">أعضاء اللجنة</div>
+          <div class="hd-kpi-value" id="hd-kpi-members">—</div>
+        </div>
+        <div class="hd-kpi-card" data-kind="applications">
+          <div class="hd-kpi-icon">📥</div>
+          <div class="hd-kpi-label">طلبات بانتظار قرارك</div>
+          <div class="hd-kpi-value" id="hd-kpi-applications">—</div>
+        </div>
+        <div class="hd-kpi-card" data-kind="hours">
+          <div class="hd-kpi-icon">⏱️</div>
+          <div class="hd-kpi-label">ساعات بانتظار اعتمادك</div>
+          <div class="hd-kpi-value" id="hd-kpi-hours">—</div>
+        </div>
+        <div class="hd-kpi-card" data-kind="opportunities">
+          <div class="hd-kpi-icon">🎯</div>
+          <div class="hd-kpi-label">فرص مفتوحة</div>
+          <div class="hd-kpi-value" id="hd-kpi-opportunities">—</div>
+        </div>
+      </div>
+
+      <!-- Pending queue: applications + hours side-by-side on desktop -->
+      <div class="hd-queue-grid">
+        <div class="card">
+          <div class="card-head">
+            <h3>📥 طلبات الانضمام للجنتك</h3>
+            <div class="card-head-right">
+              <a class="btn btn-ol btn-sm" href="admin.html#/admin/applications">عرض الكل ←</a>
+            </div>
+          </div>
+          <div id="hd-applications-list" class="hd-queue-list">
+            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>⏱️ ساعات بانتظار اعتمادك الأولي</h3>
+            <div class="card-head-right">
+              <a class="btn btn-ol btn-sm" href="admin.html#/admin/hours">عرض الكل ←</a>
+            </div>
+          </div>
+          <div id="hd-hours-list" class="hd-queue-list">
+            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick actions strip -->
+      <div class="card hd-quickactions">
+        <div class="card-head">
+          <h3>⚡ إجراءات سريعة</h3>
+        </div>
+        <div class="hd-quickactions-row">
+          <a class="hd-qa" href="admin.html#/admin/opportunities">
+            <div class="hd-qa-ic">➕</div>
+            <div>
+              <div class="hd-qa-t">إنشاء فرصة جديدة</div>
+              <div class="hd-qa-s">للفعاليات القادمة في لجنتك</div>
+            </div>
+          </a>
+          <a class="hd-qa" href="admin.html#/admin/projects">
+            <div class="hd-qa-ic">📅</div>
+            <div>
+              <div class="hd-qa-t">إنشاء فعالية</div>
+              <div class="hd-qa-s">حدث جديد للجنتك</div>
+            </div>
+          </a>
+          <a class="hd-qa" href="admin.html#/admin/members">
+            <div class="hd-qa-ic">👥</div>
+            <div>
+              <div class="hd-qa-t">إدارة الأعضاء</div>
+              <div class="hd-qa-s">قائمة أعضاء لجنتك</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+</div>
+
+<script type="module" src="assets/js/head/main.js"></script>
+<script type="module" src="assets/js/lib/sw-register.js"></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+/* Heads' dashboard styling. Sits on top of admin.css so the sidebar +
+   topbar + card primitives are inherited. Only the dashboard-specific
+   layouts are here. */
+
+/* Welcome strip — full-width, brand-green gradient with a friendly
+   greeting and the committee name underneath. Sets the tone for the
+   page; everything else is gridded under it. */
+.hd-welcome {
+  background: linear-gradient(135deg, var(--gd) 0%, var(--g) 55%, var(--go) 130%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: 0 4px 18px rgba(0,0,0,.08);
+}
+.hd-welcome-text { display: flex; flex-direction: column; gap: .3rem; }
+.hd-welcome-greeting {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.hd-welcome-committee {
+  font-size: .9rem;
+  opacity: .92;
+  letter-spacing: .03em;
+}
+.hd-welcome-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+  opacity: .85;
+}
+
+/* KPI grid — 4 cards on desktop, 2x2 on tablet, single column on mobile.
+   Each card is a soft-shadow square with an icon, a small label, and a
+   big numeric value. Hover lifts slightly for affordance even though
+   the cards aren't currently clickable. */
+.hd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.2rem;
+}
+.hd-kpi-card {
+  background: var(--c);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 1rem 1rem .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.hd-kpi-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.06);
+}
+.hd-kpi-icon { font-size: 1.4rem; line-height: 1; }
+.hd-kpi-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--tm);
+}
+.hd-kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--g);
+  letter-spacing: -.02em;
+}
+
+/* The pending-queue grid puts the two queue cards side-by-side on
+   desktop and stacks them on mobile. */
+.hd-queue-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .9rem;
+  margin-bottom: 1.2rem;
+}
+.hd-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+/* Each queue row is a clickable card linking to the relevant admin tab.
+   Uses the same shape as the KPI cards (subtle border, slight hover
+   lift) so the page reads as a coherent set of widgets. */
+.hd-queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  padding: .65rem .85rem;
+  background: var(--bg-soft, #f9fafb);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s ease, border-color .15s ease;
+}
+.hd-queue-row:hover {
+  background: var(--gl);
+  border-color: var(--g);
+}
+.hd-queue-main { display: flex; flex-direction: column; gap: .2rem; min-width: 0; flex: 1; }
+.hd-queue-title {
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hd-queue-sub {
+  font-size: .72rem;
+  color: var(--tm);
+}
+.hd-queue-action {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--g);
+  white-space: nowrap;
+}
+
+.hd-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--tm);
+  font-size: .85rem;
+  background: var(--bg-soft, #f9fafb);
+  border: 1px dashed var(--bd);
+  border-radius: 8px;
+}
+.hd-empty-err {
+  color: var(--dn);
+  background: rgba(220,38,38,.05);
+  border-color: rgba(220,38,38,.3);
+}
+
+/* Quick actions strip — three pill-cards in a row, each linking to the
+   relevant admin tab. Larger touch targets than the queue rows since
+   they're the page's CTAs. */
+.hd-quickactions-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .7rem;
+}
+.hd-qa {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .85rem 1rem;
+  background: var(--bg-soft, #f9fafb);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s ease, transform .15s ease;
+}
+.hd-qa:hover {
+  background: var(--gl);
+  transform: translateY(-1px);
+}
+.hd-qa-ic {
+  font-size: 1.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c);
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+}
+.hd-qa-t { font-size: .9rem; font-weight: 700; color: var(--tx); }
+.hd-qa-s { font-size: .72rem; color: var(--tm); margin-top: .15rem; }
+
+/* Responsive: 2-col KPI grid + stacked queue cards + 2-col quick
+   actions on tablet; single column everywhere on mobile. */
+@media (max-width: 900px) {
+  .hd-kpi-grid          { grid-template-columns: repeat(2, 1fr); }
+  .hd-queue-grid        { grid-template-columns: 1fr; }
+  .hd-quickactions-row  { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 540px) {
+  .hd-kpi-grid          { grid-template-columns: 1fr 1fr; gap: .55rem; }
+  .hd-kpi-value         { font-size: 1.6rem; }
+  .hd-quickactions-row  { grid-template-columns: 1fr; }
+  .hd-welcome           { flex-direction: column; align-items: flex-start; text-align: right; }
+  .hd-welcome-emoji     { font-size: 2rem; align-self: flex-end; }
+}

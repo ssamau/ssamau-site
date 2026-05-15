@@ -130,16 +130,13 @@ function _requireAuthOrRedirect() {
                                             // doesn't reopen admin again
     return false;
   }
-  // Wrong-portal guard (Phase 4 of Branch 4). A member-tier user
-  // who manually navigates to /admin.html (typed URL, stale bookmark,
-  // shared link) gets bounced to /member.html. landingPageForAccess
-  // returns 'admin.html' for superadmin/head and 'member.html' for
-  // member/volunteer. If we're already on the right one, this is a
-  // no-op (returns the current page, the comparison below skips).
-  // Use replace() so back-button doesn't re-strand them on admin.
-  const landing = landingPageForAccess(user.access);
-  if (landing !== 'admin.html') {
-    window.location.replace(landing);
+  // Wrong-portal guard. Member-tier users (member / volunteer) who land
+  // here get bounced to /member.html. Heads are intentionally allowed —
+  // their default landing is head.html, but they still need admin.html
+  // for the full management toolset (creating events, opportunities,
+  // assignments, etc.) that head.html doesn't replicate.
+  if (user.access === 'member' || user.access === 'volunteer') {
+    window.location.replace('member.html');
     return false;
   }
   window.CURRENT_USER = user;

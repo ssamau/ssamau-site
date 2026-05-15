@@ -101,27 +101,33 @@ export function isLoggedIn() {
 }
 
 // Pick the right post-login landing page based on the access_level
-// stamped on the session profile. The 19 leadership users
-// (superadmin + head) land on admin.html where they can see the
-// full operational dashboard (members, committees, hours, etc).
-// The 98 regular members + future volunteers land on member.html
-// — their own simpler portal with their hours / opportunities /
-// profile.
+// stamped on the session profile.
+//
+//   superadmin / admin → admin.html (the full ops dashboard)
+//   head               → head.html  (committee-scoped landing)
+//   member / volunteer → member.html
+//
+// Heads have their own focused landing page since the 16-tab admin SPA
+// is overkill for what they actually do day-to-day. They can still
+// navigate to admin.html when they need the full management toolset
+// (events, opportunities, assignments) — admin/main.js's auth guard
+// allows heads in by access level, not by landingPageForAccess.
 //
 // Used in three places:
 //  1. login.js — immediately after a successful sign-in
 //  2. login.js — on page load if the user already has a session
 //     (prevents them from sitting on the login form after they
 //     hit Back from inside their portal)
-//  3. admin/main.js and member.html — as a "wrong-portal guard"
-//     so a member who manually types /admin.html in the URL bar
-//     gets bounced to member.html, and vice versa
+//  3. admin/main.js, member/main.js, head/main.js — as a "wrong-portal
+//     guard" so a member who manually types /admin.html in the URL bar
+//     gets bounced to member.html, and so on
 //
 // Defaults to admin.html when the access value is missing or
 // unrecognised — fail safe, the admin portal has its own RBAC
 // layer that hides what the user shouldn't see.
 export function landingPageForAccess(access) {
   if (access === 'member' || access === 'volunteer') return 'member.html';
+  if (access === 'head') return 'head.html';
   return 'admin.html';
 }
 
