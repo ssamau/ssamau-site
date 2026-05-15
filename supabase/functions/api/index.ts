@@ -38,6 +38,13 @@ import { opportunitiesActions } from './actions/opportunities.ts';
 import { assignmentsActions }   from './actions/assignments.ts';
 import { applicationsActions }  from './actions/applications.ts';
 import { setupActions }         from './actions/setup.ts';
+// Phase A's storage actions (member CV / photo uploaders + signed-URL
+// fetchers) + Phase B's project-photo uploader (kept in its own file
+// during parallel development to avoid this exact merge conflict).
+// Both are wired here; a follow-up consolidation can fold them into
+// one file when convenient.
+import { storageActions }        from './actions/storage.ts';
+import { projectStorageActions } from './actions/storage_project.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────
 // Frontend (ssamau.com) and the function (functions.supabase.co) are
@@ -95,6 +102,8 @@ const actions: Record<string, Handler> = {
   ...assignmentsActions,
   ...applicationsActions,
   ...setupActions,
+  ...storageActions,
+  ...projectStorageActions,
 };
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────

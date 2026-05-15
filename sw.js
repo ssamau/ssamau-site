@@ -33,7 +33,11 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-const CACHE_VERSION = 'v7-2026-05-15-advisor-hours';
+// Final bump (v9) bundles Phase A storage + Phase B events display +
+// Phase C typeahead + Phase D advisor-hours into one cache marker.
+// Every install rolling forward to this version drops everything
+// cached under v6/v7/v8 in one sweep.
+const CACHE_VERSION = 'v9-2026-05-15-post-beta-roadmap';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 

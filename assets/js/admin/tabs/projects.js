@@ -103,7 +103,71 @@ export function editProject(id) {
   sv('prj-event-mgr', p.assigned_event_manager_member_id);
   sv('prj-status', p.project_status); sv('prj-notes', p.notes);
   document.getElementById('project-modal-title').textContent = '✏️ تعديل المشروع';
+
+  // Phase B — cover photo uploader. Show the section + current photo
+  // preview, if any. Storage upload scopes to project_id, so we only
+  // surface this on edit (the row exists after first save).
+  document.getElementById('prj-photo-section').style.display = '';
+  document.getElementById('prj-photo-wrap').style.display    = '';
+  const currentEl = document.getElementById('prj-photo-current');
+  if (currentEl) {
+    currentEl.innerHTML = p.cover_photo_url
+      ? `<img src="${esc(p.cover_photo_url)}" alt="" style="max-width:220px;height:auto;border-radius:8px;border:1px solid var(--bd)"/>`
+      : '<span style="font-size:.78rem;color:var(--tm);font-style:italic">لا توجد صورة بعد</span>';
+  }
+  // Reset the picker + button so a previous unsubmitted file doesn't
+  // bleed across opens.
+  const fileEl = document.getElementById('prj-photo-file');
+  if (fileEl) fileEl.value = '';
+  const btn = document.getElementById('prj-photo-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⬆ رفع'; }
+
   openModal('project');
+}
+
+// Phase B — cover photo upload handlers (wired in admin/main.js via
+// data-action). onProjectPhotoChange enables the rفع button once a
+// file is picked; uploadProjectPhotoFromForm reads the modal state
+// (edit-id) + the file picker, posts to storage.uploadProjectPhoto,
+// then re-loads projects so the homepage + admin grid see the new URL.
+export function onProjectPhotoChange(el) {
+  const btn = document.getElementById('prj-photo-btn');
+  if (btn) btn.disabled = !el.files || !el.files[0];
+}
+
+export async function uploadProjectPhotoFromForm() {
+  const projectId = gv('prj-edit-id');
+  const fileEl    = document.getElementById('prj-photo-file');
+  const file      = fileEl?.files?.[0];
+  if (!projectId) { toast('احفظ المشروع أولاً قبل رفع الصورة.', 'twarn'); return; }
+  if (!file)      { toast('اختر صورة أولاً.', 'twarn'); return; }
+  if (file.size > 4 * 1024 * 1024) {
+    toast('الصورة أكبر من 4 ميجابايت.', 'twarn');
+    return;
+  }
+  const btn = document.getElementById('prj-photo-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الرفع...'; }
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload  = () => resolve(String(r.result || ''));
+      r.onerror = () => reject(r.error || new Error('read failed'));
+      r.readAsDataURL(file);
+    });
+    const res = await api('storage.uploadProjectPhoto', {
+      data: { project_id: projectId, filename: file.name, contentType: file.type, base64Data },
+    });
+    if (!res || !res.success) {
+      toast(res?.error || 'فشل الرفع.', 'twarn');
+      return;
+    }
+    toast('تم رفع صورة الغلاف.', 'tok');
+    // Refresh + re-open so the new image preview renders.
+    await loadProjects();
+    editProject(projectId);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬆ رفع'; }
+  }
 }
 
 // ── PROJECT DETAIL ────────────────────────────────────────────

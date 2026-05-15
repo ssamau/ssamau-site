@@ -677,6 +677,20 @@
         </div>
         <div class="fg"><label>ملاحظات</label><input id="prj-notes"/></div>
       </div>
+      <!-- Cover photo uploader (Phase B). Visible only after the
+           project has been saved at least once — we need a project_id
+           to scope the storage path. Edit flow surfaces it; create
+           flow hides it (visible after the first save reopens the
+           modal in edit mode). -->
+      <div class="form-section" id="prj-photo-section" style="display:none">صورة الغلاف</div>
+      <div class="fg" id="prj-photo-wrap" style="display:none">
+        <div id="prj-photo-current" style="margin-bottom:.5rem"></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+          <input type="file" id="prj-photo-file" accept="image/jpeg,image/png,image/webp" data-action="onProjectPhotoChange" data-event="change"/>
+          <button class="btn btn-g btn-sm" type="button" data-action="uploadProjectPhoto" id="prj-photo-btn" disabled>⬆ رفع</button>
+        </div>
+        <div class="fg-note">JPG / PNG / WebP، 4 ميجابايت كحد أقصى. تظهر في بطاقة الفعالية بالصفحة الرئيسية.</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ol" data-action="closeModal" data-modal="project">إلغاء</button>

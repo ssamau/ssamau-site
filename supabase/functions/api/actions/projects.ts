@@ -15,7 +15,13 @@ import {
 // ─── PROJECTS / EVENTS ───────────────────────────────────────────────
 const getProjects: Handler = async () => sql`
   SELECT p.*,
-    (SELECT COUNT(*) FROM participants pa WHERE pa.project_id = p.project_id) AS participant_count
+    (SELECT COUNT(*) FROM participants pa WHERE pa.project_id = p.project_id) AS participant_count,
+    -- attendee_count is the same number but exposed under a name that
+    -- matches the homepage event-card display ("X حضور"). Kept as a
+    -- separate alias so a future denormalised attendee counter (e.g.
+    -- counting Attended assignments only) can replace just this
+    -- column without touching the participants-tab listing.
+    (SELECT COUNT(*) FROM participants pa WHERE pa.project_id = p.project_id) AS attendee_count
   FROM projects p
   ORDER BY p.event_date DESC NULLS LAST, p.created_at DESC
 `;
@@ -28,14 +34,15 @@ const createProject: Handler = async (body) => {
                           event_date, start_time, end_time, location, proposal_file_url,
                           created_by_member_id, assigned_project_manager_member_id,
                           assigned_event_manager_member_id, owning_committee_id,
-                          project_status, notes)
+                          project_status, notes, cover_photo_url)
     VALUES (${id}, ${data.project_name}, ${data.project_type || 'Event'},
             ${data.project_description || null}, ${data.event_date || null},
             ${data.start_time || null}, ${data.end_time || null},
             ${data.location || null}, ${data.proposal_file_url || null},
             ${data.created_by_member_id || null}, ${data.assigned_project_manager_member_id || null},
             ${data.assigned_event_manager_member_id || null}, ${data.owning_committee_id || null},
-            ${data.project_status || 'Planned'}, ${data.notes || null})
+            ${data.project_status || 'Planned'}, ${data.notes || null},
+            ${data.cover_photo_url || null})
   `;
   return { project_id: id };
 };
@@ -62,7 +69,8 @@ const updateProject: Handler = async (body, user) => {
       assigned_event_manager_member_id   = COALESCE(${data.assigned_event_manager_member_id},   assigned_event_manager_member_id),
       owning_committee_id                = COALESCE(${data.owning_committee_id},                owning_committee_id),
       project_status                     = COALESCE(${data.project_status},                     project_status),
-      notes                              = COALESCE(${data.notes},                              notes)
+      notes                              = COALESCE(${data.notes},                              notes),
+      cover_photo_url                    = COALESCE(${data.cover_photo_url},                    cover_photo_url)
     WHERE project_id = ${id}
   `;
   return { project_id: id };
