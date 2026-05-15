@@ -951,6 +951,66 @@
   </div>
 </div>
 
+<!--
+  OPPORTUNITY NOTIFICATION MODAL — president-requested feature (2026-05-15).
+  Three modes:
+    - all     → every Active member with an email gets the announcement
+    - members → checkbox list, admin picks specific members
+    - emails  → ad-hoc email addresses (server sends one BCC email)
+  Common to all modes: optional custom message that prepends the
+  auto-generated opportunity card in the email body.
+-->
+<div class="overlay" id="ov-opp-notify">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3>📧 إشعار بفرصة تطوعية</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="opp-notify">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--gl);border-radius:10px;padding:.75rem .95rem;margin-bottom:1rem;font-size:.82rem">
+        <div style="margin-bottom:.25rem"><strong>الفرصة:</strong> <span id="oppn-role">—</span></div>
+        <div><strong>المشروع:</strong> <span id="oppn-project" style="color:var(--tl)">—</span></div>
+      </div>
+
+      <div class="fg">
+        <label style="font-weight:700;margin-bottom:.4rem">طريقة الإرسال</label>
+        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="all" data-action="toggleNotifyMode" checked/>إلى كل الأعضاء النشطين</label>
+        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="members" data-action="toggleNotifyMode"/>إلى أعضاء محددين</label>
+        <label class="fg-check"><input type="radio" name="oppn-mode" value="emails" data-action="toggleNotifyMode"/>إلى بريد إلكتروني مخصص (BCC)</label>
+      </div>
+
+      <!-- Mode: all → just a hint, no extra input -->
+      <div id="oppn-mode-all" class="fg-note" style="background:var(--gl);padding:.6rem .85rem;border-radius:6px">
+        سيُرسل الإشعار لكل عضو نشط لديه بريد مسجّل.
+      </div>
+
+      <!-- Mode: members → scrollable checkbox list -->
+      <div id="oppn-mode-members" style="display:none">
+        <div class="fg-note" style="margin-bottom:.4rem">اختر الأعضاء الذين تريد إشعارهم:</div>
+        <div id="oppn-members-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:.5rem .65rem;background:var(--bg)"></div>
+      </div>
+
+      <!-- Mode: emails → textarea for ad-hoc list -->
+      <div id="oppn-mode-emails" style="display:none">
+        <div class="fg">
+          <label>عناوين البريد الإلكتروني</label>
+          <textarea id="oppn-emails" rows="4" dir="ltr" placeholder="email1@example.com, email2@example.com" style="font-family:inherit"></textarea>
+          <div class="fg-note">افصل بين العناوين بفاصلة أو سطر جديد. سيُرسل الإشعار كرسالة واحدة بـ BCC.</div>
+        </div>
+      </div>
+
+      <div class="fg" style="margin-top:1rem">
+        <label>رسالة إضافية (اختياري)</label>
+        <textarea id="oppn-message" rows="3" placeholder="أضف ملاحظة شخصية تظهر في أعلى الرسالة..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-notify">إلغاء</button>
+      <button class="btn btn-g" data-action="sendOpportunityNotify" id="oppn-send-btn">📧 إرسال الإشعار</button>
+    </div>
+  </div>
+</div>
+
 <!-- PARTICIPANT MODAL -->
 <div class="overlay" id="ov-participant">
   <div class="modal">

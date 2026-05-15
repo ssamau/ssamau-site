@@ -59,6 +59,7 @@ import {
   populateRolePresets, onOppRolePreset,
   openOpportunityAssignments, addAssignmentMember, addAssignmentVolunteer,
   markAttendance, removeAssignment,
+  openOpportunityNotify, toggleNotifyMode, sendOpportunityNotify,
 } from './tabs/opportunities.js';
 import {
   loadAttendance, saveAttendance, toggleAttFields,
@@ -392,6 +393,10 @@ setHandlers({
   uploadProjectPhoto:          uploadProjectPhotoFromForm,
   openApplicationReview:       (el) => openApplicationReview(el.dataset.id),
   openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
+  // Phase 2 of post-beta — opportunity notification flow
+  openOpportunityNotify:       (el) => openOpportunityNotify(el),
+  toggleNotifyMode:            (el) => toggleNotifyMode(el),
+  sendOpportunityNotify:       sendOpportunityNotify,
   viewProfile:                 (el) => viewProfile(el.dataset.id),
   openAccountModalForMember:   (el) => openAccountModalForMember(el.dataset.id),
   openInviteModal:             (el) => openInviteModal(el.dataset.id),

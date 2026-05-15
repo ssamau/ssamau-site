@@ -61,6 +61,12 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;     // plain-text fallback; auto-derived from html if absent
+  // Optional BCC list — used by opportunities.notify when blasting an
+  // announcement to ad-hoc emails. Recipients in `bcc` don't see each
+  // other's addresses; `to` is required as the visible recipient
+  // (we pass SMTP_USER as a placeholder so the message is technically
+  // addressed to the sender's own inbox + delivered to everyone in BCC).
+  bcc?: string[];
 }
 
 // Unique ASCII sentinel — kept ASCII so denomailer's broken encoder
@@ -126,14 +132,18 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
   const cleanText = (opts.text ?? stripHtml(opts.html)).replace(/[ \t]+(\r?\n)/g, '$1');
 
   try {
-    await client.send({
+    const message: Record<string, unknown> = {
       from:    SMTP_FROM,
       to:      Array.isArray(opts.to) ? opts.to : [opts.to],
       subject: SUBJECT_PLACEHOLDER,
       content: cleanText,
       html:    cleanHtml,
-    });
-    console.log(`[email] sent ok: subject="${opts.subject}" to=${Array.isArray(opts.to) ? opts.to.join(',') : opts.to}`);
+    };
+    if (opts.bcc && opts.bcc.length) {
+      message.bcc = opts.bcc;
+    }
+    await client.send(message);
+    console.log(`[email] sent ok: subject="${opts.subject}" to=${Array.isArray(opts.to) ? opts.to.join(',') : opts.to}${opts.bcc?.length ? ` bcc=${opts.bcc.length}` : ''}`);
     return true;
   } catch (err) {
     // Log but don't throw — callers (like applications.submit) should

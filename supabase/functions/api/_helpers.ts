@@ -312,6 +312,10 @@ export const ADMIN_ACTIONS = new Set<string>([
   'hours.finalApprove',
   'users.create', 'users.update', 'users.delete',
   'interest.markReviewed',
+  // Opportunity announcement notifier (admin/head). Server-side scope
+  // check still gates by committee — head can only blast notifications
+  // for opportunities in their own committee.
+  'opportunities.notify',
 ]);
 
 // Dev-tier actions: callable ONLY by `superadmin`. Reserved for

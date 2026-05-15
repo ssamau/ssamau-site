@@ -71,6 +71,7 @@ export function renderOpportunities(items) {
       <td>${tag(statusLabel, STATUS_COLORS[o.status] || 't-gr')}</td>
       <td>
         <button class="btn-icon" title="إدارة المسندين" data-action="openOpportunityAssignments" data-id="${o.opportunity_id}">👥</button>
+        <button class="btn-icon" title="إشعار للأعضاء" data-action="openOpportunityNotify" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">📧</button>
         <button class="btn-icon edit" data-action="editOpportunity" data-id="${o.opportunity_id}">✏️</button>
         <button class="btn-icon del" data-action="confirmDeleteOpportunity" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">🗑️</button>
       </td>
@@ -258,3 +259,88 @@ export async function removeAssignment(assignmentId) {
   }
 }
 
+
+// ─── Opportunity announcement notifier (Phase 2 of post-beta) ────────
+// 3 modes: send to all Active members / specific members / ad-hoc BCC
+// emails. Each mode reuses the same #ov-opp-notify modal; the mode
+// radio toggles which input is visible.
+
+let _notifyContext = null;
+
+export function openOpportunityNotify(el) {
+  const opportunity_id = el.dataset.id;
+  const role           = el.dataset.role || '';
+  const opp            = (DB.opportunities || []).find(o => o.opportunity_id === opportunity_id);
+  const project        = opp ? DB.projects.find(p => p.project_id === opp.project_id) : null;
+  _notifyContext = { opportunity_id, role, project_name: project?.project_name || '' };
+
+  // Pre-fill the header info block
+  document.getElementById('oppn-role').textContent    = role || '—';
+  document.getElementById('oppn-project').textContent = project?.project_name || '—';
+
+  // Populate the per-member checkbox list with all Active members.
+  const membersList = document.getElementById('oppn-members-list');
+  if (membersList) {
+    const actives = (DB.members || []).filter(m => m.status === 'Active' && m.email);
+    membersList.innerHTML = actives.map(m =>
+      `<label class="fg-check oppn-member-row">
+        <input type="checkbox" value="${esc(m.member_id)}" data-email="${esc(m.email)}"/>
+        <span>${esc(m.preferred_name || m.full_name)} <span style="color:var(--tm);font-size:.72rem;direction:ltr">${esc(m.email)}</span></span>
+      </label>`
+    ).join('');
+  }
+
+  // Reset mode radios to 'all' + custom message + emails textarea
+  const allRadio = document.querySelector('input[name="oppn-mode"][value="all"]');
+  if (allRadio) allRadio.checked = true;
+  toggleNotifyMode();
+  const msg   = document.getElementById('oppn-message');
+  if (msg) msg.value = '';
+  const ems   = document.getElementById('oppn-emails');
+  if (ems) ems.value = '';
+
+  document.getElementById('ov-opp-notify').classList.add('open');
+}
+
+// Wired to the mode radios; shows the relevant input chunk and hides
+// the other two. Called both from openOpportunityNotify (initial state)
+// and from a change-handler in admin/main.js.
+export function toggleNotifyMode() {
+  const mode = document.querySelector('input[name="oppn-mode"]:checked')?.value || 'all';
+  document.getElementById('oppn-mode-all').style.display     = mode === 'all'     ? '' : 'none';
+  document.getElementById('oppn-mode-members').style.display = mode === 'members' ? '' : 'none';
+  document.getElementById('oppn-mode-emails').style.display  = mode === 'emails'  ? '' : 'none';
+}
+
+export async function sendOpportunityNotify() {
+  if (!_notifyContext) return;
+  const mode = document.querySelector('input[name="oppn-mode"]:checked')?.value || 'all';
+  const custom_message = (document.getElementById('oppn-message')?.value || '').trim();
+
+  const body = { opportunity_id: _notifyContext.opportunity_id, mode, custom_message };
+  if (mode === 'members') {
+    const checked = Array.from(document.querySelectorAll('#oppn-members-list input:checked'))
+                         .map(cb => cb.value);
+    if (!checked.length) { toast('اختر عضواً واحداً على الأقل', 'twarn'); return; }
+    body.recipients = checked;
+  } else if (mode === 'emails') {
+    const raw = (document.getElementById('oppn-emails')?.value || '').trim();
+    const emails = raw.split(/[\s,;\n]+/).map(s => s.trim()).filter(Boolean);
+    if (!emails.length) { toast('أدخل بريداً واحداً على الأقل', 'twarn'); return; }
+    body.recipients = emails;
+  }
+
+  const btn = document.getElementById('oppn-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
+  try {
+    const r = await api('opportunities.notify', body);
+    if (r && r.success && r.data) {
+      const { sent = 0, failed = 0, count = 0 } = r.data;
+      toast(`✅ أُرسل: ${sent} / ${count} | فشل: ${failed}`, failed === 0 ? 'tok' : 'twarn');
+      closeModal('opp-notify');
+      _notifyContext = null;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📧 إرسال الإشعار'; }
+  }
+}
