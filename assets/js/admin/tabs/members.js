@@ -18,7 +18,7 @@ import { DB, ROLE_COLORS, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson } from '../../lib/format.js';
 import {
   api, apiGet, toast, openModal, closeModal, clearForm,
-  populateMemberSelects,
+  populateMemberSelects, filterTable,
 } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
 
@@ -34,9 +34,9 @@ export async function loadMembers() {
   const data = await apiGet('getMembers');
   if (!data || !data.success) return;
   DB.members = data.data || [];
-  // تطبيق فلتر الصلاحيات
-  const filtered = RBAC.filterMembers(DB.members);
-  renderMembers(filtered);
+  // Apply RBAC + whatever filter selections are currently in the UI so
+  // a refresh doesn't blow away the user's filter selections.
+  applyMemberFilters();
   populateMemberSelects();
   RBAC.injectMyTeamBadge();
 }
@@ -121,14 +121,35 @@ export function renderMembers(members) {
   }).join('');
 }
 
-export function filterMembersByRole(role) {
-  const filtered = role ? DB.members.filter(m => m.club_role === role) : DB.members;
-  renderMembers(filtered);
+// Both filter selects + the text search must compose, not overwrite
+// each other. Reading the current value of every control from the DOM
+// (rather than tracking state in a module variable) keeps the source
+// of truth in the form itself and survives outside resets cleanly.
+function _currentMembersFilters() {
+  const role   = document.querySelector('[data-action="filterMembersByRole"]')?.value   || '';
+  const status = document.querySelector('[data-action="filterMembersByStatus"]')?.value || '';
+  const query  = document.getElementById('members-search')?.value?.trim() || '';
+  return { role, status, query };
 }
-export function filterMembersByStatus(status) {
-  const filtered = status ? DB.members.filter(m => m.status === status) : DB.members;
+
+function applyMemberFilters() {
+  const { role, status, query } = _currentMembersFilters();
+  let filtered = RBAC.filterMembers(DB.members);
+  if (role)   filtered = filtered.filter(m => m.club_role === role);
+  if (status) filtered = filtered.filter(m => m.status     === status);
   renderMembers(filtered);
+  // Re-apply the text-search query on the freshly-rendered rows. The
+  // select-driven re-render replaces tbody, which would otherwise wipe
+  // whatever filterTable() had hidden.
+  if (query) filterTable('members-tbody', query);
 }
+
+// Public-facing handlers — the dispatcher in main.js calls these with
+// `el.value`. We accept and ignore the arg (the current value comes
+// from re-reading the DOM via _currentMembersFilters) so the function
+// signature stays backwards-compatible with any direct callers.
+export function filterMembersByRole(_role)     { applyMemberFilters(); }
+export function filterMembersByStatus(_status) { applyMemberFilters(); }
 
 // Phase-A file viewer — fetches a 1h signed URL for the target member's
 // uploaded file (CV or photo) and opens it in a new tab. Admin scope is
