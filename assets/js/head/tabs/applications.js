@@ -9,14 +9,14 @@ import { api, toast } from '../../lib/ui.js';
 const STATUS_AR = {
   PendingTriage:       'بانتظار التوجيه',
   AssignedToCommittee: 'موجّه للجنتك',
-  AwaitingInterview:   'بانتظار مقابلة',
+  InterviewRequested:  'بانتظار مقابلة',
   Accepted:            'مقبول',
   Rejected:            'مرفوض',
 };
 const STATUS_CLS = {
   PendingTriage:       't-y',
   AssignedToCommittee: 't-b',
-  AwaitingInterview:   't-b',
+  InterviewRequested:  't-y',
   Accepted:            'tok',
   Rejected:            't-r',
 };
@@ -58,10 +58,18 @@ function _renderRow(a) {
   // double-escape it. Same fix for the dashboard's queue rows.
   const when = fmtDate(a.created_at) || '<span style="color:var(--tm)">—</span>';
   const statusTag = tag(STATUS_AR[a.status] || a.status || '—', STATUS_CLS[a.status] || 't-gr');
+  // Per §6 of the requirements, heads have three options on a routed
+  // application: accept directly, reject with reason, OR request an
+  // interview before deciding. The interview button is only shown when
+  // an interview hasn't already been requested — re-requesting is a
+  // no-op clutter, just go through accept/reject after the interview.
   const actions = [];
   const isPending = a.status !== 'Accepted' && a.status !== 'Rejected';
   if (isPending) {
     actions.push(`<button class="btn-icon" title="قبول" data-action="hd.apps.accept" data-id="${a.application_id}">✅</button>`);
+    if (a.status !== 'InterviewRequested') {
+      actions.push(`<button class="btn-icon" title="طلب مقابلة" data-action="hd.apps.requestInterview" data-id="${a.application_id}">💬</button>`);
+    }
     actions.push(`<button class="btn-icon" title="رفض" data-action="hd.apps.reject" data-id="${a.application_id}">❌</button>`);
   }
   return `<tr>
@@ -71,6 +79,19 @@ function _renderRow(a) {
     <td>${statusTag}</td>
     <td>${actions.join(' ') || '<span style="color:var(--tm)">—</span>'}</td>
   </tr>`;
+}
+
+export async function requestInterview(id) {
+  const note = prompt(
+    'طلب مقابلة لهذا المتقدم.\n\n' +
+    'تستطيع إضافة ملاحظة (اختياري) مثل تاريخ/مكان المقابلة أو الموضوعات المطلوب تغطيتها:',
+  );
+  if (note === null) return;   // user cancelled
+  const res = await api('applications.requestInterview', { id, note: note || undefined });
+  if (res && res.success) {
+    toast('💬 تم طلب المقابلة');
+    loadHeadApplications();
+  }
 }
 
 export async function acceptApplication(id) {

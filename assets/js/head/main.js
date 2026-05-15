@@ -24,7 +24,7 @@ import {
   loadHeadHours, primaryApproveHours, finalApproveHours, rejectHours,
 } from './tabs/hours.js';
 import {
-  loadHeadApplications, acceptApplication, rejectApplication,
+  loadHeadApplications, acceptApplication, rejectApplication, requestInterview,
 } from './tabs/applications.js';
 
 
@@ -124,6 +124,7 @@ document.addEventListener('click', (e) => {
     case 'hd.hours.finalApprove':    finalApproveHours(el.dataset.id); break;
     case 'hd.hours.reject':          rejectHours(el.dataset.id); break;
     case 'hd.apps.accept':           acceptApplication(el.dataset.id); break;
+    case 'hd.apps.requestInterview': requestInterview(el.dataset.id); break;
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
     case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
     case 'hd.opps.create':           createOpportunity(); break;
