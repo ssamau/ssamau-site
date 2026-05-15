@@ -19,6 +19,7 @@
 import { api } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
+import { t } from '../../lib/i18n.js';
 
 // Set of project_ids the member has already expressed interest in.
 // Populated FROM SERVER on every load via `interest.listOwn` so the
@@ -31,7 +32,7 @@ const _interestedProjects = new Set();
 export async function loadOpportunities() {
   const tbody = document.getElementById('opps-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr>';
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
   // Two parallel fetches: opportunities + own interest history. Both are
   // small queries; loading them together avoids a waterfall.
@@ -40,7 +41,7 @@ export async function loadOpportunities() {
     api('interest.listOwn'),
   ]);
   if (!oppsRes || !oppsRes.success) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6" style="color:var(--dn)">تعذّر التحميل</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--dn)">${esc(t('mp.opps.err_load'))}</td></tr>`;
     return;
   }
 
@@ -68,19 +69,23 @@ export async function loadOpportunities() {
   });
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6" style="color:var(--tm)">لا توجد فرص مفتوحة حالياً تناسبك</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--tm)">${esc(t('mp.opps.empty'))}</td></tr>`;
     return;
   }
 
+  const committeeOpenLabel = `<span style="color:var(--tm)">${esc(t('mp.opps.committee_all'))}</span>`;
+  const hoursUnit          = esc(t('mp.hours.hours_unit'));
+  const expressedLabel     = esc(t('mp.opps.expressed_badge'));
+  const expressLabel       = esc(t('mp.opps.express_btn'));
   tbody.innerHTML = rows.map(o => {
     const expressed = _interestedProjects.has(o.project_id);
     return `
       <tr>
         <td><strong>${esc(o.role_name) || '—'}</strong></td>
         <td>${esc(o.project_name) || '—'}</td>
-        <td>${esc(o.owning_committee_name) || '<span style="color:var(--tm)">للجميع</span>'}</td>
+        <td>${esc(o.owning_committee_name) || committeeOpenLabel}</td>
         <td>${fmtDate(o.event_date) || '—'}</td>
-        <td>${o.estimated_hours || 0} ساعة</td>
+        <td>${o.estimated_hours || 0} ${hoursUnit}</td>
         <td>
           <button class="btn btn-g btn-sm btn-interest ${expressed ? 'expressed' : ''}"
                   data-action="expressInterest"
@@ -88,7 +93,7 @@ export async function loadOpportunities() {
                   data-project="${esc(o.project_id)}"
                   data-label="${esc(o.role_name)}"
                   ${expressed ? 'disabled' : ''}>
-            ${expressed ? '✓ مُسجّل' : '🙋 اهتمام'}
+            ${expressed ? expressedLabel : expressLabel}
           </button>
         </td>
       </tr>
@@ -113,35 +118,35 @@ export async function expressInterest(_opportunityId, _label, el) {
   const session = getSession();
   if (!session?.member_id) {
     const { toast } = await import('../../lib/ui.js');
-    toast('يجب تسجيل الدخول كعضو لإبداء الاهتمام.', 'twarn');
+    toast(t('mp.opps.err_no_session'), 'twarn');
     return;
   }
 
   btn.disabled = true;
-  btn.textContent = 'جاري التسجيل...';
+  btn.textContent = t('mp.opps.registering');
   try {
     const res = await api('interest.submit', {
       data: {
         project_id: projectId,
         member_id:  session.member_id,
         interested: true,
-        comment:    `مهتم بدور: ${label}`,
+        comment:    `${t('mp.opps.interest_role_prefix')} ${label}`,
       },
     });
     const { toast } = await import('../../lib/ui.js');
     if (!res || !res.success) {
-      toast(res?.error || 'فشل تسجيل الاهتمام.', 'twarn');
+      toast(res?.error || t('mp.opps.err_submit'), 'twarn');
       btn.disabled = false;
-      btn.textContent = '🙋 اهتمام';
+      btn.textContent = t('mp.opps.express_btn');
       return;
     }
     _interestedProjects.add(projectId);
-    toast('تم تسجيل اهتمامك. سيتواصل معك رئيس اللجنة.', 'tok');
+    toast(t('mp.opps.success'), 'tok');
     btn.classList.add('expressed');
-    btn.textContent = '✓ مُسجّل';
+    btn.textContent = t('mp.opps.expressed_badge');
   } catch (err) {
     console.error('[expressInterest]', err);
     btn.disabled = false;
-    btn.textContent = '🙋 اهتمام';
+    btn.textContent = t('mp.opps.express_btn');
   }
 }

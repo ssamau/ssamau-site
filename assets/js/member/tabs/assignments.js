@@ -12,12 +12,16 @@
 
 import { api, toast } from '../../lib/ui.js';
 import { esc, fmtDate, gv, sv } from '../../lib/format.js';
+import { t } from '../../lib/i18n.js';
 
-const ATTENDANCE_LABEL_AR = {
-  Pending:  'قيد الانتظار',
-  Attended: 'حضرت',
-  Absent:   'غبت',
-  Excused:  'معذور',
+// Attendance enum → translation key. Values are the canonical English
+// strings stored on assignments.attendance_status; t() resolves the
+// language-specific label at render time.
+const ATTENDANCE_KEY = {
+  Pending:  'mp.asn.att_pending',
+  Attended: 'mp.asn.att_attended',
+  Absent:   'mp.asn.att_absent',
+  Excused:  'mp.asn.att_excused',
 };
 
 // Set of assignment_ids the member has ALREADY logged hours for (any
@@ -32,18 +36,17 @@ export async function loadAssignments() {
   const upBody = document.getElementById('assignments-upcoming-tbody');
   const paBody = document.getElementById('assignments-past-tbody');
   if (!upBody || !paBody) return;
-  upBody.innerHTML = '<tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr>';
+  upBody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
   paBody.innerHTML = '<tr class="empty-row"><td colspan="6">—</td></tr>';
 
   // Two fetches in parallel: assignments + own hours. The hours fetch
-  // is what tells us which assignments are already logged. Both are
-  // small queries scoped to one member.
+  // tells us which assignments are already logged.
   const [assignmentsRes, hoursRes] = await Promise.all([
     api('assignments.listOwn'),
     api('hours.listOwn'),
   ]);
   if (!assignmentsRes || !assignmentsRes.success) {
-    upBody.innerHTML = '<tr class="empty-row"><td colspan="6" style="color:var(--dn)">تعذّر التحميل</td></tr>';
+    upBody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--dn)">${esc(t('mp.asn.err_load'))}</td></tr>`;
     paBody.innerHTML = '<tr class="empty-row"><td colspan="6">—</td></tr>';
     return;
   }
@@ -76,21 +79,24 @@ export async function loadAssignments() {
 
   upBody.innerHTML = upcoming.length
     ? upcoming.map(renderRow).join('')
-    : '<tr class="empty-row"><td colspan="6" style="color:var(--tm)">لا توجد مهام قادمة</td></tr>';
+    : `<tr class="empty-row"><td colspan="6" style="color:var(--tm)">${esc(t('mp.asn.empty_upcoming'))}</td></tr>`;
 
   paBody.innerHTML = past.length
     ? past.map(renderRow).join('')
-    : '<tr class="empty-row"><td colspan="6" style="color:var(--tm)">لا توجد مهام سابقة</td></tr>';
+    : `<tr class="empty-row"><td colspan="6" style="color:var(--tm)">${esc(t('mp.asn.empty_past'))}</td></tr>`;
 }
 
 function renderRow(a) {
+  const attLabel = ATTENDANCE_KEY[a.attendance_status]
+    ? t(ATTENDANCE_KEY[a.attendance_status])
+    : (a.attendance_status || '');
   return `
     <tr>
       <td><strong>${esc(a.role_name) || '—'}</strong></td>
       <td>${esc(a.project_name) || '—'}</td>
       <td>${fmtDate(a.event_date) || '—'}</td>
       <td>${esc(a.location) || '—'}</td>
-      <td>${ATTENDANCE_LABEL_AR[a.attendance_status] || esc(a.attendance_status) || '—'}</td>
+      <td>${esc(attLabel) || '—'}</td>
       <td>${renderHoursCell(a)}</td>
     </tr>
   `;
@@ -106,12 +112,8 @@ function renderHoursCell(a) {
     return '<span style="color:var(--tm)">—</span>';
   }
   if (_hoursLogged.has(a.assignment_id)) {
-    return '<span class="hs-badge hs-finalapproved">✓ مسجَّلة</span>';
+    return `<span class="hs-badge hs-finalapproved">${esc(t('mp.asn.recorded_badge'))}</span>`;
   }
-  // Encode the assignment_id + role + estimated_hours into data-*
-  // attrs so the dispatcher can pop the modal without an array index
-  // lookup. JSON.stringify would also work but data-* keys are
-  // cheaper to read.
   return `
     <button class="btn btn-g btn-sm"
             data-action="openLogHours"
@@ -120,7 +122,7 @@ function renderHoursCell(a) {
             data-project="${esc(a.project_name || '')}"
             data-estimated="${a.estimated_hours || 0}"
             style="font-size:.72rem;padding:.3rem .7rem">
-      📝 سجّل
+      ${esc(t('mp.asn.log_btn'))}
     </button>
   `;
 }
@@ -151,7 +153,7 @@ export function openLogHoursModal(assignmentId, role, project, estimated) {
   sv('logh-after',  0);
   sv('logh-notes',  '');
   const btn = document.getElementById('logh-submit-btn');
-  if (btn) { btn.disabled = false; btn.textContent = 'إرسال للموافقة'; }
+  if (btn) { btn.disabled = false; btn.textContent = t('mp.logh.submit'); }
   document.getElementById('ov-log-hours').classList.add('open');
 }
 
@@ -166,11 +168,11 @@ export async function submitLogHours() {
   const during = parseFloat(gv('logh-during')) || 0;
   const after  = parseFloat(gv('logh-after'))  || 0;
   if (before + during + after <= 0) {
-    toast('أدخل ساعات أكبر من صفر.', 'twarn');
+    toast(t('mp.logh.err_zero'), 'twarn');
     return;
   }
   const btn = document.getElementById('logh-submit-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('mp.logh.submitting'); }
   try {
     const res = await api('hours.recordOwn', {
       data: {
@@ -182,18 +184,16 @@ export async function submitLogHours() {
       },
     });
     if (!res || !res.success) {
-      toast(res?.error || 'فشل التسجيل.', 'twarn');
-      if (btn) { btn.disabled = false; btn.textContent = 'إرسال للموافقة'; }
+      toast(res?.error || t('mp.logh.err_submit'), 'twarn');
+      if (btn) { btn.disabled = false; btn.textContent = t('mp.logh.submit'); }
       return;
     }
-    toast('تم إرسال ساعاتك. ستظهر في تبويب الساعات بانتظار موافقة رئيس اللجنة.', 'tok');
+    toast(t('mp.logh.success'), 'tok');
     closeLogHoursModal();
-    // Mark logged in-memory + refresh the rendered tables so the
-    // button flips to "✓ مسجَّلة" without a full reload.
     _hoursLogged.add(_activeLogContext?.assignment_id);
     await loadAssignments();
   } catch (err) {
     console.error('[submitLogHours]', err);
-    if (btn) { btn.disabled = false; btn.textContent = 'إرسال للموافقة'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('mp.logh.submit'); }
   }
 }

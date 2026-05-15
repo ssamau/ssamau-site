@@ -18,6 +18,12 @@
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 applyStoredTheme();
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n
+// to the sidebar + topbar markup. On language change we re-fire the
+// active page's loader so JS-generated rows in the tabs re-render with
+// the new language's labels (status badges, empty-state copy, etc.).
+import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
+
 import {
   getSession, clearSession, isLoggedIn, signOut, landingPageForAccess,
 } from '../lib/auth.js';
@@ -72,7 +78,7 @@ _requireMemberAuthOrRedirect();
 window.addEventListener('pageshow', _requireMemberAuthOrRedirect);
 
 async function logout() {
-  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  if (!confirm(t('common.confirm_logout'))) return;
   // signOut() handles both auth paths: Supabase users get their refresh
   // token revoked; legacy users have their local state cleared. clearSession
   // runs at the end either way.
@@ -119,6 +125,31 @@ function _syncThemeButtons() {
 }
 window.addEventListener('ssam-theme-changed', _syncThemeButtons);
 _syncThemeButtons();
+
+// ── Language toggle wiring ──────────────────────────────────────────
+// Pills sit in the sidebar between the nav and the theme row. Active
+// state mirrors the theme-button pattern; flip the lang AND re-fire
+// the current tab's loader so JS-generated content re-renders.
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(() => {
+  _syncLangButtons();
+  // Re-fire the active tab's loader so dynamic rows (status badges,
+  // empty-state copy, action buttons) re-render in the new language.
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const page = active.id.replace('page-', '');
+  const loader = loaderMap[page];
+  if (loader) loader();
+});
+_syncLangButtons();
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSidebar();

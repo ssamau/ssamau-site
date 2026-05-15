@@ -34,7 +34,7 @@
     <div class="sb-logo">🌿</div>
     <div class="sb-brand-text">
       <div class="t1">SSAM</div>
-      <div class="t2">لوحة العضو</div>
+      <div class="t2" data-i18n="mp.sb.brand_sub">لوحة العضو</div>
     </div>
   </div>
   <div class="sb-user">
@@ -45,29 +45,36 @@
     </div>
   </div>
   <nav class="sb-nav">
-    <div class="sb-section">لوحة العضو</div>
+    <div class="sb-section" data-i18n="mp.sb.section">لوحة العضو</div>
     <div class="sb-item active" data-page="profile" data-action="showPage">
-      <span class="sb-ic">👤</span>ملفي الشخصي
+      <span class="sb-ic">👤</span><span data-i18n="mp.sb.profile">ملفي الشخصي</span>
     </div>
     <div class="sb-item" data-page="hours" data-action="showPage">
-      <span class="sb-ic">⏱️</span>ساعاتي التطوعية
+      <span class="sb-ic">⏱️</span><span data-i18n="mp.sb.hours">ساعاتي التطوعية</span>
     </div>
     <div class="sb-item" data-page="opportunities" data-action="showPage">
-      <span class="sb-ic">🎯</span>الفرص التطوعية
+      <span class="sb-ic">🎯</span><span data-i18n="mp.sb.opportunities">الفرص التطوعية</span>
     </div>
     <div class="sb-item" data-page="assignments" data-action="showPage">
-      <span class="sb-ic">📋</span>مهامي
+      <span class="sb-ic">📋</span><span data-i18n="mp.sb.assignments">مهامي</span>
     </div>
   </nav>
 
-  <!-- Same three-way theme toggle as admin.html. Lives at the bottom
-       so it's reachable from every tab without taking nav space. -->
+  <!-- Language toggle — two pills matching the auth pages' pattern.
+       Placed above the theme row so it's the first toggle the user
+       hits. Wired by main.js: data-action="setLang" buttons. -->
+  <div class="lang-toggle" role="radiogroup" data-i18n-aria-label="lang.label" aria-label="اللغة">
+    <button type="button" class="lang-btn" data-action="setLang" data-value="ar" data-i18n="lang.arabic">العربية</button>
+    <button type="button" class="lang-btn" data-action="setLang" data-value="en" data-i18n="lang.english">English</button>
+  </div>
+
+  <!-- Same three-way theme toggle as admin.html. -->
   <div class="sb-theme">
-    <div class="sb-theme-label">المظهر</div>
-    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
-      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
-      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
-      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    <div class="sb-theme-label" data-i18n="mp.sb.theme_label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" data-i18n-aria-label="mp.sb.theme_label" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" data-i18n="mp.sb.theme_auto" data-i18n-title="mp.sb.theme_auto_title" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" data-i18n-title="mp.sb.theme_light_title" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" data-i18n-title="mp.sb.theme_dark_title" title="داكن">🌙</button>
     </div>
   </div>
 </aside>
@@ -76,13 +83,13 @@
 
 <div class="main">
   <header class="topbar">
-    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
-    <span class="topbar-title" id="page-title">ملفي الشخصي</span>
+    <button class="sb-toggle" id="sb-toggle" type="button" data-i18n-aria-label="mp.topbar.menu_label" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <span class="topbar-title" id="page-title" data-i18n="mp.title.profile">ملفي الشخصي</span>
     <div class="topbar-right">
-      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <button class="btn btn-ol btn-sm" data-action="logout" data-i18n="mp.topbar.logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
       <div class="api-status pending" id="api-status">
         <div class="api-dot"></div>
-        <span id="api-status-text">غير متصل</span>
+        <span id="api-status-text" data-i18n="mp.topbar.api_disconnected">غير متصل</span>
       </div>
     </div>
   </header>
@@ -92,22 +99,20 @@
     <div class="page active" id="page-profile">
       <div class="card">
         <div class="card-head">
-          <h3>👤 ملفي الشخصي</h3>
+          <h3 data-i18n="mp.profile.card_title">👤 ملفي الشخصي</h3>
           <div class="card-head-right">
-            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn" data-i18n="mp.profile.save_btn">💾 حفظ التعديلات</button>
           </div>
         </div>
         <div class="card-body" id="profile-form-wrap">
-          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+          <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
         </div>
       </div>
 
-      <!-- Contact directory — presidency + own committee head/vice.
-           Carried over from the placeholder member.html (Phase 4) so
-           members keep the directory after the SPA lands. -->
+      <!-- Contact directory — presidency + own committee head/vice. -->
       <div class="card" id="contact-card" style="display:none">
         <div class="card-head">
-          <h3>📞 للتواصل</h3>
+          <h3 data-i18n="mp.profile.contact_card_title">📞 للتواصل</h3>
         </div>
         <div class="card-body" id="contact-cards" style="display:flex;flex-direction:column;gap:.55rem"></div>
       </div>
@@ -117,23 +122,27 @@
     <div class="page" id="page-hours">
       <div class="card">
         <div class="card-head">
-          <h3>⏱️ ساعاتي التطوعية</h3>
+          <h3 data-i18n="mp.hours.card_title">⏱️ ساعاتي التطوعية</h3>
           <div class="card-head-right">
-            <span class="stat-pill" id="hours-total-pill">المجموع المعتمد: <strong>0</strong> ساعة</span>
+            <span class="stat-pill" id="hours-total-pill">
+              <span data-i18n="mp.hours.total_label">المجموع المعتمد:</span>
+              <strong>0</strong>
+              <span data-i18n="mp.hours.hours_unit">ساعة</span>
+            </span>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>المشروع/الفعالية</th>
-                <th>الدور</th>
-                <th>التاريخ</th>
-                <th>الساعات</th>
-                <th>الحالة</th>
+                <th data-i18n="mp.hours.col_project">المشروع/الفعالية</th>
+                <th data-i18n="mp.hours.col_role">الدور</th>
+                <th data-i18n="mp.hours.col_date">التاريخ</th>
+                <th data-i18n="mp.hours.col_hours">الساعات</th>
+                <th data-i18n="mp.hours.col_status">الحالة</th>
               </tr>
             </thead>
-            <tbody id="hours-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="hours-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -143,12 +152,12 @@
     <div class="page" id="page-opportunities">
       <div class="card">
         <div class="card-head">
-          <h3>🎯 الفرص التطوعية المتاحة</h3>
+          <h3 data-i18n="mp.opps.card_title">🎯 الفرص التطوعية المتاحة</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث بالاسم..." data-action="filterTable" data-target="opps-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="mp.opps.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="opps-tbody" data-event="input"/>
           </div>
         </div>
-        <p style="font-size:.78rem;color:var(--tl);margin:0 0 .8rem 0">
+        <p style="font-size:.78rem;color:var(--tl);margin:0 0 .8rem 0" data-i18n="mp.opps.lead">
           الفرص الخاصة بلجنتك والفرص المفتوحة للجميع. اضغط "اهتمام" لتسجيل اهتمامك،
           وسيتواصل معك رئيس اللجنة لتأكيد المشاركة.
         </p>
@@ -156,15 +165,15 @@
           <table>
             <thead>
               <tr>
-                <th>الفرصة</th>
-                <th>المشروع</th>
-                <th>اللجنة</th>
-                <th>التاريخ</th>
-                <th>الساعات التقديرية</th>
-                <th>إجراء</th>
+                <th data-i18n="mp.opps.col_opportunity">الفرصة</th>
+                <th data-i18n="mp.opps.col_project">المشروع</th>
+                <th data-i18n="mp.opps.col_committee">اللجنة</th>
+                <th data-i18n="mp.opps.col_date">التاريخ</th>
+                <th data-i18n="mp.opps.col_estimated">الساعات التقديرية</th>
+                <th data-i18n="mp.opps.col_action">إجراء</th>
               </tr>
             </thead>
-            <tbody id="opps-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+            <tbody id="opps-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -174,39 +183,39 @@
     <div class="page" id="page-assignments">
       <div class="card">
         <div class="card-head">
-          <h3>📋 مهامي القادمة</h3>
+          <h3 data-i18n="mp.asn.upcoming_title">📋 مهامي القادمة</h3>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>الفرصة</th>
-                <th>المشروع</th>
-                <th>التاريخ</th>
-                <th>الموقع</th>
-                <th>حضوري</th>
-                <th>الساعات</th>
+                <th data-i18n="mp.asn.col_opportunity">الفرصة</th>
+                <th data-i18n="mp.asn.col_project">المشروع</th>
+                <th data-i18n="mp.asn.col_date">التاريخ</th>
+                <th data-i18n="mp.asn.col_location">الموقع</th>
+                <th data-i18n="mp.asn.col_attendance">حضوري</th>
+                <th data-i18n="mp.asn.col_hours">الساعات</th>
               </tr>
             </thead>
-            <tbody id="assignments-upcoming-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+            <tbody id="assignments-upcoming-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
 
       <div class="card" style="margin-top:1rem">
         <div class="card-head">
-          <h3>📜 مهامي السابقة</h3>
+          <h3 data-i18n="mp.asn.past_title">📜 مهامي السابقة</h3>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>الفرصة</th>
-                <th>المشروع</th>
-                <th>التاريخ</th>
-                <th>الموقع</th>
-                <th>حضوري</th>
-                <th>الساعات</th>
+                <th data-i18n="mp.asn.col_opportunity">الفرصة</th>
+                <th data-i18n="mp.asn.col_project">المشروع</th>
+                <th data-i18n="mp.asn.col_date">التاريخ</th>
+                <th data-i18n="mp.asn.col_location">الموقع</th>
+                <th data-i18n="mp.asn.col_attendance">حضوري</th>
+                <th data-i18n="mp.asn.col_hours">الساعات</th>
               </tr>
             </thead>
             <tbody id="assignments-past-tbody"><tr class="empty-row"><td colspan="6">—</td></tr></tbody>
@@ -232,45 +241,41 @@
 <div class="overlay" id="ov-log-hours" role="dialog" aria-modal="true" aria-labelledby="logh-title">
   <div class="modal modal-sm">
     <div class="modal-head">
-      <h3 id="logh-title">⏱️ تسجيل ساعات</h3>
-      <button class="modal-close" type="button" data-action="closeLogHoursModal" aria-label="إغلاق">✕</button>
+      <h3 id="logh-title" data-i18n="mp.logh.title">⏱️ تسجيل ساعات</h3>
+      <button class="modal-close" type="button" data-action="closeLogHoursModal" data-i18n-aria-label="mp.logh.close" aria-label="إغلاق">✕</button>
     </div>
     <div class="modal-body">
-      <!-- Read-only header strip naming what they're logging hours for.
-           Filled by openLogHoursModal() before .open is set. -->
       <p style="font-size:.78rem;color:var(--tl);margin:0 0 1rem 0">
         <strong id="logh-role">—</strong> · <span id="logh-project" style="color:var(--tm)">—</span>
       </p>
 
       <div class="fg">
-        <label for="logh-before">ساعات قبل الفعالية</label>
+        <label for="logh-before" data-i18n="mp.logh.before_label">ساعات قبل الفعالية</label>
         <input id="logh-before" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
       </div>
       <div class="fg">
-        <label for="logh-during">ساعات خلال الفعالية</label>
+        <label for="logh-during" data-i18n="mp.logh.during_label">ساعات خلال الفعالية</label>
         <input id="logh-during" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
         <div class="fg-note" id="logh-est-note" style="display:none">
-          الساعات التقديرية للدور: <strong id="logh-est"></strong>
+          <span data-i18n="mp.logh.est_hint">الساعات التقديرية للدور:</span> <strong id="logh-est"></strong>
         </div>
       </div>
       <div class="fg">
-        <label for="logh-after">ساعات بعد الفعالية</label>
+        <label for="logh-after" data-i18n="mp.logh.after_label">ساعات بعد الفعالية</label>
         <input id="logh-after" type="number" min="0" step="0.25" value="0" inputmode="decimal"/>
       </div>
       <div class="fg">
-        <label for="logh-notes">ملاحظات (اختياري)</label>
-        <textarea id="logh-notes" rows="2" placeholder="أي تفاصيل إضافية..."></textarea>
+        <label for="logh-notes" data-i18n="mp.logh.notes_label">ملاحظات (اختياري)</label>
+        <textarea id="logh-notes" rows="2" data-i18n-placeholder="mp.logh.notes_placeholder" placeholder="أي تفاصيل إضافية..."></textarea>
       </div>
 
-      <p style="font-size:.72rem;color:var(--tm);margin:.8rem 0 1rem 0;line-height:1.6">
-        ⓘ سيتم تسجيل ساعاتك كـ <strong>مسوّدة</strong>. تمر على رئيس
-        لجنتك للموافقة الأولية، ثم الإدارة للموافقة النهائية. لا يمكن
-        التعديل بعد الإرسال — تواصل مع رئيس اللجنة لأي تصحيح.
+      <p style="font-size:.72rem;color:var(--tm);margin:.8rem 0 1rem 0;line-height:1.6" data-i18n="mp.logh.disclaimer">
+        ⓘ سيتم تسجيل ساعاتك كـ مسوّدة. تمر على رئيس لجنتك للموافقة الأولية، ثم الإدارة للموافقة النهائية. لا يمكن التعديل بعد الإرسال — تواصل مع رئيس اللجنة لأي تصحيح.
       </p>
 
       <div style="display:flex;gap:.6rem;justify-content:flex-end">
-        <button class="btn btn-ol btn-sm" type="button" data-action="closeLogHoursModal">إلغاء</button>
-        <button class="btn btn-g btn-sm" type="button" data-action="submitLogHours" id="logh-submit-btn">إرسال للموافقة</button>
+        <button class="btn btn-ol btn-sm" type="button" data-action="closeLogHoursModal" data-i18n="mp.logh.cancel">إلغاء</button>
+        <button class="btn btn-g btn-sm" type="button" data-action="submitLogHours" id="logh-submit-btn" data-i18n="mp.logh.submit">إرسال للموافقة</button>
       </div>
     </div>
   </div>

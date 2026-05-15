@@ -10,11 +10,15 @@
 // Loaders are injected by main.js via setLoaders() — see comment in the
 // admin router for why (cycle avoidance).
 
+// Page-title lookup — values are i18n KEYS (resolved at call time via
+// t() inside showPage), not literal strings. This way switching language
+// re-renders the title on the next nav without a per-page tweak.
+import { t } from '../lib/i18n.js';
 export const PAGE_TITLES = {
-  profile:       'ملفي الشخصي',
-  hours:         'ساعاتي التطوعية',
-  opportunities: 'الفرص التطوعية',
-  assignments:   'مهامي',
+  profile:       'mp.title.profile',
+  hours:         'mp.title.hours',
+  opportunities: 'mp.title.opportunities',
+  assignments:   'mp.title.assignments',
 };
 
 // Loader dispatch — filled in by main.js after every tab module has been
@@ -73,7 +77,7 @@ export function showPage(page) {
   const si = document.querySelector(`[data-page="${page}"]`);
   if (si) si.classList.add('active');
   const titleEl = document.getElementById('page-title');
-  if (titleEl) titleEl.textContent = PAGE_TITLES[page] || page;
+  if (titleEl) titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
 
   if (_loaders[page]) _loaders[page]();
 

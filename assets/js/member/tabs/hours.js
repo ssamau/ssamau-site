@@ -7,12 +7,15 @@
 
 import { api } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
+import { t } from '../../lib/i18n.js';
 
-const STATUS_LABEL_AR = {
-  Draft:           'مسوّدة',
-  PrimaryApproved: 'موافقة أولية',
-  FinalApproved:   'معتمدة نهائيًا',
-  Rejected:        'مرفوضة',
+// Status labels resolved through t() — translation key per enum value.
+// Same data flowing as before; only the lookup path changes.
+const STATUS_KEY = {
+  Draft:           'mp.hours.status_draft',
+  PrimaryApproved: 'mp.hours.status_primary',
+  FinalApproved:   'mp.hours.status_final',
+  Rejected:        'mp.hours.status_rejected',
 };
 const STATUS_CLASS = {
   Draft:           'hs-draft',
@@ -25,34 +28,41 @@ export async function loadHours() {
   const tbody = document.getElementById('hours-tbody');
   const pill  = document.getElementById('hours-total-pill');
   if (!tbody) return;
-  tbody.innerHTML = '<tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr>';
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('common.loading'))}</td></tr>`;
 
   const res = await api('hours.listOwn');
   if (!res || !res.success) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5" style="color:var(--dn)">تعذّر التحميل</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--dn)">${esc(t('mp.hours.err_load'))}</td></tr>`;
     return;
   }
   const rows = res.data || [];
 
-  // FinalApproved-only sum mirrors what the server stores in
-  // members.total_hours via recomputeMemberTotalHours().
+  // FinalApproved-only sum mirrors members.total_hours computed
+  // server-side. Pill HTML stays identical in shape so styles match.
   const finalApprovedTotal = rows
     .filter(r => r.approval_status === 'FinalApproved')
     .reduce((s, r) => s + (parseFloat(r.total_hours) || 0), 0);
-  if (pill) pill.innerHTML = `المجموع المعتمد: <strong>${finalApprovedTotal.toFixed(1)}</strong> ساعة`;
+  if (pill) {
+    pill.innerHTML = `${esc(t('mp.hours.total_label'))} <strong>${finalApprovedTotal.toFixed(1)}</strong> ${esc(t('mp.hours.hours_unit'))}`;
+  }
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5" style="color:var(--tm)">لا توجد ساعات مسجّلة بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--tm)">${esc(t('mp.hours.empty'))}</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = rows.map(r => `
+  tbody.innerHTML = rows.map(r => {
+    const statusLabel = STATUS_KEY[r.approval_status]
+      ? t(STATUS_KEY[r.approval_status])
+      : (r.approval_status || '');
+    return `
     <tr>
       <td>${esc(r.project_name) || r.project_id || '—'}</td>
       <td>${esc(r.opportunity_role_name) || '—'}</td>
       <td>${fmtDate(r.event_date || r.recorded_at) || '—'}</td>
       <td><strong>${r.total_hours || 0}</strong></td>
-      <td><span class="hs-badge ${STATUS_CLASS[r.approval_status] || ''}">${STATUS_LABEL_AR[r.approval_status] || esc(r.approval_status)}</span></td>
+      <td><span class="hs-badge ${STATUS_CLASS[r.approval_status] || ''}">${esc(statusLabel)}</span></td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }

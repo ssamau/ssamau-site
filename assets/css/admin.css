@@ -632,3 +632,33 @@ tr:hover td { background:var(--bg-soft); }
 .seed-txt{font-size:.78rem;color:var(--wn);font-weight:600;}
 @media(max-width:880px){.proj-kpis{grid-template-columns:1fr 1fr;}.sum-row{grid-template-columns:1fr 1fr;}}
 
+
+/* ── Language toggle (member / head / admin sidebars) ─────────────────
+   Same two-pill pattern as the auth pages' .lang-toggle, scaled for the
+   compact sidebar context. Sits between the sb-nav and the sb-theme row
+   (added in Phase 3 of the i18n rollout). */
+.lang-toggle {
+  display: flex;
+  gap: .3rem;
+  justify-content: center;
+  padding: .5rem .75rem;
+  margin: .25rem 0;
+}
+.lang-btn {
+  font-family: inherit;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--bg-soft);
+  color: var(--tm);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.lang-btn:hover { color: var(--g); border-color: var(--g); }
+.lang-btn.active {
+  background: var(--g);
+  color: #fff;
+  border-color: var(--g);
+}
