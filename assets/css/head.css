@@ -44,7 +44,7 @@
   margin-bottom: 1.2rem;
 }
 .hd-kpi-card {
-  background: var(--c);
+  background: var(--sf);
   border: 1px solid var(--bd);
   border-radius: 12px;
   padding: 1rem 1rem .85rem;
@@ -171,7 +171,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--c);
+  background: var(--sf);
   border-radius: 8px;
   border: 1px solid var(--bd);
 }
@@ -228,7 +228,7 @@
   padding: .5rem .7rem;
   border: 1px solid var(--bd);
   border-radius: 6px;
-  background: var(--c);
+  background: var(--sf);
   color: var(--tx);
 }
 .hd-form-field input:focus,

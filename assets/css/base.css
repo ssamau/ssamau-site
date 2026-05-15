@@ -19,7 +19,8 @@
 
   /* Surfaces & text — light defaults */
   --bg:  #f4f6f4;   /* page background */
-  --sf:  #ffffff;   /* cards, modals, sidebar */
+  --sf:       #ffffff;   /* cards, modals, sidebar */
+  --bg-soft:  #f9fafb;   /* elevated inner panels within a card (KPI tile, table-header strip, hover-row) */
   --tx:  #111827;   /* primary text */
   --tl:  #4b5563;   /* secondary text */
   --tm:  #9ca3af;   /* muted text */
@@ -61,8 +62,9 @@
  * to know about the theme. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --bg:  #0f1410;   /* page bg — dark green-tinted black */
-    --sf:  #1a2018;   /* cards, modals */
+    --bg:       #0f1410;   /* page bg — dark green-tinted black */
+    --sf:       #1a2018;   /* cards, modals */
+    --bg-soft:  #151b16;   /* elevated surface — slightly above --bg, below --sf */
     --tx:  #e5e7eb;   /* primary text */
     --tl:  #9ca3af;   /* secondary text */
     --tm:  #6b7280;   /* muted text */
@@ -86,9 +88,10 @@
 
 /* Explicit "dark" override — applies regardless of OS preference. */
 :root[data-theme="dark"] {
-  --bg:  #0f1410;
-  --sf:  #1a2018;
-  --tx:  #e5e7eb;
+  --bg:       #0f1410;
+  --sf:       #1a2018;
+  --bg-soft:  #151b16;
+  --tx:       #e5e7eb;
   --tl:  #9ca3af;
   --tm:  #6b7280;
   --bd:  #2a312c;

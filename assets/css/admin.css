@@ -134,10 +134,10 @@
 /* Table */
 .table-wrap { overflow-x:auto; }
 table { width:100%; border-collapse:collapse; }
-th { background:#f8faf8; font-size:.7rem; font-weight:700; color:var(--tl); padding:.55rem 1rem; text-align:right; border-bottom:1px solid var(--bd); white-space:nowrap; }
-td { padding:.7rem 1rem; border-bottom:1px solid #f0f0f0; font-size:.82rem; vertical-align:middle; }
+th { background:var(--bg-soft); font-size:.7rem; font-weight:700; color:var(--tl); padding:.55rem 1rem; text-align:right; border-bottom:1px solid var(--bd); white-space:nowrap; }
+td { padding:.7rem 1rem; border-bottom:1px solid var(--bd); font-size:.82rem; vertical-align:middle; }
 tr:last-child td { border-bottom:none; }
-tr:hover td { background:#fafcfa; }
+tr:hover td { background:var(--bg-soft); }
 .empty-row td { text-align:center; color:var(--tm); padding:2.5rem; }
 
 /* Buttons */
@@ -226,7 +226,7 @@ tr:hover td { background:#fafcfa; }
   padding:.55rem .85rem; font-size:.86rem; direction:rtl;
   outline:none; transition:border-color .18s; background:var(--bg);
 }
-.fg input:focus, .fg textarea:focus, .fg select:focus { border-color:var(--g); background:#fff; }
+.fg input:focus, .fg textarea:focus, .fg select:focus { border-color:var(--g); background:var(--sf); }
 .fg textarea { height:80px; resize:vertical; }
 .fg-row { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
 .fg-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.7rem; }
