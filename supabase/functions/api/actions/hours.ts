@@ -47,12 +47,26 @@ const recordHours: Handler = async (body, user) => {
     if (!data.volunteer_email) data.volunteer_email = a.a_volunteer_email;
   }
 
+  // Phase D — advisor support. recordHours now accepts advisor_id as
+  // an alternative to member_id / volunteer_email. The Edge Function
+  // enforces "exactly one" at the application layer (no DB CHECK,
+  // since legacy rows might violate it). participant_type='advisor'
+  // is the convention; for ergonomics we default it when advisor_id
+  // is present and the caller didn't specify.
+  const advisor_id = data.advisor_id ? Number(data.advisor_id) : null;
+  if (advisor_id) {
+    if (data.member_id || data.volunteer_email) {
+      throw httpErr('Provide only one of advisor_id, member_id, or volunteer_email.', 422);
+    }
+    if (!data.participant_type) data.participant_type = 'advisor';
+  }
+
   const [r] = await sql`
-    INSERT INTO hours (project_id, assignment_id, member_id, volunteer_email, participant_type,
-                       hours_before, hours_during, hours_after,
+    INSERT INTO hours (project_id, assignment_id, member_id, volunteer_email, advisor_id,
+                       participant_type, hours_before, hours_during, hours_after,
                        notes, recorded_by, recorded_by_member_id, approval_status)
     VALUES (${data.project_id}, ${data.assignment_id || null},
-            ${data.member_id || null}, ${data.volunteer_email || null},
+            ${data.member_id || null}, ${data.volunteer_email || null}, ${advisor_id},
             ${data.participant_type || null},
             ${before}, ${during}, ${after},
             ${data.notes || null}, ${user!.id}, ${data.recorded_by_member_id || null},
@@ -60,6 +74,7 @@ const recordHours: Handler = async (body, user) => {
     RETURNING id, total_hours
   ` as Array<{ id: number; total_hours: number }>;
   await recomputeMemberTotalHours(data.member_id as string | null | undefined);
+  await recomputeAdvisorTotalHours(advisor_id);
   return { id: r.id, hours_id: r.id, total_hours: r.total_hours };
 };
 
@@ -67,7 +82,7 @@ const recordHours: Handler = async (body, user) => {
 const updateHours: Handler = async (body) => {
   const id = body.id as number | undefined;
   const data = (body.data ?? {}) as Record<string, unknown>;
-  const [row] = await sql`SELECT member_id FROM hours WHERE id = ${id}` as Array<{ member_id: string | null }>;
+  const [row] = await sql`SELECT member_id, advisor_id FROM hours WHERE id = ${id}` as Array<{ member_id: string | null; advisor_id: number | null }>;
   await sql`
     UPDATE hours SET
       hours_before = COALESCE(${data.hours_before}, hours_before),
@@ -77,6 +92,7 @@ const updateHours: Handler = async (body) => {
     WHERE id = ${id}
   `;
   await recomputeMemberTotalHours(row?.member_id);
+  await recomputeAdvisorTotalHours(row?.advisor_id);
   return { id };
 };
 
@@ -88,14 +104,14 @@ const updateHours: Handler = async (body) => {
 const hoursPrimaryApprove: Handler = async (body, user) => {
   const id = body.id as number | undefined;
   const [row] = await sql`
-    SELECT h.id, h.member_id, h.approval_status, o.owning_committee_id
+    SELECT h.id, h.member_id, h.advisor_id, h.approval_status, o.owning_committee_id
     FROM hours h
     LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
     LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
     WHERE h.id = ${id}
   ` as Array<{
-    id: number; member_id: string | null; approval_status: string;
-    owning_committee_id: string | null;
+    id: number; member_id: string | null; advisor_id: number | null;
+    approval_status: string; owning_committee_id: string | null;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
   if (row.approval_status !== 'Draft') {
@@ -110,14 +126,15 @@ const hoursPrimaryApprove: Handler = async (body, user) => {
     WHERE id = ${id}
   `;
   await recomputeMemberTotalHours(row.member_id);
+  await recomputeAdvisorTotalHours(row.advisor_id);
   return { id };
 };
 
 const hoursFinalApprove: Handler = async (body, user) => {
   requireAdmin(user);
   const id = body.id as number | undefined;
-  const [row] = await sql`SELECT id, member_id, approval_status FROM hours WHERE id = ${id}` as Array<{
-    id: number; member_id: string | null; approval_status: string;
+  const [row] = await sql`SELECT id, member_id, advisor_id, approval_status FROM hours WHERE id = ${id}` as Array<{
+    id: number; member_id: string | null; advisor_id: number | null; approval_status: string;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
   if (row.approval_status !== 'PrimaryApproved') {
@@ -131,6 +148,7 @@ const hoursFinalApprove: Handler = async (body, user) => {
     WHERE id = ${id}
   `;
   await recomputeMemberTotalHours(row.member_id);
+  await recomputeAdvisorTotalHours(row.advisor_id);
   return { id };
 };
 
@@ -138,14 +156,14 @@ const hoursReject: Handler = async (body, user) => {
   const id = body.id as number | undefined;
   const reason = body.reason as string | undefined;
   const [row] = await sql`
-    SELECT h.id, h.member_id, h.approval_status, o.owning_committee_id
+    SELECT h.id, h.member_id, h.advisor_id, h.approval_status, o.owning_committee_id
     FROM hours h
     LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
     LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
     WHERE h.id = ${id}
   ` as Array<{
-    id: number; member_id: string | null; approval_status: string;
-    owning_committee_id: string | null;
+    id: number; member_id: string | null; advisor_id: number | null;
+    approval_status: string; owning_committee_id: string | null;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
   // Anyone in the approval chain can reject:
@@ -167,6 +185,7 @@ const hoursReject: Handler = async (body, user) => {
     WHERE id = ${id}
   `;
   await recomputeMemberTotalHours(row.member_id);
+  await recomputeAdvisorTotalHours(row.advisor_id);
   return { id };
 };
 
@@ -213,6 +232,22 @@ async function recomputeMemberTotalHours(member_id: string | null | undefined): 
         AND approval_status = 'FinalApproved'
     )
     WHERE member_id = ${member_id}
+  `;
+}
+
+// Mirror of recomputeMemberTotalHours, but for advisor totals (Phase D).
+// Every hours-mutation handler calls this alongside the member version so
+// whichever participant the row references gets its cache rebuilt.
+async function recomputeAdvisorTotalHours(advisor_id: number | null | undefined): Promise<void> {
+  if (!advisor_id) return;
+  await sql`
+    UPDATE advisors SET total_hours = (
+      SELECT COALESCE(SUM(total_hours), 0)
+      FROM hours
+      WHERE advisor_id = ${advisor_id}
+        AND approval_status = 'FinalApproved'
+    )
+    WHERE id = ${advisor_id}
   `;
 }
 

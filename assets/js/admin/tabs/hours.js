@@ -108,12 +108,17 @@ export async function saveHours() {
   const during = parseFloat(gv('hrs-during') || 0);
   const after  = parseFloat(gv('hrs-after')  || 0);
   const assignmentId = gv('hrs-assignment-id');
+  const t = gv('hrs-type');
+  // Phase D — pick the right participant identifier based on the type.
+  // Exactly one is sent; the Edge Function rejects rows with more than
+  // one identifier set.
   const body = {
     assignment_id:        assignmentId ? parseInt(assignmentId, 10) : null,
     project_id:           gv('hrs-project'),
-    participant_type:     gv('hrs-type'),
-    member_id:            gv('hrs-member'),
-    volunteer_email:      gv('hrs-vol-email'),
+    participant_type:     t,
+    member_id:            t === 'Member'    ? gv('hrs-member')   : null,
+    volunteer_email:      t === 'Volunteer' ? gv('hrs-vol-email') : null,
+    advisor_id:           t === 'Advisor'   ? (parseInt(gv('hrs-advisor'), 10) || null) : null,
     hours_before:         before,
     hours_during:         during,
     hours_after:          after,
@@ -122,6 +127,8 @@ export async function saveHours() {
   };
   if (!body.project_id) { toast('اختر مشروعاً', 'twarn'); return; }
   if (before + during + after <= 0) { toast('أدخل عدد الساعات', 'twarn'); return; }
+  if (t === 'Advisor' && !body.advisor_id) { toast('اختر المستشار', 'twarn'); return; }
+  if (t === 'Member'  && !body.member_id)  { toast('اختر العضو', 'twarn');   return; }
   const res = await api('recordHours', body);
   if (res && res.success) {
     toast(`✅ تم تسجيل ${res.total_hours} ساعة`);
@@ -204,8 +211,11 @@ export function onHrsAssignmentChange() {
 
 export function toggleHrsFields() {
   const t = gv('hrs-type');
-  document.getElementById('hrs-member-section').style.display = t === 'Member' ? '' : 'none';
-  document.getElementById('hrs-vol-section').style.display    = t === 'Volunteer' ? '' : 'none';
+  document.getElementById('hrs-member-section').style.display  = t === 'Member'    ? '' : 'none';
+  document.getElementById('hrs-vol-section').style.display     = t === 'Volunteer' ? '' : 'none';
+  // Phase D — advisor section. Mutually exclusive with member/volunteer.
+  const advSection = document.getElementById('hrs-advisor-section');
+  if (advSection) advSection.style.display = t === 'Advisor' ? '' : 'none';
 }
 
 // Live hours total preview — wired at import time, matching the original

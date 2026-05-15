@@ -17,7 +17,7 @@ export async function loadAdvisors() {
   DB.advisors = data.data || [];
   const tbody = document.getElementById('advisors-tbody');
   if (!DB.advisors.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">لا يوجد مستشارون</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد مستشارون</td></tr>';
     return;
   }
   tbody.innerHTML = DB.advisors.map(a => `<tr>
@@ -25,6 +25,7 @@ export async function loadAdvisors() {
     <td>${esc(a.advisory_role) || '—'}</td>
     <td style="direction:ltr;font-size:.78rem">${esc(a.email) || '—'}</td>
     <td style="direction:ltr;font-size:.78rem">${esc(a.phone) || '—'}</td>
+    <td><strong style="color:var(--g)">${a.total_hours || 0}</strong></td>
     <td>${tag(a.status, STATUS_COLORS[a.status] || 't-gr')}</td>
     <td>
       <button class="btn-icon edit" data-action="editAdvisor" data-id="${a.advisor_id}">✏️</button>

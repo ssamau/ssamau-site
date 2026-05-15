@@ -8,9 +8,11 @@ import { sql } from '../_sql.ts';
 import { type Handler } from '../_helpers.ts';
 
 // ─── ADVISORS ────────────────────────────────────────────────────────
+// total_hours added by Phase D (advisor hours). Mirrors members.total_hours —
+// cached sum of FinalApproved hours rows that point at this advisor.
 const getAdvisors: Handler = async () => sql`
   SELECT id AS advisor_id, id, full_name, advisory_role, email, phone, notes,
-         status, created_at, updated_at
+         status, total_hours, created_at, updated_at
   FROM advisors ORDER BY full_name
 `;
 

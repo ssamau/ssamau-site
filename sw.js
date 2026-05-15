@@ -33,11 +33,11 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-// Bumped to v8 here because main now has v7-storage-uploads from PR #23
-// (Phase A) and this branch is layering Phase B on top — they each
-// introduced their own v7 string, so unify under a v8 marker that
-// covers both.
-const CACHE_VERSION = 'v8-2026-05-15-storage-and-events';
+// Final bump (v9) bundles Phase A storage + Phase B events display +
+// Phase C typeahead + Phase D advisor-hours into one cache marker.
+// Every install rolling forward to this version drops everything
+// cached under v6/v7/v8 in one sweep.
+const CACHE_VERSION = 'v9-2026-05-15-post-beta-roadmap';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 

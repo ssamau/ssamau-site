@@ -264,8 +264,8 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>الدور الاستشاري</th><th>البريد</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="advisors-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+            <thead><tr><th>الاسم</th><th>الدور الاستشاري</th><th>البريد</th><th>الهاتف</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <tbody id="advisors-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
         <div class="card-body" style="background:var(--wnb);border-top:1px solid var(--bd);font-size:.76rem;color:var(--wn)">
@@ -1064,6 +1064,7 @@
         <select id="hrs-type" data-action="toggleHrsFields">
           <option value="Member">عضو</option>
           <option value="Volunteer">متطوع</option>
+          <option value="Advisor">مستشار</option>
         </select>
       </div>
       <div id="hrs-member-section">
@@ -1071,6 +1072,11 @@
       </div>
       <div id="hrs-vol-section" style="display:none">
         <div class="fg"><label>بريد المتطوع</label><input id="hrs-vol-email" type="email" dir="ltr"/></div>
+      </div>
+      <!-- Phase D — advisor participant. The select is filled by
+           populateAdvisorSelects() when the hours modal opens. -->
+      <div id="hrs-advisor-section" style="display:none">
+        <div class="fg"><label>المستشار</label><select id="hrs-advisor"><option value="">— اختر —</option></select></div>
       </div>
       <div class="fg-row3">
         <div class="fg"><label>ساعات قبل</label><input id="hrs-before" type="number" min="0" step="0.5" value="0"/></div>
