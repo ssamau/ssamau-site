@@ -195,13 +195,12 @@
 <!-- Page 1 — male recipient (masculine pronouns: لجهوده / مشاركته) -->
 <div class="cert-stage">
   <div class="cert-sheet">
-    <svg class="cert-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="48" fill="#1A5C2E"/>
-      <path d="M50 18 L62 42 L86 46 L68 64 L72 88 L50 76 L28 88 L32 64 L14 46 L38 42 Z"
-            fill="#b8932a" stroke="#fff" stroke-width="1"/>
-      <text x="50" y="56" font-family="Almarai, sans-serif" font-size="13"
-            font-weight="800" fill="#fff" text-anchor="middle">SSAM</text>
-    </svg>
+    <!-- Real SSAM logo. Relative path resolves correctly when Chrome
+         headless loads via `file://docs/demo-cert.html` — the asset
+         lives at `../assets/img/logo-200.png` (sibling-of-docs path).
+         An earlier draft used an inline SVG placeholder out of caution
+         about `file://` resolution; turns out Chrome handles it fine. -->
+    <img class="cert-logo" src="../assets/img/logo-200.png" alt="SSAM"/>
 
     <div class="cert-title-ar">شهادة تقدير</div>
     <div class="cert-title-en">Certificate of Appreciation</div>
@@ -235,13 +234,7 @@
      Page break enforced by the `.cert-stage + .cert-stage` rule above. -->
 <div class="cert-stage">
   <div class="cert-sheet">
-    <svg class="cert-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="48" fill="#1A5C2E"/>
-      <path d="M50 18 L62 42 L86 46 L68 64 L72 88 L50 76 L28 88 L32 64 L14 46 L38 42 Z"
-            fill="#b8932a" stroke="#fff" stroke-width="1"/>
-      <text x="50" y="56" font-family="Almarai, sans-serif" font-size="13"
-            font-weight="800" fill="#fff" text-anchor="middle">SSAM</text>
-    </svg>
+    <img class="cert-logo" src="../assets/img/logo-200.png" alt="SSAM"/>
 
     <div class="cert-title-ar">شهادة تقدير</div>
     <div class="cert-title-en">Certificate of Appreciation</div>
