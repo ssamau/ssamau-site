@@ -25,8 +25,29 @@
 import { applyStoredTheme } from './lib/theme.js';
 applyStoredTheme();
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n
+// strings. t() is used below for the dynamic mode-switch label and
+// the per-field validation messages (those are set by JS, not by
+// data-i18n attributes, so they need re-rendering on language change).
+import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
+
 import { callApi } from './lib/api.js';
 import { $ } from './lib/dom.js';
+
+// ── Language toggle wiring ──────────────────────────────────────────
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+// On language change we also need to refresh the dynamic welcome +
+// mode-switch labels (they're set imperatively in applyMode()).
+onLangChange(() => { _syncLangButtons(); applyMode(); });
+_syncLangButtons();
 
 // ── Detect mode from URL params ─────────────────────────────────────
 // `?token=...` (or accidentally `&token=...`) → email-link mode.
@@ -57,12 +78,12 @@ function applyMode() {
   const toggle    = $('#mode-switch');
   if (mode === 'token') {
     pinFields.style.display = 'none';
-    welcome.textContent     = 'أنت على بُعد خطوة واحدة من تفعيل حسابك. اختر كلمة المرور وابدأ.';
-    toggle.textContent      = 'لديك رمز PIN بدلاً من الرابط؟ اضغط هنا';
+    welcome.textContent     = t('su.token_mode_welcome');
+    toggle.textContent      = t('su.mode_switch_to_pin');
   } else {
     pinFields.style.display = '';
-    welcome.textContent     = 'أدخل رقم الهوية الوطنية ورمز PIN الذي زوّدك به المسؤول، ثم اختر كلمة المرور.';
-    toggle.textContent      = 'لديك رابط بريد إلكتروني بدلاً من PIN؟ اضغط هنا';
+    welcome.textContent     = t('su.pin_mode_welcome');
+    toggle.textContent      = t('su.mode_switch_to_link');
   }
 }
 
@@ -73,19 +94,19 @@ async function doSubmit() {
 
   hideMessages();
 
-  // Per-mode field validation. Keep messages friendly + bilingual so a
-  // member who's iffy on Arabic still gets actionable feedback.
+  // Per-mode field validation. Messages flow through t() so they
+  // localize cleanly when the user toggles language.
   if (mode === 'pin') {
     const nid = $('#national-id').value.trim();
     const pin = $('#pin').value.trim();
-    if (!nid) { showError('أدخل رقم الهوية الوطنية'); return; }
-    if (!/^\d{10}$/.test(nid)) { showError('رقم الهوية يجب أن يكون 10 أرقام'); return; }
-    if (!pin) { showError('أدخل رمز PIN المكوّن من 6 أرقام'); return; }
-    if (!/^\d{6}$/.test(pin)) { showError('رمز PIN يجب أن يكون 6 أرقام'); return; }
+    if (!nid)                  { showError(t('su.err_need_nid'));    return; }
+    if (!/^\d{10}$/.test(nid)) { showError(t('su.err_nid_format'));  return; }
+    if (!pin)                  { showError(t('su.err_need_pin'));    return; }
+    if (!/^\d{6}$/.test(pin))  { showError(t('su.err_pin_format'));  return; }
   }
-  if (!pw1 || !pw2) { showError('يرجى تعبئة كلمتي المرور'); return; }
-  if (pw1 !== pw2)  { showError('كلمتا المرور غير متطابقتين'); return; }
-  if (pw1.length < 8) { showError('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+  if (!pw1 || !pw2)   { showError(t('su.err_need_passwords'));    return; }
+  if (pw1 !== pw2)    { showError(t('su.err_password_mismatch')); return; }
+  if (pw1.length < 8) { showError(t('su.err_password_short'));    return; }
 
   const btn = $('#submit-btn');
   btn.disabled  = true;
@@ -106,18 +127,18 @@ async function doSubmit() {
     // Clear the URL query string so refreshing doesn't replay the token.
     history.replaceState(null, '', window.location.pathname);
 
-    showSuccess('تم تفعيل الحساب بنجاح. سيتم تحويلك إلى صفحة تسجيل الدخول…');
+    showSuccess(t('su.success_activated'));
     // Brief pause so the member SEES the success message before the
     // redirect — 2s matches reset-password.js's pacing.
     setTimeout(() => { window.location.href = 'login.html'; }, 2000);
   } catch (e) {
     btn.disabled  = false;
-    btn.innerHTML = '<span id="submit-btn-txt">تفعيل الحساب</span>';
+    btn.innerHTML = `<span id="submit-btn-txt" data-i18n="su.submit">${t('su.submit')}</span>`;
     // The Edge Function already returns Arabic-first error strings
     // (with English mirror), so passing the message through verbatim
-    // is fine. If we ever need to add client-side translation later,
-    // do it here.
-    showError(String(e?.message || 'حدث خطأ غير متوقع'));
+    // is fine for now. Generic-error fallback uses t() so at least
+    // the unknown-error case is bilingual.
+    showError(String(e?.message || t('su.err_unexpected')));
   }
 }
 

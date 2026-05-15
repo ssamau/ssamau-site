@@ -17,8 +17,26 @@
 import { applyStoredTheme } from './lib/theme.js';
 applyStoredTheme();
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n on
+// the page. t() is used below for the runtime "invalid recovery link"
+// error path which is set in JS, not data-i18n.
+import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
+
 import { supabaseUpdatePassword } from './lib/auth.js';
 import { $ } from './lib/dom.js';
+
+// ── Language toggle wiring ──────────────────────────────────────────
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(_syncLangButtons);
+_syncLangButtons();
 
 // ─── Parse the recovery token from the URL fragment ────────────────
 function parseFragment() {
@@ -36,7 +54,7 @@ if (!accessToken || flowType !== 'recovery') {
   // Either the page was opened directly (no recovery link) or the
   // link was malformed/old. Surface the failure cleanly rather than
   // submitting a half-baked request.
-  showError('رابط إعادة التعيين غير صالح أو منتهي الصلاحية. اطلب من المسؤول رابطاً جديداً.');
+  showError(t('rp.err_invalid_link'));
   $('#submit-btn').disabled = true;
 }
 
