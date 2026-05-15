@@ -112,6 +112,7 @@ const SCHOLARSHIP_LABELS_AR: Record<string, string> = {
   companion_student:    'مرافق دارس',
   self_funded:          'دارس على الحساب الخاص',
   companion_non_student:'مرافق غير دارس',
+  resident_non_student: 'مقيم/ـة غير دارس',
   other:                'أخرى',
 };
 const UNIVERSITY_LABELS: Record<string, string> = {

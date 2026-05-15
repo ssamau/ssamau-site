@@ -213,25 +213,28 @@ function renderOppNotificationHtml(opts: {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
   const customBlock = opts.custom_message
-    ? `<div style="background:#fffbeb;border-inline-start:4px solid #b8932a;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.92rem;line-height:1.7">${esc(opts.custom_message).replace(/\n/g, '<br/>')}</div>`
+    ? `<div dir="rtl" style="background:#fffbeb;border-inline-start:4px solid #b8932a;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.92rem;line-height:1.7;text-align:right">${esc(opts.custom_message).replace(/\n/g, '<br/>')}</div>`
     : '';
+  // RTL hardening: dir="rtl" + text-align:right on every block so
+  // phone-mail clients (which ignore the html-level dir) still render
+  // Arabic correctly. Same pattern as the cert delivery + thanks emails.
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827">
-  <div style="max-width:580px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
-    <div style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 60%,#b8932a 100%);padding:1.6rem 1.4rem;color:#fff;text-align:center">
+<body dir="rtl" style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827;text-align:right">
+  <div dir="rtl" style="max-width:580px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div dir="rtl" style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 60%,#b8932a 100%);padding:1.6rem 1.4rem;color:#fff;text-align:center">
       <div style="font-size:1.7rem;margin-bottom:.3rem">🎯</div>
       <div style="font-size:1.05rem;font-weight:800">فرصة تطوعية جديدة</div>
       <div style="font-size:.72rem;color:rgba(255,255,255,.75);margin-top:.25rem">New Volunteer Opportunity</div>
     </div>
-    <div style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75">
+    <div dir="rtl" style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75;text-align:right">
       ${customBlock}
-      <p style="margin:0 0 1rem 0">السلام عليكم،</p>
-      <p style="margin:0 0 1rem 0">يسرّنا الإعلان عن فرصة تطوعية جديدة في النادي، ندعوك للمشاركة:</p>
+      <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">السلام عليكم،</p>
+      <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">يسرّنا الإعلان عن فرصة تطوعية جديدة في النادي، ندعوك للمشاركة:</p>
 
-      <div style="background:#f9fafb;border-radius:10px;padding:1.1rem;margin:1rem 0">
+      <div dir="rtl" style="background:#f9fafb;border-radius:10px;padding:1.1rem;margin:1rem 0;text-align:right">
         <div style="font-size:1.05rem;font-weight:800;color:#1A5C2E;margin-bottom:.5rem">${esc(opts.role_name)}</div>
         <div style="font-size:.88rem;color:#4b5563;margin-bottom:.85rem">${esc(opts.project_name)}</div>
-        <table style="width:100%;font-size:.86rem;color:#374151;border-collapse:collapse">
+        <table dir="rtl" style="width:100%;font-size:.86rem;color:#374151;border-collapse:collapse">
           ${opts.event_date ? `<tr><td style="padding:.3rem 0;color:#6b7280;width:30%">📅 التاريخ</td><td style="padding:.3rem 0;direction:ltr">${esc(opts.event_date)}</td></tr>` : ''}
           ${opts.location ? `<tr><td style="padding:.3rem 0;color:#6b7280">📍 الموقع</td><td style="padding:.3rem 0">${esc(opts.location)}</td></tr>` : ''}
           ${opts.committee_name ? `<tr><td style="padding:.3rem 0;color:#6b7280">🏛️ اللجنة</td><td style="padding:.3rem 0">${esc(opts.committee_name)}</td></tr>` : ''}
@@ -240,7 +243,7 @@ function renderOppNotificationHtml(opts: {
         </table>
       </div>
 
-      <p style="margin:0 0 1rem 0">إذا كنت مهتماً بالمشاركة، سجّل الدخول إلى بوابة العضو وانتقل إلى تبويب "الفرص التطوعية" واضغط "اهتمام" على هذه الفرصة. سيتواصل معك رئيس اللجنة لتأكيد المشاركة.</p>
+      <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">إذا كنت مهتماً بالمشاركة، سجّل الدخول إلى بوابة العضو وانتقل إلى تبويب "الفرص التطوعية" واضغط "اهتمام" على هذه الفرصة. سيتواصل معك رئيس اللجنة لتأكيد المشاركة.</p>
 
       <div style="text-align:center;margin:1.4rem 0">
         <a href="https://ssamau.com/login.html" style="display:inline-block;background:#1A5C2E;color:#fff;text-decoration:none;padding:.75rem 1.6rem;border-radius:50px;font-weight:700;font-size:.85rem">
@@ -248,7 +251,7 @@ function renderOppNotificationHtml(opts: {
         </a>
       </div>
     </div>
-    <div style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
+    <div dir="rtl" style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
       <span style="color:#b8932a;font-weight:700">نادي الطلبة السعوديين في ملبورن</span><br/>
       SSAM · Saudi Students Association in Melbourne
     </div>

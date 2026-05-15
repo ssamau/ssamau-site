@@ -35,25 +35,33 @@ function certDeliveryEmail(opts: {
   hours: number | string; certCode: string;
 }): string {
   const verifyUrl = `${SITE_URL}/verify-cert.html?code=${encodeURIComponent(opts.certCode)}`;
+  // RTL hardening: most email clients (Gmail mobile, default phone mail
+  // apps) ignore `<html dir="rtl">` and treat the body as LTR by
+  // default, which makes Arabic punctuation appear on the wrong side
+  // (comma at the start of a name instead of the end, etc). President
+  // flagged this on his phone test. The fix is to put `dir="rtl"` and
+  // an explicit `text-align: right` on every block-level element that
+  // contains Arabic — clients respect inline direction attrs even when
+  // they ignore the html-level one.
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827">
-  <div style="max-width:600px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
-    <div style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 60%,#b8932a 100%);padding:1.8rem 1.4rem;color:#fff;text-align:center">
+<body dir="rtl" style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827;text-align:right">
+  <div dir="rtl" style="max-width:600px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div dir="rtl" style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 60%,#b8932a 100%);padding:1.8rem 1.4rem;color:#fff;text-align:center">
       <div style="font-size:1.6rem;font-weight:800;margin-bottom:.3rem">🏅</div>
       <div style="font-size:1.05rem;font-weight:800">شهادتك جاهزة</div>
       <div style="font-size:.72rem;color:rgba(255,255,255,.75);margin-top:.25rem">Your Certificate Is Ready</div>
     </div>
-    <div style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75">
-      <p style="margin:0 0 .85rem 0">السلام عليكم ${escHtml(opts.recipientName)},</p>
-      <p style="margin:0 0 .85rem 0">يسعدنا تقديم شهادة تقدير لك على مشاركتك في:</p>
+    <div dir="rtl" style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75;text-align:right">
+      <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">السلام عليكم ${escHtml(opts.recipientName)},</p>
+      <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">يسعدنا تقديم شهادة تقدير لك على مشاركتك في:</p>
 
-      <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin:.85rem 0;font-size:.86rem">
-        <div style="margin-bottom:.4rem"><span style="color:#6b7280">الفعالية:</span> <strong>${escHtml(opts.projectName)}</strong></div>
-        <div style="margin-bottom:.4rem"><span style="color:#6b7280">الدور:</span> <strong>${escHtml(opts.role)}</strong></div>
-        <div><span style="color:#6b7280">عدد الساعات:</span> <strong>${escHtml(String(opts.hours))}</strong></div>
+      <div dir="rtl" style="background:#f9fafb;border-radius:10px;padding:1rem;margin:.85rem 0;font-size:.86rem;text-align:right">
+        <div dir="rtl" style="margin-bottom:.4rem"><span style="color:#6b7280">الفعالية:</span> <strong>${escHtml(opts.projectName)}</strong></div>
+        <div dir="rtl" style="margin-bottom:.4rem"><span style="color:#6b7280">الدور:</span> <strong>${escHtml(opts.role)}</strong></div>
+        <div dir="rtl"><span style="color:#6b7280">عدد الساعات:</span> <strong>${escHtml(String(opts.hours))}</strong></div>
       </div>
 
-      <p style="margin:0 0 .85rem 0">يمكنك التحقق من الشهادة عبر الرابط التالي. الرابط نفسه قابل للمشاركة مع جهات التحقق (الجامعة، الجهة المبتعِثة، جهة عمل، ...):</p>
+      <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">يمكنك التحقق من الشهادة عبر الرابط التالي. الرابط نفسه قابل للمشاركة مع جهات التحقق (الجامعة، الجهة المبتعِثة، جهة عمل، ...):</p>
 
       <div style="text-align:center;margin:1.2rem 0">
         <a href="${verifyUrl}" style="display:inline-block;background:#1A5C2E;color:#fff;text-decoration:none;padding:.75rem 1.6rem;border-radius:50px;font-weight:700;font-size:.85rem">
@@ -61,12 +69,12 @@ function certDeliveryEmail(opts: {
         </a>
       </div>
 
-      <p style="margin:0 0 .4rem 0;font-size:.78rem;color:#6b7280;text-align:center">أو انسخ الرمز التالي وأدخله في صفحة التحقق:</p>
-      <div style="text-align:center;font-family:monospace;letter-spacing:.08em;font-size:.85rem;font-weight:700;color:#1A5C2E;background:#f0fdf4;border-radius:8px;padding:.55rem;margin:.4rem 0 1rem">
+      <p dir="rtl" style="margin:0 0 .4rem 0;font-size:.78rem;color:#6b7280;text-align:center">أو انسخ الرمز التالي وأدخله في صفحة التحقق:</p>
+      <div dir="ltr" style="text-align:center;font-family:monospace;letter-spacing:.08em;font-size:.85rem;font-weight:700;color:#1A5C2E;background:#f0fdf4;border-radius:8px;padding:.55rem;margin:.4rem 0 1rem">
         ${escHtml(opts.certCode)}
       </div>
     </div>
-    <div style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
+    <div dir="rtl" style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
       <span style="color:#b8932a;font-weight:700">نادي الطلبة السعوديين في ملبورن</span><br/>
       SSAM · Saudi Students Association in Melbourne
     </div>

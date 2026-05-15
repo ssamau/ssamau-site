@@ -117,6 +117,7 @@
         <label><input type="radio" name="scholarship" value="companion_student"/> مرافق دارس</label>
         <label><input type="radio" name="scholarship" value="self_funded"/> دارس على الحساب الخاص</label>
         <label><input type="radio" name="scholarship" value="companion_non_student"/> مرافق غير دارس</label>
+        <label><input type="radio" name="scholarship" value="resident_non_student"/> مقيم/ـة غير دارس (لا ابتعاث ولا مرافقة)</label>
         <label><input type="radio" name="scholarship" value="other"/> أخرى</label>
         <div class="other-input" id="other-scholarship" style="display:none">
           <input id="f-scholarship-other" placeholder="حدّد جهة الابتعاث"/>
@@ -126,9 +127,10 @@
 
     <!-- ── 4. Study ───────────────────────────────────────── -->
     <!-- The whole section gets display:none'd by apply.js when the applicant
-         picks scholarship_entity = "companion_non_student" (a non-student
-         dependent). Validation in apply.js skips the study fields in that
-         case so the form can submit without university/degree info. -->
+         picks a non-student scholarship value (`companion_non_student` or
+         `resident_non_student`). Validation in apply.js skips the study
+         fields in those cases so the form can submit without university /
+         degree info. -->
     <div class="section" id="section-study">
       <h3><span class="num">4</span> الدراسة</h3>
       <div class="fg-row">

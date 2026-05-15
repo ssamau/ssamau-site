@@ -28,8 +28,11 @@ function htmlBody(message: string): string {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const paragraphs = String(message || '').split(/\n\s*\n/);
+  // Per-paragraph dir="rtl" + text-align:right so the body renders RTL
+  // even in email clients that ignore the html-level dir attribute
+  // (most mobile mail apps).
   return paragraphs
-    .map(p => '<p style="margin:0 0 .85rem 0;line-height:1.7">' + esc(p).replace(/\n/g, '<br/>') + '</p>')
+    .map(p => '<p dir="rtl" style="margin:0 0 .85rem 0;line-height:1.7;text-align:right">' + esc(p).replace(/\n/g, '<br/>') + '</p>')
     .join('');
 }
 
@@ -37,16 +40,16 @@ function htmlBody(message: string): string {
 // so recipients recognise the sender visually. Arabic-first RTL.
 function thanksEnvelope(message: string): string {
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827">
-  <div style="max-width:560px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
-    <div style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 100%);padding:1.6rem 1.4rem;color:#fff;text-align:center">
+<body dir="rtl" style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827;text-align:right">
+  <div dir="rtl" style="max-width:560px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div dir="rtl" style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 100%);padding:1.6rem 1.4rem;color:#fff;text-align:center">
       <div style="font-size:1.05rem;font-weight:800;letter-spacing:.02em">نادي الطلبة السعوديين في ملبورن</div>
       <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:.2rem">SSAM · Saudi Students Association in Melbourne</div>
     </div>
-    <div style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937">
+    <div dir="rtl" style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;text-align:right">
       ${htmlBody(message)}
     </div>
-    <div style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
+    <div dir="rtl" style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
       مع خالص الشكر والتقدير<br/>
       <span style="color:#b8932a;font-weight:700">SSAM Committee</span>
     </div>

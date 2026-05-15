@@ -73,12 +73,16 @@ function updateSubmitState() {
 }
 
 // Show / hide the entire study section based on the scholarship choice.
-// `companion_non_student` means the applicant is a dependent who isn't
-// themselves a student — they have no degree, no university, no graduation
-// date to report. Keep the section visible for every other choice.
+// Two values flag the applicant as a non-student: `companion_non_student`
+// (dependent who isn't themselves a student) and `resident_non_student`
+// (a Melbourne resident who is neither on a scholarship nor a companion
+// nor currently studying — the president hit this case filling the form
+// for someone in his network, 2026-05-15). Either way they have no
+// degree / university / graduation to report.
+const NON_STUDENT_VALUES = ['companion_non_student', 'resident_non_student'];
 function toggleStudySection() {
   const sel = $$('input[name=scholarship]').find((r) => r.checked);
-  const isNonStudent = !!sel && sel.value === 'companion_non_student';
+  const isNonStudent = !!sel && NON_STUDENT_VALUES.includes(sel.value);
   const sec = $('#section-study');
   if (sec) sec.style.display = isNonStudent ? 'none' : '';
 }
@@ -185,7 +189,7 @@ async function doSubmit() {
     ['referral_source',            'كيف علمت عن النادي'],
     ['suggestions',                'الاقتراحات'],
   ];
-  const isStudying = body.scholarship_entity !== 'companion_non_student';
+  const isStudying = !NON_STUDENT_VALUES.includes(body.scholarship_entity);
   if (isStudying) {
     required.push(
       ['study_level',                'المرحلة الدراسية'],

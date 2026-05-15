@@ -239,16 +239,24 @@
   .cert-back-link:hover { background: #1A5C2E; color: #fff; }
 
   /* Print styles — produce a clean one-page A4 landscape PDF when
-   * the user hits Cmd+P / "Save as PDF" */
+   * the user hits Cmd+P / "Save as PDF".
+   *
+   * Earlier version forced `max-width: 100%` + `height: calc(210mm
+   * - 12mm)` on the sheet, which stretched it to fill the entire
+   * A4 landscape printable area (~285×198mm = 1.44:1 aspect).
+   * Combined with the on-screen padding + clamp() font sizes, that
+   * produced a noticeably stretched look in the printed PDF
+   * (president flagged this on his laptop test). Now we just hide
+   * the page chrome (login-card / cert-actions) + drop the shadow
+   * and let the cert sheet print at its natural width (900px max)
+   * centered on the page — same shape as the demo PDF the
+   * president already approved. */
   @media print {
     @page { size: A4 landscape; margin: 6mm; }
     body { background: #fff; margin: 0; }
     .cert-stage { padding: 0; min-height: auto; background: #fff; }
     .cert-actions, .login-card { display: none !important; }
     .cert-sheet {
-      max-width: 100%;
-      aspect-ratio: auto;
-      height: calc(210mm - 12mm);          /* A4 landscape height minus margins */
       box-shadow: none;
       page-break-after: avoid;
     }
