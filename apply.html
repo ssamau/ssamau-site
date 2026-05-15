@@ -7,6 +7,7 @@
 <meta name="description" content="نموذج الانضمام إلى نادي الطلبة السعوديين في ملبورن — Saudi Students Association Melbourne membership application."/>
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/base.css"/>
+<link rel="stylesheet" href="assets/css/login.css"/>
 <link rel="stylesheet" href="assets/css/apply.css"/>
 <link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
@@ -17,49 +18,56 @@
 <body>
 
 <div class="card" id="card">
+  <!-- Language toggle: same pattern as login/signup/reset-password —
+       two pill buttons; the active one gets brand-green fill. -->
+  <div class="lang-toggle" role="radiogroup" data-i18n-aria-label="lang.label" aria-label="اللغة">
+    <button type="button" class="lang-btn" data-action="setLang" data-value="ar" data-i18n="lang.arabic">العربية</button>
+    <button type="button" class="lang-btn" data-action="setLang" data-value="en" data-i18n="lang.english">English</button>
+  </div>
+
   <div class="head">
-    <div class="logo"><img src="logo.png" alt="شعار النادي"/></div>
-    <h1>الانضمام إلى نادي الطلبة السعوديين في ملبورن</h1>
-    <p>Saudi Students Association in Melbourne · Membership Application</p>
+    <div class="logo"><img src="logo.png" data-i18n-alt="brand.logo_alt" alt="شعار النادي"/></div>
+    <h1 data-i18n="apply.page_title">الانضمام إلى نادي الطلبة السعوديين في ملبورن</h1>
+    <p data-i18n="brand.ssam_full_en">Saudi Students Association in Melbourne · Membership Application</p>
   </div>
 
   <!-- FORM -->
   <div class="body" id="form-view">
-    <p class="intro">يرجى تعبئة النموذج بدقّة — ستخدم البيانات لإصدار العضوية وشهادات الملحقية الثقافية.</p>
+    <p class="intro" data-i18n="apply.intro">يرجى تعبئة النموذج بدقّة — ستخدم البيانات لإصدار العضوية وشهادات الملحقية الثقافية.</p>
 
     <!-- ── 1. Identity ────────────────────────────────────── -->
     <div class="section">
-      <h3><span class="num">1</span> بطاقة الهوية</h3>
+      <h3><span class="num">1</span> <span data-i18n="apply.s1.title">بطاقة الهوية</span></h3>
       <div class="fg">
-        <label>رقم الهوية الوطنية / الإقامة <span class="req">*</span></label>
+        <label><span data-i18n="apply.s1.nid_label">رقم الهوية الوطنية / الإقامة</span> <span class="req">*</span></label>
         <input id="f-national-id" class="ltr" maxlength="15" placeholder="1xxxxxxxxx"/>
-        <div class="hint">يجب أن يطابق رقم الهوية الوطنية أو الإقامة في الجواز.</div>
+        <div class="hint" data-i18n="apply.s1.nid_hint">يجب أن يطابق رقم الهوية الوطنية أو الإقامة في الجواز.</div>
       </div>
       <div class="fg">
-        <label>الاسم الرباعي بالعربية <span class="req">*</span></label>
-        <input id="f-name-ar" placeholder="مثال: عبدالله محمد سعد العتيبي"/>
-        <div class="hint">يجب أن يطابق الاسم الموجود في بطاقة الأحوال / الإقامة.</div>
+        <label><span data-i18n="apply.s1.name_ar_label">الاسم الرباعي بالعربية</span> <span class="req">*</span></label>
+        <input id="f-name-ar" data-i18n-placeholder="apply.s1.name_ar_placeholder" placeholder="مثال: عبدالله محمد سعد العتيبي"/>
+        <div class="hint" data-i18n="apply.s1.name_ar_hint">يجب أن يطابق الاسم الموجود في بطاقة الأحوال / الإقامة.</div>
       </div>
       <div class="fg">
-        <label>الاسم الرباعي بالإنجليزية <span class="req">*</span></label>
+        <label><span data-i18n="apply.s1.name_en_label">الاسم الرباعي بالإنجليزية</span> <span class="req">*</span></label>
         <input id="f-name-en" class="ltr" placeholder="Abdullah Mohammed Saad Alotaibi"/>
-        <div class="hint">يجب أن يطابق الاسم الموجود في جواز السفر.</div>
+        <div class="hint" data-i18n="apply.s1.name_en_hint">يجب أن يطابق الاسم الموجود في جواز السفر.</div>
       </div>
       <div class="fg">
-        <label>الاسم المختصر (الكنية)</label>
-        <input id="f-preferred-name" placeholder="عبدالله"/>
+        <label data-i18n="apply.s1.preferred_label">الاسم المختصر (الكنية)</label>
+        <input id="f-preferred-name" data-i18n-placeholder="apply.s1.preferred_placeholder" placeholder="عبدالله"/>
       </div>
       <div class="fg-row">
         <div class="fg">
-          <label>الجنس <span class="req">*</span></label>
+          <label><span data-i18n="apply.s1.gender_label">الجنس</span> <span class="req">*</span></label>
           <select id="f-gender">
-            <option value="">— اختر —</option>
-            <option value="ذكر">ذكر</option>
-            <option value="أنثى">أنثى</option>
+            <option value="" data-i18n="apply.s4.choose">— اختر —</option>
+            <option value="ذكر"  data-i18n="apply.s1.gender_male">ذكر</option>
+            <option value="أنثى" data-i18n="apply.s1.gender_female">أنثى</option>
           </select>
         </div>
         <div class="fg">
-          <label>تاريخ الميلاد <span class="req">*</span></label>
+          <label><span data-i18n="apply.s1.dob_label">تاريخ الميلاد</span> <span class="req">*</span></label>
           <input id="f-dob" type="date"/>
         </div>
       </div>
@@ -67,27 +75,27 @@
 
     <!-- ── 2. Contact ─────────────────────────────────────── -->
     <div class="section">
-      <h3><span class="num">2</span> معلومات التواصل</h3>
+      <h3><span class="num">2</span> <span data-i18n="apply.s2.title">معلومات التواصل</span></h3>
       <div class="fg">
-        <label>العنوان الحالي في ملبورن</label>
-        <input id="f-address" placeholder="مثال: 14 La Trobe St, Melbourne VIC 3000"/>
+        <label data-i18n="apply.s2.address_label">العنوان الحالي في ملبورن</label>
+        <input id="f-address" data-i18n-placeholder="apply.s2.address_placeholder" placeholder="مثال: 14 La Trobe St, Melbourne VIC 3000"/>
       </div>
       <div class="fg">
-        <label>رقم الجوال <span class="req">*</span></label>
+        <label><span data-i18n="apply.s2.phone_label">رقم الجوال</span> <span class="req">*</span></label>
         <div class="phone-wrap">
           <select id="f-phone-cc">
             <option value="+61">🇦🇺 +61</option>
             <option value="+966">🇸🇦 +966</option>
           </select>
-          <input id="f-phone" type="tel" placeholder="4XX XXX XXX"/>
+          <input id="f-phone" type="tel" data-i18n-placeholder="apply.s2.phone_placeholder" placeholder="4XX XXX XXX"/>
         </div>
-        <div class="hint">رقم التواصل الأساسي.</div>
+        <div class="hint" data-i18n="apply.s2.phone_hint">رقم التواصل الأساسي.</div>
       </div>
       <div class="fg">
-        <label>رقم واتس اب <span class="req">*</span></label>
+        <label><span data-i18n="apply.s2.wa_label">رقم واتس اب</span> <span class="req">*</span></label>
         <label class="confirm confirm-row">
           <input type="checkbox" id="f-wa-same" checked/>
-          <span>نفس رقم الجوال أعلاه</span>
+          <span data-i18n="apply.s2.wa_same">نفس رقم الجوال أعلاه</span>
         </label>
         <div id="f-wa-section" style="display:none">
           <div class="phone-wrap">
@@ -95,65 +103,60 @@
               <option value="+966">🇸🇦 +966</option>
               <option value="+61">🇦🇺 +61</option>
             </select>
-            <input id="f-wa-number" type="tel" placeholder="5XX XXX XXX"/>
+            <input id="f-wa-number" type="tel" data-i18n-placeholder="apply.s2.wa_placeholder" placeholder="5XX XXX XXX"/>
           </div>
-          <div class="hint">للأعضاء الذين يستخدمون رقمًا سعوديًا للواتس اب ورقمًا أستراليًا للاتصال (أو العكس).</div>
+          <div class="hint" data-i18n="apply.s2.wa_hint">للأعضاء الذين يستخدمون رقمًا سعوديًا للواتس اب ورقمًا أستراليًا للاتصال (أو العكس).</div>
         </div>
       </div>
       <div class="fg">
-        <label>البريد الإلكتروني <span class="req">*</span></label>
+        <label><span data-i18n="apply.s2.email_label">البريد الإلكتروني</span> <span class="req">*</span></label>
         <input id="f-email" type="email" class="ltr" placeholder="you@example.com"/>
       </div>
     </div>
 
     <!-- ── 3. Sponsorship ─────────────────────────────────── -->
     <div class="section">
-      <h3><span class="num">3</span> جهة الابتعاث <span class="req">*</span></h3>
+      <h3><span class="num">3</span> <span data-i18n="apply.s3.title">جهة الابتعاث</span> <span class="req">*</span></h3>
       <div class="opts" id="opts-scholarship">
-        <label><input type="radio" name="scholarship" value="khadem_alharamain"/> برنامج خادم الحرمين الشريفين للابتعاث (يشمل مسارات: التميز، الرواد، إمداد، واعد)</label>
-        <label><input type="radio" name="scholarship" value="job_sponsored"/> الابتعاث الوظيفي (حكومي / عسكري)</label>
-        <label><input type="radio" name="scholarship" value="private_sector"/> ابتعاث الشركات والقطاع الخاص (أرامكو، سابك، نيوم، معادن، وغيرها)</label>
-        <label><input type="radio" name="scholarship" value="cultural_tourism"/> الابتعاث الثقافي والسياحي</label>
-        <label><input type="radio" name="scholarship" value="companion_student"/> مرافق دارس</label>
-        <label><input type="radio" name="scholarship" value="self_funded"/> دارس على الحساب الخاص</label>
-        <label><input type="radio" name="scholarship" value="companion_non_student"/> مرافق غير دارس</label>
-        <label><input type="radio" name="scholarship" value="resident_non_student"/> مقيم/ـة غير دارس (لا ابتعاث ولا مرافقة)</label>
-        <label><input type="radio" name="scholarship" value="other"/> أخرى</label>
+        <label><input type="radio" name="scholarship" value="khadem_alharamain"/> <span data-i18n="apply.s3.opt.khadem_alharamain">برنامج خادم الحرمين الشريفين للابتعاث (يشمل مسارات: التميز، الرواد، إمداد، واعد)</span></label>
+        <label><input type="radio" name="scholarship" value="job_sponsored"/> <span data-i18n="apply.s3.opt.job_sponsored">الابتعاث الوظيفي (حكومي / عسكري)</span></label>
+        <label><input type="radio" name="scholarship" value="private_sector"/> <span data-i18n="apply.s3.opt.private_sector">ابتعاث الشركات والقطاع الخاص (أرامكو، سابك، نيوم، معادن، وغيرها)</span></label>
+        <label><input type="radio" name="scholarship" value="cultural_tourism"/> <span data-i18n="apply.s3.opt.cultural_tourism">الابتعاث الثقافي والسياحي</span></label>
+        <label><input type="radio" name="scholarship" value="companion_student"/> <span data-i18n="apply.s3.opt.companion_student">مرافق دارس</span></label>
+        <label><input type="radio" name="scholarship" value="self_funded"/> <span data-i18n="apply.s3.opt.self_funded">دارس على الحساب الخاص</span></label>
+        <label><input type="radio" name="scholarship" value="companion_non_student"/> <span data-i18n="apply.s3.opt.companion_non_student">مرافق غير دارس</span></label>
+        <label><input type="radio" name="scholarship" value="resident_non_student"/> <span data-i18n="apply.s3.opt.resident_non_student">مقيم/ـة غير دارس (لا ابتعاث ولا مرافقة)</span></label>
+        <label><input type="radio" name="scholarship" value="other"/> <span data-i18n="apply.s3.opt.other">أخرى</span></label>
         <div class="other-input" id="other-scholarship" style="display:none">
-          <input id="f-scholarship-other" placeholder="حدّد جهة الابتعاث"/>
+          <input id="f-scholarship-other" data-i18n-placeholder="apply.s3.other_placeholder" placeholder="حدّد جهة الابتعاث"/>
         </div>
       </div>
     </div>
 
     <!-- ── 4. Study ───────────────────────────────────────── -->
-    <!-- The whole section gets display:none'd by apply.js when the applicant
-         picks a non-student scholarship value (`companion_non_student` or
-         `resident_non_student`). Validation in apply.js skips the study
-         fields in those cases so the form can submit without university /
-         degree info. -->
     <div class="section" id="section-study">
-      <h3><span class="num">4</span> الدراسة</h3>
+      <h3><span class="num">4</span> <span data-i18n="apply.s4.title">الدراسة</span></h3>
       <div class="fg-row">
         <div class="fg">
-          <label>المرحلة الدراسية <span class="req">*</span></label>
+          <label><span data-i18n="apply.s4.study_level_label">المرحلة الدراسية</span> <span class="req">*</span></label>
           <select id="f-study-level">
-            <option value="">— اختر —</option>
-            <option value="PhD">دكتوراه</option>
-            <option value="Masters">ماجستير</option>
-            <option value="Bachelor">بكالوريوس</option>
-            <option value="Diploma">دبلوم</option>
-            <option value="Language">دراسة لغة</option>
+            <option value=""        data-i18n="apply.s4.choose">— اختر —</option>
+            <option value="PhD"     data-i18n="apply.s4.opt.phd">دكتوراه</option>
+            <option value="Masters" data-i18n="apply.s4.opt.masters">ماجستير</option>
+            <option value="Bachelor" data-i18n="apply.s4.opt.bachelor">بكالوريوس</option>
+            <option value="Diploma" data-i18n="apply.s4.opt.diploma">دبلوم</option>
+            <option value="Language" data-i18n="apply.s4.opt.language">دراسة لغة</option>
           </select>
         </div>
         <div class="fg">
-          <label>التخصص <span class="req">*</span></label>
-          <input id="f-degree-field" placeholder="مثال: علوم الحاسب"/>
+          <label><span data-i18n="apply.s4.degree_field_label">التخصص</span> <span class="req">*</span></label>
+          <input id="f-degree-field" data-i18n-placeholder="apply.s4.degree_field_placeholder" placeholder="مثال: علوم الحاسب"/>
         </div>
       </div>
       <div class="fg">
-        <label>الجامعة <span class="req">*</span></label>
+        <label><span data-i18n="apply.s4.university_label">الجامعة</span> <span class="req">*</span></label>
         <select id="f-university">
-          <option value="">— اختر —</option>
+          <option value=""           data-i18n="apply.s4.choose">— اختر —</option>
           <option value="melbourne">Melbourne University</option>
           <option value="monash">Monash University</option>
           <option value="rmit">RMIT University</option>
@@ -162,30 +165,30 @@
           <option value="swinburne">Swinburne University</option>
           <option value="victoria">Victoria University</option>
           <option value="acu">Australian Catholic University</option>
-          <option value="other">أخرى</option>
+          <option value="other"      data-i18n="apply.s4.university_other">أخرى</option>
         </select>
       </div>
       <div class="fg" id="university-other-wrap" style="display:none">
-        <label>اسم الجامعة <span class="req">*</span></label>
+        <label><span data-i18n="apply.s4.university_other_label">اسم الجامعة</span> <span class="req">*</span></label>
         <input id="f-university-other" class="ltr"/>
       </div>
       <div class="fg-row">
         <div class="fg">
-          <label>متى بدأت الدراسة؟ <span class="req">*</span></label>
+          <label><span data-i18n="apply.s4.study_started_label">متى بدأت الدراسة؟</span> <span class="req">*</span></label>
           <select id="f-study-started">
-            <option value="">— اختر —</option>
-            <option value="<6mo">أقل من 6 أشهر</option>
-            <option value="6mo-1y">من 6 أشهر إلى سنة</option>
-            <option value=">1y">أكثر من سنة</option>
+            <option value=""        data-i18n="apply.s4.choose">— اختر —</option>
+            <option value="<6mo"    data-i18n="apply.s4.opt.started_lt6">أقل من 6 أشهر</option>
+            <option value="6mo-1y"  data-i18n="apply.s4.opt.started_6mo_1y">من 6 أشهر إلى سنة</option>
+            <option value=">1y"     data-i18n="apply.s4.opt.started_gt1y">أكثر من سنة</option>
           </select>
         </div>
         <div class="fg">
-          <label>تاريخ التخرج المتوقع <span class="req">*</span></label>
+          <label><span data-i18n="apply.s4.graduation_label">تاريخ التخرج المتوقع</span> <span class="req">*</span></label>
           <select id="f-graduation">
-            <option value="">— اختر —</option>
-            <option value="Jul2027">يوليو 2027</option>
-            <option value="Dec2027">ديسمبر 2027</option>
-            <option value="2028+">2028 أو لاحقاً</option>
+            <option value=""        data-i18n="apply.s4.choose">— اختر —</option>
+            <option value="Jul2027" data-i18n="apply.s4.opt.grad_jul2027">يوليو 2027</option>
+            <option value="Dec2027" data-i18n="apply.s4.opt.grad_dec2027">ديسمبر 2027</option>
+            <option value="2028+"   data-i18n="apply.s4.opt.grad_2028">2028 أو لاحقاً</option>
           </select>
         </div>
       </div>
@@ -193,95 +196,98 @@
 
     <!-- ── 5. About you ───────────────────────────────────── -->
     <div class="section">
-      <h3><span class="num">5</span> عنك</h3>
+      <h3><span class="num">5</span> <span data-i18n="apply.s5.title">عنك</span></h3>
       <div class="fg">
-        <label>السيرة الذاتية (اختياري)</label>
-        <button type="button" class="cv-btn">📎 إرفاق رابط السيرة الذاتية</button>
+        <label data-i18n="apply.s5.cv_label">السيرة الذاتية (اختياري)</label>
+        <button type="button" class="cv-btn" data-i18n="apply.s5.cv_btn">📎 إرفاق رابط السيرة الذاتية</button>
         <div class="cv-state" id="cv-state">
-          ✅ تم الإرفاق: <span dir="ltr" id="cv-display">—</span>
-          <span class="clear">إزالة</span>
+          ✅ <span data-i18n="apply.s5.cv_attached">تم الإرفاق:</span> <span dir="ltr" id="cv-display">—</span>
+          <span class="clear" data-i18n="apply.s5.cv_clear">إزالة</span>
         </div>
-        <div class="hint">ارفع السيرة على Google Drive أو Dropbox واضغط الزر لإلصاق الرابط.</div>
+        <div class="hint" data-i18n="apply.s5.cv_hint">ارفع السيرة على Google Drive أو Dropbox واضغط الزر لإلصاق الرابط.</div>
       </div>
       <div class="fg">
-        <label>ما هي المهارات والهوايات التي تتقنها؟ <span class="req">*</span></label>
-        <textarea id="f-skills" placeholder="مثال: تصميم، تصوير، رياضة، برمجة، تنظيم فعاليات…"></textarea>
+        <label><span data-i18n="apply.s5.skills_label">ما هي المهارات والهوايات التي تتقنها؟</span> <span class="req">*</span></label>
+        <textarea id="f-skills" data-i18n-placeholder="apply.s5.skills_placeholder" placeholder="مثال: تصميم، تصوير، رياضة، برمجة، تنظيم فعاليات…"></textarea>
       </div>
       <div class="fg">
-        <label>فضلاً اكتب لنا عن نفسك <span class="req">*</span></label>
-        <textarea id="f-about" placeholder="نبذة قصيرة عنك وعن خلفيتك ودوافع انضمامك"></textarea>
+        <label><span data-i18n="apply.s5.about_label">فضلاً اكتب لنا عن نفسك</span> <span class="req">*</span></label>
+        <textarea id="f-about" data-i18n-placeholder="apply.s5.about_placeholder" placeholder="نبذة قصيرة عنك وعن خلفيتك ودوافع انضمامك"></textarea>
       </div>
       <div class="fg">
-        <label>اللجان التي تهتم بالانضمام إليها</label>
+        <label data-i18n="apply.s5.committees_label">اللجان التي تهتم بالانضمام إليها</label>
         <div class="committees" id="committees-grid"></div>
-        <div class="hint">يمكنك اختيار أكثر من لجنة. سيختار رئيس النادي اللجنة الأنسب.</div>
+        <div class="hint" data-i18n="apply.s5.committees_hint">يمكنك اختيار أكثر من لجنة. سيختار رئيس النادي اللجنة الأنسب.</div>
       </div>
     </div>
 
     <!-- ── 6. Referral + suggestions ──────────────────────── -->
     <div class="section">
-      <h3><span class="num">6</span> بيانات إضافية</h3>
+      <h3><span class="num">6</span> <span data-i18n="apply.s6.title">بيانات إضافية</span></h3>
       <div class="fg">
-        <label>كيف علمت عن النادي السعودي في ملبورن؟ <span class="req">*</span></label>
+        <label><span data-i18n="apply.s6.referral_label">كيف علمت عن النادي السعودي في ملبورن؟</span> <span class="req">*</span></label>
         <div class="opts" id="opts-referral">
-          <label><input type="radio" name="referral" value="twitter"/> منصة إكس (X — تويتر سابقاً)</label>
-          <label><input type="radio" name="referral" value="snapchat"/> سناب شات</label>
-          <label><input type="radio" name="referral" value="instagram"/> انستقرام</label>
-          <label><input type="radio" name="referral" value="whatsapp"/> واتس اب</label>
-          <label><input type="radio" name="referral" value="website"/> الموقع الإلكتروني للنادي</label>
-          <label><input type="radio" name="referral" value="friend"/> عن طريق صديق / زميل</label>
-          <label><input type="radio" name="referral" value="other"/> أخرى</label>
+          <label><input type="radio" name="referral" value="twitter"/> <span data-i18n="apply.s6.opt.twitter">منصة إكس (X — تويتر سابقاً)</span></label>
+          <label><input type="radio" name="referral" value="snapchat"/> <span data-i18n="apply.s6.opt.snapchat">سناب شات</span></label>
+          <label><input type="radio" name="referral" value="instagram"/> <span data-i18n="apply.s6.opt.instagram">انستقرام</span></label>
+          <label><input type="radio" name="referral" value="whatsapp"/> <span data-i18n="apply.s6.opt.whatsapp">واتس اب</span></label>
+          <label><input type="radio" name="referral" value="website"/> <span data-i18n="apply.s6.opt.website">الموقع الإلكتروني للنادي</span></label>
+          <label><input type="radio" name="referral" value="friend"/> <span data-i18n="apply.s6.opt.friend">عن طريق صديق / زميل</span></label>
+          <label><input type="radio" name="referral" value="other"/> <span data-i18n="apply.s6.opt.other">أخرى</span></label>
           <div class="other-input" id="other-referral" style="display:none">
-            <input id="f-referral-other" placeholder="حدّد"/>
+            <input id="f-referral-other" data-i18n-placeholder="apply.s6.other_placeholder" placeholder="حدّد"/>
           </div>
         </div>
       </div>
       <div class="fg">
-        <label>ما هي اقتراحاتك أو الأفكار التي تودّ أن يقدّمها النادي خلال هذا العام؟ <span class="req">*</span></label>
-        <div class="hint" style="margin-top:-.2rem;margin-bottom:.4rem">(فعاليات — برامج — مبادرات — أنشطة اجتماعية أو مهنية)</div>
+        <label><span data-i18n="apply.s6.suggestions_label">ما هي اقتراحاتك أو الأفكار التي تودّ أن يقدّمها النادي خلال هذا العام؟</span> <span class="req">*</span></label>
+        <div class="hint" data-i18n="apply.s6.suggestions_hint" style="margin-top:-.2rem;margin-bottom:.4rem">(فعاليات — برامج — مبادرات — أنشطة اجتماعية أو مهنية)</div>
         <textarea id="f-suggestions"></textarea>
       </div>
     </div>
 
     <!-- ── 7. Confirmation ────────────────────────────────── -->
     <div class="section">
-      <h3><span class="num">7</span> الإقرار <span class="req">*</span></h3>
+      <h3><span class="num">7</span> <span data-i18n="apply.s7.title">الإقرار</span> <span class="req">*</span></h3>
       <label class="confirm">
         <input type="checkbox" id="f-confirm"/>
-        <span>أُقرّ بصحّة ودقّة المعلومات التي قمت بإدخالها في هذا النموذج، وأتعهّد بإبلاغ إدارة النادي في حال حدوث أي تغيير عليها.</span>
+        <span data-i18n="apply.s7.confirm">أُقرّ بصحّة ودقّة المعلومات التي قمت بإدخالها في هذا النموذج، وأتعهّد بإبلاغ إدارة النادي في حال حدوث أي تغيير عليها.</span>
       </label>
     </div>
 
-    <button class="btn" id="submit-btn" type="button" disabled>📨 إرسال الطلب</button>
+    <button class="btn" id="submit-btn" type="button" disabled data-i18n="apply.submit">📨 إرسال الطلب</button>
     <div class="msg err" id="err-msg"></div>
   </div>
 
   <!-- THANK-YOU -->
   <div class="thanks" id="thanks-view" style="display:none">
     <div class="icon">✅</div>
-    <h2>تم استلام طلبك!</h2>
-    <p>شكراً جزيلاً على اهتمامك بالانضمام إلى نادي الطلبة السعوديين في ملبورن.</p>
-    <p>سيراجع فريق النادي طلبك ويتواصل معك قريباً عبر بريدك أو رقم جوالك.</p>
-    <p style="margin-top:1.2rem">رقم الطلب للمراجعة:</p>
+    <h2 data-i18n="apply.thanks.title">تم استلام طلبك!</h2>
+    <p data-i18n="apply.thanks.lead">شكراً جزيلاً على اهتمامك بالانضمام إلى نادي الطلبة السعوديين في ملبورن.</p>
+    <p data-i18n="apply.thanks.review">سيراجع فريق النادي طلبك ويتواصل معك قريباً عبر بريدك أو رقم جوالك.</p>
+    <p style="margin-top:1.2rem" data-i18n="apply.thanks.ref">رقم الطلب للمراجعة:</p>
     <div class="ref" id="thanks-ref" dir="ltr">—</div>
-    <p style="margin-top:1.5rem"><a href="index.html">← العودة إلى الموقع</a></p>
+    <p style="margin-top:1.5rem"><a href="index.html" data-i18n="apply.thanks.back">← العودة إلى الموقع</a></p>
   </div>
 
   <div class="foot">
-    <a href="index.html" class="foot-back">← العودة إلى الصفحة الرئيسية</a>
-    <div style="margin-top:.5rem">لوحة الإدارة الداخلية: <a href="login.html">تسجيل الدخول</a></div>
+    <a href="index.html" class="foot-back" data-i18n="apply.foot.back_home">← العودة إلى الصفحة الرئيسية</a>
+    <div style="margin-top:.5rem">
+      <span data-i18n="apply.foot.internal_link">لوحة الإدارة الداخلية:</span>
+      <a href="login.html" data-i18n="apply.foot.internal_cta">تسجيل الدخول</a>
+    </div>
   </div>
 </div>
 
 <!-- CV URL paste modal -->
 <div class="cv-modal" id="cv-modal">
   <div class="card">
-    <h4>📎 رابط السيرة الذاتية</h4>
-    <p>ارفع ملفك على Google Drive أو Dropbox (أو أي مكان قابل للوصول) ثم الصق الرابط هنا.</p>
-    <input id="cv-url-input" type="url" dir="ltr" placeholder="https://drive.google.com/..."/>
+    <h4 data-i18n="apply.cv.modal_title">📎 رابط السيرة الذاتية</h4>
+    <p data-i18n="apply.cv.modal_lead">ارفع ملفك على Google Drive أو Dropbox (أو أي مكان قابل للوصول) ثم الصق الرابط هنا.</p>
+    <input id="cv-url-input" type="url" dir="ltr" data-i18n-placeholder="apply.cv.modal_placeholder" placeholder="https://drive.google.com/..."/>
     <div class="acts">
-      <button class="cancel" type="button">إلغاء</button>
-      <button class="ok" type="button">حفظ الرابط</button>
+      <button class="cancel" type="button" data-i18n="apply.cv.modal_cancel">إلغاء</button>
+      <button class="ok" type="button" data-i18n="apply.cv.modal_save">حفظ الرابط</button>
     </div>
   </div>
 </div>

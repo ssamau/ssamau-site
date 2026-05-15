@@ -9,6 +9,25 @@
 import { callApi } from './lib/api.js';
 import { $, $$ } from './lib/dom.js';
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n
+// strings on the static markup. t() is used below for any string that
+// JS sets imperatively (button labels mid-submit, validation toasts,
+// the CV-URL alert).
+import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
+
+// ── Language toggle wiring ──────────────────────────────────────────
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(_syncLangButtons);
+_syncLangButtons();
+
 // ─── Committees (live fetch + static fallback) ──────────────────────────────
 // Render the committee checklist as soon as we have data — getCommittees is
 // public, but if the API is unreachable we still want users to be able to
@@ -98,7 +117,7 @@ function closeCvModal() { $('#cv-modal').classList.remove('open'); }
 function saveCv() {
   const u = $('#cv-url-input').value.trim();
   if (u && !/^https?:\/\//i.test(u)) {
-    alert('الرجاء إدخال رابط صحيح (يبدأ بـ http أو https).');
+    alert(t('apply.err.invalid_url'));
     return;
   }
   _cvUrl = u;
@@ -175,53 +194,55 @@ async function doSubmit() {
   // A `companion_non_student` (dependent who isn't a student themselves)
   // legitimately has no university/degree/graduation to report — leaving
   // them required forced people to invent fake data to submit.
+  // The second column is now a translation KEY (not a literal string) —
+  // the error message resolves to the current language at render time.
   const required = [
-    ['national_id',                'رقم الهوية'],
-    ['name_ar',                    'الاسم بالعربية'],
-    ['name_en',                    'الاسم بالإنجليزية'],
-    ['gender',                     'الجنس'],
-    ['date_of_birth',              'تاريخ الميلاد'],
-    ['phone',                      'رقم الجوال'],
-    ['email',                      'البريد الإلكتروني'],
-    ['scholarship_entity',         'جهة الابتعاث'],
-    ['skills_hobbies',             'المهارات والهوايات'],
-    ['about_self',                 'النبذة عن نفسك'],
-    ['referral_source',            'كيف علمت عن النادي'],
-    ['suggestions',                'الاقتراحات'],
+    ['national_id',                'apply.field.national_id'],
+    ['name_ar',                    'apply.field.name_ar'],
+    ['name_en',                    'apply.field.name_en'],
+    ['gender',                     'apply.field.gender'],
+    ['date_of_birth',              'apply.field.dob'],
+    ['phone',                      'apply.field.phone'],
+    ['email',                      'apply.field.email'],
+    ['scholarship_entity',         'apply.field.scholarship'],
+    ['skills_hobbies',             'apply.field.skills'],
+    ['about_self',                 'apply.field.about'],
+    ['referral_source',            'apply.field.referral'],
+    ['suggestions',                'apply.field.suggestions'],
   ];
   const isStudying = !NON_STUDENT_VALUES.includes(body.scholarship_entity);
   if (isStudying) {
     required.push(
-      ['study_level',                'المرحلة الدراسية'],
-      ['degree_field',               'التخصص'],
-      ['university',                 'الجامعة'],
-      ['study_started_window',       'وقت بدء الدراسة'],
-      ['expected_graduation_window', 'تاريخ التخرج المتوقع'],
+      ['study_level',                'apply.field.study_level'],
+      ['degree_field',               'apply.field.degree_field'],
+      ['university',                 'apply.field.university'],
+      ['study_started_window',       'apply.field.study_started'],
+      ['expected_graduation_window', 'apply.field.graduation'],
     );
   }
-  for (const [k, label] of required) {
-    if (!body[k]) { showErr(`الحقل مطلوب: ${label}`); return; }
+  for (const [k, labelKey] of required) {
+    if (!body[k]) { showErr(t('apply.err.required_prefix') + t(labelKey)); return; }
   }
   if (body.scholarship_entity === 'other' && !body.scholarship_entity_other) {
-    showErr('فضلاً حدّد جهة الابتعاث في خانة "أخرى".'); return;
+    showErr(t('apply.err.scholarship_other_specify')); return;
   }
   if (body.university === 'other' && !body.university_other) {
-    showErr('فضلاً اكتب اسم الجامعة.'); return;
+    showErr(t('apply.err.university_other_specify')); return;
   }
   if (body.referral_source === 'other' && !body.referral_source_other) {
-    showErr('فضلاً حدّد مصدر معرفتك بالنادي.'); return;
+    showErr(t('apply.err.referral_other_specify')); return;
   }
-  if (!body.confirmation_accepted) { showErr('يجب الموافقة على الإقرار.'); return; }
+  if (!body.confirmation_accepted) { showErr(t('apply.err.must_confirm')); return; }
 
   const btn = $('#submit-btn');
   btn.disabled  = true;
-  btn.textContent = '⏳ جاري الإرسال…';
+  btn.textContent = t('apply.submit_sending');
 
   const r = await callApi('applications.submit', body);
   if (!r || !r.success) {
-    showErr((r && r.error) || 'تعذّر إرسال الطلب — حاول مجدداً');
+    showErr((r && r.error) || t('apply.err.submit_failed'));
     btn.disabled  = false;
-    btn.textContent = '📨 إرسال الطلب';
+    btn.textContent = t('apply.submit');
     return;
   }
   $('#thanks-ref').textContent = (r.data && r.data.application_id) || '—';
