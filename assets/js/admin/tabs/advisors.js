@@ -7,6 +7,14 @@
 import { DB, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson } from '../../lib/format.js';
 import { api, apiGet, toast, openModal, closeModal, clearForm } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
+
+// Status enum (Active / Inactive) → translation key. Tag color comes
+// from STATUS_COLORS which is keyed off the canonical English value.
+const STATUS_KEY = {
+  Active:   'ap.status.active',
+  Inactive: 'ap.status.inactive',
+};
 
 // ══════════════════════════════════════════
 // ADVISORS
@@ -17,21 +25,24 @@ export async function loadAdvisors() {
   DB.advisors = data.data || [];
   const tbody = document.getElementById('advisors-tbody');
   if (!DB.advisors.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد مستشارون</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.adv.empty'))}</td></tr>`;
     return;
   }
-  tbody.innerHTML = DB.advisors.map(a => `<tr>
-    <td><strong>${esc(a.full_name)}</strong></td>
-    <td>${esc(a.advisory_role) || '—'}</td>
-    <td style="direction:ltr;font-size:.78rem">${esc(a.email) || '—'}</td>
-    <td style="direction:ltr;font-size:.78rem">${esc(a.phone) || '—'}</td>
-    <td><strong style="color:var(--g)">${a.total_hours || 0}</strong></td>
-    <td>${tag(a.status, STATUS_COLORS[a.status] || 't-gr')}</td>
-    <td>
-      <button class="btn-icon edit" data-action="editAdvisor" data-id="${a.advisor_id}">✏️</button>
-      <button class="btn-icon del" data-action="confirmDelete" data-type="advisor" data-id="${a.advisor_id}" data-name=${attrJson(a.full_name)}>🗑️</button>
-    </td>
-  </tr>`).join('');
+  tbody.innerHTML = DB.advisors.map(a => {
+    const statusLabel = STATUS_KEY[a.status] ? t(STATUS_KEY[a.status]) : (a.status || '—');
+    return `<tr>
+      <td><strong>${esc(a.full_name)}</strong></td>
+      <td>${esc(a.advisory_role) || '—'}</td>
+      <td style="direction:ltr;font-size:.78rem">${esc(a.email) || '—'}</td>
+      <td style="direction:ltr;font-size:.78rem">${esc(a.phone) || '—'}</td>
+      <td><strong style="color:var(--g)">${a.total_hours || 0}</strong></td>
+      <td>${tag(statusLabel, STATUS_COLORS[a.status] || 't-gr')}</td>
+      <td>
+        <button class="btn-icon edit" data-action="editAdvisor" data-id="${a.advisor_id}">✏️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="advisor" data-id="${a.advisor_id}" data-name=${attrJson(a.full_name)}>🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 export async function saveAdvisor() {
@@ -44,11 +55,11 @@ export async function saveAdvisor() {
     notes:        gv('adv-notes'),
     status:       gv('adv-status'),
   };
-  if (!body.full_name) { toast('الاسم مطلوب', 'twarn'); return; }
+  if (!body.full_name) { toast(t('ap.adv.err_name_required'), 'twarn'); return; }
   let res;
   if (id) res = await api('updateAdvisor', { id, data: body });
   else     res = await api('createAdvisor', body);
-  if (res) { toast('✅ تم الحفظ'); closeModal('advisor'); clearForm('advisor'); loadAdvisors(); }
+  if (res) { toast(t('ap.adv.success_save')); closeModal('advisor'); clearForm('advisor'); loadAdvisors(); }
 }
 
 export function editAdvisor(id) {
@@ -58,6 +69,6 @@ export function editAdvisor(id) {
   sv('adv-full-name', a.full_name); sv('adv-role', a.advisory_role);
   sv('adv-email', a.email); sv('adv-phone', a.phone);
   sv('adv-notes', a.notes); sv('adv-status', a.status);
-  document.getElementById('advisor-modal-title').textContent = '✏️ تعديل المستشار';
+  document.getElementById('advisor-modal-title').textContent = t('ap.adv.modal_edit');
   openModal('advisor');
 }

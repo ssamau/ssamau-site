@@ -16,21 +16,23 @@ import { DB } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson, fmtDate, fmtDateTime } from '../../lib/format.js';
 import { api, toast, openModal, closeModal } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
+import { t } from '../../lib/i18n.js';
 
 // ══════════════════════════════════════════
 // USER ACCOUNTS (superadmin only)
 // ══════════════════════════════════════════
-// Role display labels + tag colors. Role-system refactor 2026-05-15
-// added the `admin` tier between `head` and `superadmin`. superadmin
-// is now dev-only; admin is the presidency tier (President + VPs +
-// DVPs). Both render with warm/red-ish tags so they read as "high
-// privilege" at a glance.
-export const ACCESS_LABEL_AR = {
-  superadmin: 'مطوّر',
-  admin:      'إدارة',
-  head:       'رئيس لجنة',
-  member:     'عضو',
-  volunteer:  'متطوع',
+// Access-level enum (canonical English from DB) → translation key. Tag
+// colors stay in this module because they don't depend on language.
+// Role-system refactor 2026-05-15 added the `admin` tier between `head`
+// and `superadmin`. superadmin is now dev-only; admin is the presidency
+// tier (President + VPs + DVPs). Both render with warm/red-ish tags so
+// they read as "high privilege" at a glance.
+export const ACCESS_KEY = {
+  superadmin: 'ap.role.superadmin',
+  admin:      'ap.role.admin',
+  head:       'ap.role.head',
+  member:     'ap.role.member',
+  volunteer:  'ap.role.volunteer',
 };
 export const ACCESS_COLOR = {
   superadmin: 't-r',   // dev — red so it pops, only one row
@@ -51,8 +53,8 @@ export async function loadAccounts() {
   const title = document.getElementById('accounts-head-title');
   const addBtn = document.getElementById('accounts-add-btn');
   if (title) title.textContent = isAdmin
-    ? '🔑 حسابات المستخدمين'
-    : '🔑 حسابات أعضاء لجنتي — إعادة تعيين كلمات المرور';
+    ? t('ap.acc.card_title_admin')
+    : t('ap.acc.card_title_head');
   if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
 
   // Ensure members + committees are loaded for the linking dropdown + rendering.
@@ -70,7 +72,7 @@ export async function loadAccounts() {
   DB._accounts = items;
   const tbody = document.getElementById('accounts-tbody');
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد حسابات بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.acc.empty'))}</td></tr>`;
   } else {
     tbody.innerHTML = items.map(a => renderAccountRow(a)).join('');
   }
@@ -89,18 +91,19 @@ export function renderAccountRow(a) {
   const memberCell = a.member_id
     ? `<div style="font-weight:600">${esc(a.member_preferred_name || a.member_full_name || a.member_id)}</div>
        <div style="font-size:.7rem;color:var(--tm)">${esc(a.member_club_role || '')} · <span dir="ltr">${esc(a.member_id)}</span></div>`
-    : '<span style="color:var(--tm)">— (حساب مدير غير مرتبط) —</span>';
+    : `<span style="color:var(--tm)">${esc(t('ap.acc.member_not_linked'))}</span>`;
 
   const usernameCell = hasAccount
-    ? `<span dir="ltr" style="font-weight:700;font-family:Menlo,Consolas,monospace;font-size:.85rem">${esc(a.username)}</span>${isSelf ? ' <span style="font-size:.7rem;color:var(--g)">(أنت)</span>' : ''}`
-    : `<span style="color:var(--tm);font-size:.78rem">— لم يُنشأ حساب بعد —</span>`;
+    ? `<span dir="ltr" style="font-weight:700;font-family:Menlo,Consolas,monospace;font-size:.85rem">${esc(a.username)}</span>${isSelf ? ` <span style="font-size:.7rem;color:var(--g)">${esc(t('ap.acc.row_self'))}</span>` : ''}`
+    : `<span style="color:var(--tm);font-size:.78rem">${esc(t('ap.acc.no_account_yet'))}</span>`;
 
+  const accessLabel = ACCESS_KEY[a.access_level] ? t(ACCESS_KEY[a.access_level]) : a.access_level;
   const accessCell = hasAccount
-    ? tag(ACCESS_LABEL_AR[a.access_level] || a.access_level, ACCESS_COLOR[a.access_level] || 't-gr')
-    : `<span style="font-size:.7rem;color:var(--tm)">${isAdmin ? 'لا يوجد حساب' : 'اطلب من المدير إنشاء حساب'}</span>`;
+    ? tag(accessLabel, ACCESS_COLOR[a.access_level] || 't-gr')
+    : `<span style="font-size:.7rem;color:var(--tm)">${esc(isAdmin ? t('ap.acc.no_account') : t('ap.acc.ask_admin_create'))}</span>`;
 
   const lastLoginCell = hasAccount
-    ? (a.last_login_at ? fmtDateTime(a.last_login_at) : '<span style="color:var(--tm)">لم يدخل بعد</span>')
+    ? (a.last_login_at ? fmtDateTime(a.last_login_at) : `<span style="color:var(--tm)">${esc(t('ap.acc.no_login_yet'))}</span>`)
     : '<span style="color:var(--tm)">—</span>';
 
   const createdCell = hasAccount ? (fmtDate(a.created_at) || '—') : '<span style="color:var(--tm)">—</span>';
@@ -119,20 +122,20 @@ export function renderAccountRow(a) {
   const actions = [];
   if (hasAccount) {
     if (isAdmin) {
-      actions.push(`<button class="btn-icon edit" title="تعديل" data-action="editAccount" data-id="${a.id}">✏️</button>`);
+      actions.push(`<button class="btn-icon edit" title="${esc(t('ap.acc.row_edit'))}" data-action="editAccount" data-id="${a.id}">✏️</button>`);
     }
     if (isAdmin || (a.access_level !== 'superadmin' && a.access_level !== 'head')) {
       if (a.auth_user_id) {
-        actions.push(`<button class="btn-icon" title="إرسال رابط إعادة تعيين كلمة المرور" data-action="sendPasswordResetEmail" data-id="${a.id}" data-username=${attrJson(a.username)} data-email=${attrJson(a.auth_email || '')}>📧</button>`);
+        actions.push(`<button class="btn-icon" title="${esc(t('ap.acc.row_reset_email'))}" data-action="sendPasswordResetEmail" data-id="${a.id}" data-username=${attrJson(a.username)} data-email=${attrJson(a.auth_email || '')}>📧</button>`);
       } else {
-        actions.push(`<button class="btn-icon" title="إعادة تعيين كلمة المرور (إنشاء كلمة مؤقتة)" data-action="resetAccountPassword" data-id="${a.id}" data-username=${attrJson(a.username)}>🔑</button>`);
+        actions.push(`<button class="btn-icon" title="${esc(t('ap.acc.row_reset_legacy'))}" data-action="resetAccountPassword" data-id="${a.id}" data-username=${attrJson(a.username)}>🔑</button>`);
       }
     }
     if (isAdmin && !isSelf) {
-      actions.push(`<button class="btn-icon del" title="حذف" data-action="confirmDeleteAccount" data-id="${a.id}" data-username=${attrJson(a.username)}>🗑️</button>`);
+      actions.push(`<button class="btn-icon del" title="${esc(t('ap.acc.row_delete'))}" data-action="confirmDeleteAccount" data-id="${a.id}" data-username=${attrJson(a.username)}>🗑️</button>`);
     }
   } else if (isAdmin) {
-    actions.push(`<button class="btn-icon" title="إنشاء حساب لهذا العضو" data-action="openAccountModalForMember" data-id=${attrJson(a.member_id)}>➕</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.acc.row_create'))}" data-action="openAccountModalForMember" data-id=${attrJson(a.member_id)}>➕</button>`);
   }
 
   // Slightly fade no-account rows so the eye lands on the actionable ones.
@@ -169,11 +172,11 @@ export function openAccountModal(forEditId) {
   sv('acc-password', '');
   sv('acc-access', 'member');
   document.getElementById('account-modal-title').textContent =
-    forEditId ? '✏️ تعديل حساب' : '🔑 إضافة حساب';
+    forEditId ? t('ap.acc.modal_edit') : t('ap.acc.modal_add');
   document.getElementById('acc-pw-required').style.display = forEditId ? 'none' : '';
   document.getElementById('acc-pw-hint').textContent = forEditId
-    ? 'اتركها فارغة للاحتفاظ بكلمة المرور الحالية. لإعادة التعيين استخدم زر 🔑 في الجدول.'
-    : 'على الأقل 6 أحرف.';
+    ? t('ap.acc.hint_password_edit')
+    : t('ap.acc.hint_password');
 
   // Populate the member dropdown — only members without an account
   // (or the current account's own member when editing).
@@ -182,7 +185,7 @@ export function openAccountModal(forEditId) {
   const current = forEditId ? (DB._accounts || []).find(a => a.id === forEditId) : null;
   if (current && current.member_id) usedMemberIds.delete(current.member_id);
   const linkableMembers = DB.members.filter(m => !usedMemberIds.has(m.member_id));
-  sel.innerHTML = '<option value="">— حساب مدير غير مرتبط بعضو —</option>' +
+  sel.innerHTML = `<option value="">${esc(t('ap.acc.link_member_none_admin'))}</option>` +
     linkableMembers.map(m =>
       `<option value="${m.member_id}">${esc(m.preferred_name || m.full_name)}${m.club_role ? ' · ' + esc(m.club_role) : ''}</option>`
     ).join('');
@@ -214,8 +217,8 @@ export async function saveAccount() {
     member_id:    gv('acc-member') || null,
     access_level: gv('acc-access'),
   };
-  if (!body.username) { toast('اسم المستخدم مطلوب', 'twarn'); return; }
-  if (!id && !body.password) { toast('كلمة المرور مطلوبة للحساب الجديد', 'twarn'); return; }
+  if (!body.username) { toast(t('ap.acc.err_username_required'), 'twarn'); return; }
+  if (!id && !body.password) { toast(t('ap.acc.err_password_required'), 'twarn'); return; }
 
   let res;
   if (id) {
@@ -227,14 +230,14 @@ export async function saveAccount() {
     res = await api('users.create', body);
   }
   if (res && res.success) {
-    toast(id ? '✅ تم تعديل الحساب' : '✅ تم إنشاء الحساب');
+    toast(id ? t('ap.acc.success_update') : t('ap.acc.success_create'));
     closeModal('account');
     loadAccounts();
   }
 }
 
 export async function resetAccountPassword(id, username) {
-  if (!confirm(`إعادة تعيين كلمة مرور ${username}؟\nسيتم توليد كلمة مرور جديدة وإلغاء كلمة المرور الحالية فوراً.`)) return;
+  if (!confirm(t('ap.acc.reset_confirm', { username }))) return;
   const res = await api('users.resetPassword', { id });
   if (res && res.success) {
     document.getElementById('pw-shown-value').textContent = res.data.temp_password;
@@ -252,11 +255,8 @@ export async function resetAccountPassword(id, username) {
 // The button is only shown for migrated users (auth_user_id present);
 // renderAccountRow above branches on that.
 export async function sendPasswordResetEmail(id, username, email) {
-  if (!email) { toast('لا يوجد بريد إلكتروني مرتبط بهذا الحساب', 'twarn'); return; }
-  const ok = confirm(
-    `إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}\n\n` +
-    `سيتلقى ${username} رسالة بريد فيها رابط؛ بالضغط عليه يقوم بتعيين كلمة مرور جديدة بنفسه.`
-  );
+  if (!email) { toast(t('ap.acc.err_no_email'), 'twarn'); return; }
+  const ok = confirm(t('ap.acc.reset_email_confirm', { username, email }));
   if (!ok) return;
   // Tell the Edge Function which origin the reset email's link should
   // come back to — important so that a reset triggered from the
@@ -266,21 +266,21 @@ export async function sendPasswordResetEmail(id, username, email) {
   const redirectTo = window.location.origin + '/reset-password.html';
   const res = await api('users.sendPasswordReset', { id, redirectTo });
   if (res && res.success) {
-    toast(`📧 تم إرسال الرابط إلى ${email}`);
+    toast(t('ap.acc.reset_email_sent', { email }));
   }
 }
 
 export function copyShownPw() {
   const v = document.getElementById('pw-shown-value').textContent;
   navigator.clipboard.writeText(v).then(
-    () => toast('📋 تم النسخ'),
-    () => toast('تعذّر النسخ — انسخها يدوياً', 'twarn')
+    () => toast(t('ap.acc.pwshown_copy_success')),
+    () => toast(t('ap.acc.pwshown_copy_failed'), 'twarn')
   );
 }
 
 export function confirmDeleteAccount(id, username) {
-  if (!confirm(`حذف حساب ${username}؟ سيخسر المستخدم القدرة على تسجيل الدخول.`)) return;
+  if (!confirm(t('ap.acc.delete_confirm', { username }))) return;
   api('users.delete', { id }).then(res => {
-    if (res && res.success) { toast('🗑️ تم الحذف'); loadAccounts(); }
+    if (res && res.success) { toast(t('ap.acc.delete_success')); loadAccounts(); }
   });
 }

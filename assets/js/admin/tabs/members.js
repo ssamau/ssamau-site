@@ -21,6 +21,26 @@ import {
   populateMemberSelects, filterTable,
 } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
+import { t } from '../../lib/i18n.js';
+
+// Club-role enum (canonical English) → translation key. Also drives the
+// localized label inside the row's role tag. ROLE_COLORS still keys off
+// the same English value.
+const CLUB_ROLE_KEY = {
+  'President':           'ap.role.president',
+  'Vice President':      'ap.role.vice_president',
+  'Deputy Vice Head':    'ap.role.deputy_vice_head',
+  'Committee Head':      'ap.role.committee_head',
+  'Committee Vice Head': 'ap.role.committee_vice_head',
+  'Project Manager':     'ap.role.project_manager',
+  'Event Manager':       'ap.role.event_manager',
+  'Member':              'ap.role.member',
+  'Volunteer':           'ap.role.volunteer',
+};
+const STATUS_KEY = {
+  Active:   'ap.status.active',
+  Inactive: 'ap.status.inactive',
+};
 
 // Module-level state for the invite modal — `openInviteModal()` writes
 // this, and the per-action handlers (sendInviteByEmail / sendInviteByPin
@@ -44,7 +64,7 @@ export async function loadMembers() {
 export function renderMembers(members) {
   const tbody = document.getElementById('members-tbody');
   if (!members.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا يوجد أعضاء</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('ap.members.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = members.map(m => {
@@ -71,15 +91,15 @@ export function renderMembers(members) {
     let inviteBtns = '';
     if (joined) {
       // Already signed up — show a small green tag for at-a-glance status.
-      inviteBtns = '<span class="t-g" style="font-size:.66rem;padding:.15rem .4rem;border-radius:6px;background:var(--gl);color:var(--g);font-weight:600" title="انضم إلى لوحة الأعضاء">✓ منضم</span>';
+      inviteBtns = `<span class="t-g" style="font-size:.66rem;padding:.15rem .4rem;border-radius:6px;background:var(--gl);color:var(--g);font-weight:600" title="${esc(t('ap.members.invite_joined_title'))}">${esc(t('ap.members.invite_joined_tag'))}</span>`;
     } else if (pending) {
       // Invite outstanding — let admin resend (same modal) or revoke.
       inviteBtns =
-        `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="إعادة إرسال الدعوة">🔄</button>` +
-        `<button class="btn-icon del" data-action="confirmRevokeInvite" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="إلغاء الدعوة">❌</button>`;
+        `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="${esc(t('ap.members.invite_resend_title'))}">🔄</button>` +
+        `<button class="btn-icon del" data-action="confirmRevokeInvite" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="${esc(t('ap.members.invite_revoke_title'))}">❌</button>`;
     } else if (noAccount) {
       // Never invited — offer the first invite.
-      inviteBtns = `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="دعوة إلى لوحة الأعضاء">📩</button>`;
+      inviteBtns = `<button class="btn-icon" data-action="openInviteModal" data-id="${m.member_id}" title="${esc(t('ap.members.invite_first_title'))}">📩</button>`;
     }
     // else: account_id is set but no signup_* and no signup_completed_at
     //       and no auth_user_id — legacy admin account in limbo. We
@@ -93,9 +113,12 @@ export function renderMembers(members) {
     // N+1 signed URLs per page load — too slow. Indicators are
     // enough at the listing level.
     const fileIcons = [
-      m.profile_photo_url ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="photo" title="عرض الصورة">🖼</button>` : '',
-      m.cv_url            ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="cv"    title="عرض السيرة الذاتية">📄</button>` : '',
+      m.profile_photo_url ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="photo" title="${esc(t('ap.members.row_photo'))}">🖼</button>` : '',
+      m.cv_url            ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="cv"    title="${esc(t('ap.members.row_cv'))}">📄</button>` : '',
     ].filter(Boolean).join('');
+
+    const roleLabel   = CLUB_ROLE_KEY[m.club_role] ? t(CLUB_ROLE_KEY[m.club_role]) : (m.club_role || '—');
+    const statusLabel = STATUS_KEY[m.status]       ? t(STATUS_KEY[m.status])       : (m.status     || '—');
 
     return `<tr>
       <td>
@@ -107,14 +130,14 @@ export function renderMembers(members) {
       </td>
       <td>${nid}</td>
       <td style="font-size:.78rem">${contact}</td>
-      <td>${tag(m.club_role, ROLE_COLORS[m.club_role] || 't-gr')}</td>
+      <td>${tag(roleLabel, ROLE_COLORS[m.club_role] || 't-gr')}</td>
       <td>${com ? tag(com.committee_name, 't-b') : '<span style="color:var(--tm)">—</span>'}</td>
       <td><strong style="color:var(--g)">${m.total_hours || 0}</strong></td>
-      <td>${tag(m.status, STATUS_COLORS[m.status] || 't-gr')}</td>
+      <td>${tag(statusLabel, STATUS_COLORS[m.status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon edit" data-action="editMember" data-id="${m.member_id}" title="تعديل">✏️</button>
-        <button class="btn-icon del" data-action="confirmDelete" data-type="member" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="حذف">🗑️</button>
-        <button class="btn-icon" data-action="viewProfile" data-id="${m.member_id}" title="ملف العضو">👤</button>
+        <button class="btn-icon edit" data-action="editMember" data-id="${m.member_id}" title="${esc(t('ap.members.row_edit'))}">✏️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="member" data-id="${m.member_id}" data-name=${attrJson(m.full_name)} title="${esc(t('ap.members.row_delete'))}">🗑️</button>
+        <button class="btn-icon" data-action="viewProfile" data-id="${m.member_id}" title="${esc(t('ap.members.row_view'))}">👤</button>
         ${inviteBtns}
       </td>
     </tr>`;
@@ -162,8 +185,8 @@ export async function openMemberFile(memberId, kind) {
     // explicitly instead of the generic "couldn't open" so the admin
     // knows to ask the member to re-upload rather than retry.
     const friendly = res?.data?.missing
-      ? 'الملف غير متوفر في التخزين — يبدو أنه حُذف.'
-      : (res?.error || 'تعذّر فتح الملف.');
+      ? t('ap.members.file_missing')
+      : (res?.error || t('ap.members.file_failed'));
     toast(friendly, 'twarn');
     return;
   }
@@ -188,7 +211,7 @@ export async function saveMember() {
     join_date:        gv('m-join-date'),
   };
   if (!body.full_name || !body.email || !body.club_role) {
-    toast('الحقول المطلوبة: الاسم، البريد، الدور', 'twarn'); return;
+    toast(t('ap.members.err_required'), 'twarn'); return;
   }
   let res;
   if (id) {
@@ -197,7 +220,7 @@ export async function saveMember() {
     res = await api('createMember', body);
   }
   if (res) {
-    toast(id ? '✅ تم تعديل العضو' : '✅ تم إضافة العضو');
+    toast(id ? t('ap.members.success_update') : t('ap.members.success_create'));
     closeModal('member'); clearForm('member');
     loadMembers();
   }
@@ -220,7 +243,7 @@ export function editMember(id) {
   sv('m-club-role', m.club_role);
   sv('m-status', m.status);
   sv('m-join-date', m.join_date ? String(m.join_date).slice(0, 10) : '');
-  document.getElementById('member-modal-title').textContent = '✏️ تعديل العضو';
+  document.getElementById('member-modal-title').textContent = t('ap.members.modal_edit');
   openModal('member');
 }
 
@@ -233,7 +256,7 @@ export function editMember(id) {
 export function openInviteModal(memberId) {
   const m = DB.members.find(x => x.member_id === memberId);
   if (!m) {
-    toast('العضو غير موجود', 'twarn');
+    toast(t('ap.invite.member_not_found'), 'twarn');
     return;
   }
   _currentInviteMember = m;
@@ -244,7 +267,7 @@ export function openInviteModal(memberId) {
   // textContent directly. Same pattern below for the PIN value and
   // email-target display fields.
   document.getElementById('invite-member-name').textContent  = m.preferred_name || m.full_name;
-  document.getElementById('invite-member-email').textContent = m.email || '— لا يوجد بريد، استخدم رمز PIN —';
+  document.getElementById('invite-member-email').textContent = m.email || t('ap.invite.no_email_placeholder');
 
   // The email button is unusable if the member has no email on file —
   // disable it so the admin can't trigger a 400 from the server.
@@ -253,11 +276,11 @@ export function openInviteModal(memberId) {
   if (m.email) {
     emailBtn.disabled = false;
     emailBtn.style.opacity = '';
-    emailHelp.textContent = 'يستلم العضو رابطاً صالحاً 7 أيام لاختيار كلمة المرور بنفسه.';
+    emailHelp.textContent = t('ap.invite.email_help');
   } else {
     emailBtn.disabled = true;
     emailBtn.style.opacity = '.4';
-    emailHelp.textContent = '⚠️ لا يوجد بريد للعضو — استخدم PIN، أو أضف بريداً عبر "تعديل" أولاً.';
+    emailHelp.textContent = t('ap.invite.email_help_no_email');
   }
 
   // Reset the modal to "choose method" state (the previous open might
@@ -280,7 +303,7 @@ export async function sendInviteByEmail() {
   // The DB-side invite landed even if the SMTP send failed. Distinguish
   // the two so the admin isn't told "sent" when it wasn't.
   if (res.data && res.data.sent === false) {
-    toast('⚠️ تم إنشاء الدعوة لكن فشل إرسال البريد. حاول مرة أخرى لاحقاً.', 'twarn');
+    toast(t('ap.invite.email_partial_fail'), 'twarn');
     closeModal('member-invite');
     loadMembers();
     return;
@@ -289,7 +312,7 @@ export async function sendInviteByEmail() {
   document.getElementById('invite-choose').style.display = 'none';
   document.getElementById('invite-email-result-target').textContent = m.email;
   document.getElementById('invite-email-result').style.display = '';
-  toast('📧 تم إرسال الدعوة', 'tok');
+  toast(t('ap.invite.email_success_toast'), 'tok');
   // Refresh the table so the row's state flips from "📩" to "🔄 ❌".
   loadMembers();
 }
@@ -303,7 +326,7 @@ export async function sendInviteByPin() {
   document.getElementById('invite-choose').style.display = 'none';
   document.getElementById('invite-pin-value').textContent = res.data.pin;
   document.getElementById('invite-pin-result').style.display = '';
-  toast('🔢 تم إنشاء رمز PIN', 'tok');
+  toast(t('ap.invite.pin_success_toast'), 'tok');
   loadMembers();
 }
 
@@ -311,10 +334,10 @@ export async function copyShownPin() {
   const pin = document.getElementById('invite-pin-value').textContent;
   try {
     await navigator.clipboard.writeText(pin);
-    toast('📋 نُسخ الرمز', 'tok');
+    toast(t('ap.invite.copy_success'), 'tok');
   } catch (err) {
     console.warn('[clipboard] write failed:', err);
-    toast('تعذّر النسخ — انسخ الرمز يدوياً', 'twarn');
+    toast(t('ap.invite.copy_failed'), 'twarn');
   }
 }
 
@@ -322,9 +345,9 @@ export async function copyShownPin() {
 // stray click doesn't nuke a pending invite the admin still wants. No
 // modal for this — toast-driven for speed.
 export async function confirmRevokeInvite(memberId, memberName) {
-  if (!confirm(`إلغاء الدعوة المعلّقة للعضو "${memberName}"؟ سيُحذف رمز التفعيل ولن يستطيع العضو إكمال التسجيل حتى تُرسل له دعوة جديدة.`)) return;
+  if (!confirm(t('ap.invite.revoke_confirm', { name: memberName }))) return;
   const res = await api('auth.invite.revoke', { member_id: memberId });
   if (!res || !res.success) return;
-  toast('❌ تم إلغاء الدعوة', 'tok');
+  toast(t('ap.invite.revoke_success'), 'tok');
   loadMembers();
 }

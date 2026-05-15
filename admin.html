@@ -177,27 +177,42 @@
     <div class="page" id="page-members">
       <div class="card">
         <div class="card-head">
-          <h3>👥 الأعضاء</h3>
+          <h3>👥 <span data-i18n="ap.sb.tab_members">الأعضاء</span></h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث بالاسم أو البريد..." data-action="filterTable" data-target="members-tbody" data-event="input" id="members-search"/>
+            <input class="search-input" data-i18n-placeholder="ap.members.search_placeholder" placeholder="بحث بالاسم أو البريد..." data-action="filterTable" data-target="members-tbody" data-event="input" id="members-search"/>
             <select class="filter-select" data-action="filterMembersByRole">
-              <option value="">كل الأدوار</option>
-              <option>President</option><option>Vice President</option><option>Deputy Vice Head</option>
-              <option>Committee Head</option><option>Committee Vice Head</option>
-              <option>Project Manager</option><option>Event Manager</option>
-              <option>Member</option><option>Volunteer</option>
+              <option value="" data-i18n="ap.members.filter_all_roles">كل الأدوار</option>
+              <option value="President"            data-i18n="ap.role.president">President</option>
+              <option value="Vice President"       data-i18n="ap.role.vice_president">Vice President</option>
+              <option value="Deputy Vice Head"     data-i18n="ap.role.deputy_vice_head">Deputy Vice Head</option>
+              <option value="Committee Head"       data-i18n="ap.role.committee_head">Committee Head</option>
+              <option value="Committee Vice Head"  data-i18n="ap.role.committee_vice_head">Committee Vice Head</option>
+              <option value="Project Manager"      data-i18n="ap.role.project_manager">Project Manager</option>
+              <option value="Event Manager"        data-i18n="ap.role.event_manager">Event Manager</option>
+              <option value="Member"               data-i18n="ap.role.member">Member</option>
+              <option value="Volunteer"            data-i18n="ap.role.volunteer">Volunteer</option>
             </select>
             <select class="filter-select" data-action="filterMembersByStatus">
-              <option value="">كل الحالات</option>
-              <option>Active</option><option>Inactive</option>
+              <option value="" data-i18n="ap.members.filter_all_statuses">كل الحالات</option>
+              <option value="Active"   data-i18n="ap.status.active">Active</option>
+              <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="member">+ إضافة عضو</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="member" data-i18n="ap.members.add_btn">+ إضافة عضو</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>رقم الهوية</th><th>التواصل</th><th>الدور</th><th>اللجنة</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="members-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.members.col_name">الاسم</th>
+              <th data-i18n="ap.members.col_nid">رقم الهوية</th>
+              <th data-i18n="ap.members.col_contact">التواصل</th>
+              <th data-i18n="ap.members.col_role">الدور</th>
+              <th data-i18n="ap.members.col_committee">اللجنة</th>
+              <th data-i18n="ap.members.col_hours">الساعات</th>
+              <th data-i18n="ap.members.col_status">الحالة</th>
+              <th data-i18n="ap.members.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="members-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -207,24 +222,28 @@
     <div class="page" id="page-accounts">
       <div class="card">
         <div class="card-head">
-          <h3 id="accounts-head-title">🔑 حسابات المستخدمين</h3>
+          <!-- accounts-head-title content is rewritten by loadAccounts()
+               via t() — admin sees the full title, head sees the
+               narrowed reset-only label. The data-i18n attr here is the
+               static default for the more common admin view. -->
+          <h3 id="accounts-head-title" data-i18n="ap.acc.card_title_admin">🔑 حسابات المستخدمين</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث باسم المستخدم..." data-action="filterTable" data-target="accounts-tbody" data-event="input"/>
-            <button class="btn btn-g" id="accounts-add-btn" data-action="openAccountModal">+ إضافة حساب</button>
+            <input class="search-input" data-i18n-placeholder="ap.acc.search_placeholder" placeholder="بحث باسم المستخدم..." data-action="filterTable" data-target="accounts-tbody" data-event="input"/>
+            <button class="btn btn-g" id="accounts-add-btn" data-action="openAccountModal" data-i18n="ap.acc.add_btn">+ إضافة حساب</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>اسم المستخدم</th>
-              <th>الصلاحية</th>
-              <th>العضو المرتبط</th>
-              <th>اللجنة</th>
-              <th>آخر دخول</th>
-              <th>تاريخ الإنشاء</th>
-              <th>إجراءات</th>
+              <th data-i18n="ap.acc.col_username">اسم المستخدم</th>
+              <th data-i18n="ap.acc.col_access">الصلاحية</th>
+              <th data-i18n="ap.acc.col_member">العضو المرتبط</th>
+              <th data-i18n="ap.acc.col_committee">اللجنة</th>
+              <th data-i18n="ap.acc.col_last_login">آخر دخول</th>
+              <th data-i18n="ap.acc.col_created">تاريخ الإنشاء</th>
+              <th data-i18n="ap.acc.col_actions">إجراءات</th>
             </tr></thead>
-            <tbody id="accounts-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
+            <tbody id="accounts-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -234,31 +253,31 @@
     <div class="page" id="page-applications">
       <div class="card">
         <div class="card-head">
-          <h3>📥 طلبات العضوية</h3>
+          <h3 data-i18n="ap.title.applications">📥 طلبات العضوية</h3>
           <div class="card-head-right">
             <select class="filter-select" id="applications-status-filter" data-action="loadApplications">
-              <option value="">كل الحالات</option>
-              <option value="PendingTriage">قيد الفرز</option>
-              <option value="AssignedToCommittee">معيّنة للجنة</option>
-              <option value="InterviewRequested">مقابلة مطلوبة</option>
-              <option value="Accepted">مقبولة</option>
-              <option value="Rejected">مرفوضة</option>
+              <option value="" data-i18n="ap.apps.filter_all_statuses">كل الحالات</option>
+              <option value="PendingTriage"       data-i18n="ap.apps.status_pending_triage">قيد الفرز</option>
+              <option value="AssignedToCommittee" data-i18n="ap.apps.status_assigned">معيّنة للجنة</option>
+              <option value="InterviewRequested"  data-i18n="ap.apps.status_interview_requested">مقابلة مطلوبة</option>
+              <option value="Accepted"            data-i18n="ap.apps.status_accepted">مقبولة</option>
+              <option value="Rejected"            data-i18n="ap.apps.status_rejected">مرفوضة</option>
             </select>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>الاسم</th>
-              <th>التواصل</th>
-              <th>الجامعة / التخصص</th>
-              <th>الاهتمامات</th>
-              <th>اللجنة المعيّنة</th>
-              <th>الحالة</th>
-              <th>تاريخ الطلب</th>
-              <th>إجراءات</th>
+              <th data-i18n="ap.apps.col_name">الاسم</th>
+              <th data-i18n="ap.apps.col_contact">التواصل</th>
+              <th data-i18n="ap.apps.col_uni">الجامعة / التخصص</th>
+              <th data-i18n="ap.apps.col_interests">الاهتمامات</th>
+              <th data-i18n="ap.apps.col_assigned">اللجنة المعيّنة</th>
+              <th data-i18n="ap.apps.col_status">الحالة</th>
+              <th data-i18n="ap.apps.col_date">تاريخ الطلب</th>
+              <th data-i18n="ap.apps.col_actions">إجراءات</th>
             </tr></thead>
-            <tbody id="applications-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل…</td></tr></tbody>
+            <tbody id="applications-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -268,19 +287,27 @@
     <div class="page" id="page-advisors">
       <div class="card">
         <div class="card-head">
-          <h3>🎓 المستشارون</h3>
+          <h3>🎓 <span data-i18n="ap.sb.tab_advisors">المستشارون</span></h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث..." data-action="filterTable" data-target="advisors-tbody" data-event="input"/>
-            <button class="btn btn-g" data-action="openModal" data-modal="advisor">+ إضافة مستشار</button>
+            <input class="search-input" data-i18n-placeholder="ap.adv.search_placeholder" placeholder="بحث..." data-action="filterTable" data-target="advisors-tbody" data-event="input"/>
+            <button class="btn btn-g" data-action="openModal" data-modal="advisor" data-i18n="ap.adv.add_btn">+ إضافة مستشار</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>الدور الاستشاري</th><th>البريد</th><th>الهاتف</th><th>الساعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="advisors-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.adv.col_name">الاسم</th>
+              <th data-i18n="ap.adv.col_advisory_role">الدور الاستشاري</th>
+              <th data-i18n="ap.adv.col_email">البريد</th>
+              <th data-i18n="ap.adv.col_phone">الهاتف</th>
+              <th data-i18n="ap.adv.col_hours">الساعات</th>
+              <th data-i18n="ap.adv.col_status">الحالة</th>
+              <th data-i18n="ap.adv.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="advisors-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
-        <div class="card-body" style="background:var(--wnb);border-top:1px solid var(--bd);font-size:.76rem;color:var(--wn)">
+        <div class="card-body" data-i18n="ap.adv.footer_lead" style="background:var(--wnb);border-top:1px solid var(--bd);font-size:.76rem;color:var(--wn)">
           ℹ️ المستشارون للحفظ فقط — لا يملكون حسابات دخول للنظام.
         </div>
       </div>
@@ -290,15 +317,22 @@
     <div class="page" id="page-committees">
       <div class="card">
         <div class="card-head">
-          <h3>🏛️ اللجان</h3>
+          <h3>🏛️ <span data-i18n="ap.sb.tab_committees">اللجان</span></h3>
           <div class="card-head-right">
-            <button class="btn btn-g" data-action="openModal" data-modal="committee">+ إضافة لجنة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="committee" data-i18n="ap.com.add_btn">+ إضافة لجنة</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>اسم اللجنة</th><th>الرئيس</th><th>نائب الرئيس</th><th>عدد الأعضاء</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="committees-tbody"><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.com.col_name">اسم اللجنة</th>
+              <th data-i18n="ap.com.col_head">الرئيس</th>
+              <th data-i18n="ap.com.col_vice">نائب الرئيس</th>
+              <th data-i18n="ap.com.col_count">عدد الأعضاء</th>
+              <th data-i18n="ap.com.col_status">الحالة</th>
+              <th data-i18n="ap.com.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="committees-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -572,58 +606,69 @@
 <!-- ═══ MODALS ═══ -->
 <div class="overlay" id="ov-member">
   <div class="modal">
-    <div class="modal-head"><h3 id="member-modal-title">➕ إضافة عضو</h3><button class="modal-close" data-action="closeModal" data-modal="member">✕</button></div>
+    <div class="modal-head"><h3 id="member-modal-title" data-i18n="ap.members.modal_add">➕ إضافة عضو</h3><button class="modal-close" data-action="closeModal" data-modal="member">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="m-edit-id"/>
-      <div class="form-section">البيانات الأساسية</div>
+      <div class="form-section" data-i18n="ap.members.section_basics">البيانات الأساسية</div>
       <div class="fg-row">
-        <div class="fg"><label>الاسم الكامل <span class="required">*</span></label><input id="m-full-name" placeholder="أحمد علي الشمري"/></div>
-        <div class="fg"><label>الاسم المفضّل</label><input id="m-preferred-name" placeholder="أحمد"/></div>
+        <div class="fg"><label><span data-i18n="ap.members.lbl_full_name">الاسم الكامل</span> <span class="required">*</span></label><input id="m-full-name" data-i18n-placeholder="ap.members.ph_full_name" placeholder="أحمد علي الشمري"/></div>
+        <div class="fg"><label data-i18n="ap.members.lbl_preferred">الاسم المفضّل</label><input id="m-preferred-name" data-i18n-placeholder="ap.members.ph_preferred" placeholder="أحمد"/></div>
       </div>
       <div class="fg">
-        <label>رقم الهوية الوطنية / الإقامة</label>
-        <input id="m-national-id" dir="ltr" maxlength="15" placeholder="1xxxxxxxxx"/>
-        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">يُستخدم لتسجيل دخول العضو لاحقاً عبر صفحة التسجيل.</div>
+        <label data-i18n="ap.members.lbl_nid">رقم الهوية الوطنية / الإقامة</label>
+        <input id="m-national-id" dir="ltr" maxlength="15" data-i18n-placeholder="ap.members.ph_nid" placeholder="1xxxxxxxxx"/>
+        <div data-i18n="ap.members.nid_hint" style="font-size:.7rem;color:var(--tm);margin-top:.25rem">يُستخدم لتسجيل دخول العضو لاحقاً عبر صفحة التسجيل.</div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>البريد الإلكتروني <span class="required">*</span></label><input id="m-email" type="email" dir="ltr" placeholder="ahmed@example.com"/></div>
-        <div class="fg"><label>الهاتف</label><input id="m-phone" dir="ltr" placeholder="+61400000000"/></div>
+        <div class="fg"><label><span data-i18n="ap.members.lbl_email">البريد الإلكتروني</span> <span class="required">*</span></label><input id="m-email" type="email" dir="ltr" data-i18n-placeholder="ap.members.ph_email" placeholder="ahmed@example.com"/></div>
+        <div class="fg"><label data-i18n="ap.members.lbl_phone">الهاتف</label><input id="m-phone" dir="ltr" data-i18n-placeholder="ap.members.ph_phone" placeholder="+61400000000"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>واتس اب</label><input id="m-whatsapp" dir="ltr" placeholder="+966500000000"/></div>
-        <div class="fg"><label>تاريخ الميلاد</label><input id="m-dob" type="date"/></div>
+        <div class="fg"><label data-i18n="ap.members.lbl_whatsapp">واتس اب</label><input id="m-whatsapp" dir="ltr" data-i18n-placeholder="ap.members.ph_whatsapp" placeholder="+966500000000"/></div>
+        <div class="fg"><label data-i18n="ap.members.lbl_dob">تاريخ الميلاد</label><input id="m-dob" type="date"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>الجنس</label>
-          <select id="m-gender"><option value="">—</option><option>ذكر</option><option>أنثى</option></select>
-        </div>
-        <div class="fg"><label>تاريخ الانضمام</label><input id="m-join-date" type="date"/></div>
-      </div>
-      <div class="form-section">الدور واللجنة</div>
-      <div class="fg-row">
-        <div class="fg"><label>الدور في النادي <span class="required">*</span></label>
-          <select id="m-club-role">
-            <option>Member</option>
-            <option>Committee Head</option><option>Committee Vice Head</option>
-            <option>Project Manager</option><option>Event Manager</option>
-            <option>Vice President</option><option>Deputy Vice Head</option>
-            <option>President</option><option>Volunteer</option>
+        <div class="fg"><label data-i18n="ap.members.lbl_gender">الجنس</label>
+          <select id="m-gender">
+            <option value="" data-i18n="ap.members.gender_empty">—</option>
+            <option value="ذكر"  data-i18n="ap.members.gender_male">ذكر</option>
+            <option value="أنثى" data-i18n="ap.members.gender_female">أنثى</option>
           </select>
         </div>
-        <div class="fg"><label>اللجنة</label>
-          <select id="m-committee-id"><option value="">— بدون لجنة —</option></select>
+        <div class="fg"><label data-i18n="ap.members.lbl_join_date">تاريخ الانضمام</label><input id="m-join-date" type="date"/></div>
+      </div>
+      <div class="form-section" data-i18n="ap.members.section_role">الدور واللجنة</div>
+      <div class="fg-row">
+        <div class="fg"><label><span data-i18n="ap.members.lbl_club_role">الدور في النادي</span> <span class="required">*</span></label>
+          <select id="m-club-role">
+            <option value="Member"               data-i18n="ap.role.member">Member</option>
+            <option value="Committee Head"       data-i18n="ap.role.committee_head">Committee Head</option>
+            <option value="Committee Vice Head"  data-i18n="ap.role.committee_vice_head">Committee Vice Head</option>
+            <option value="Project Manager"      data-i18n="ap.role.project_manager">Project Manager</option>
+            <option value="Event Manager"        data-i18n="ap.role.event_manager">Event Manager</option>
+            <option value="Vice President"       data-i18n="ap.role.vice_president">Vice President</option>
+            <option value="Deputy Vice Head"     data-i18n="ap.role.deputy_vice_head">Deputy Vice Head</option>
+            <option value="President"            data-i18n="ap.role.president">President</option>
+            <option value="Volunteer"            data-i18n="ap.role.volunteer">Volunteer</option>
+          </select>
+        </div>
+        <div class="fg"><label data-i18n="ap.members.lbl_committee">اللجنة</label>
+          <select id="m-committee-id"><option value="" data-i18n="ap.members.committee_none">— بدون لجنة —</option></select>
         </div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>الحالة</label>
-          <select id="m-status"><option>Active</option><option>Inactive</option></select>
+        <div class="fg"><label data-i18n="ap.members.lbl_status">الحالة</label>
+          <select id="m-status">
+            <option value="Active"   data-i18n="ap.status.active">Active</option>
+            <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
+          </select>
         </div>
-        <div class="fg"><label>رابط الصورة الشخصية</label><input id="m-photo" dir="ltr" placeholder="https://drive.google.com/..."/></div>
+        <div class="fg"><label data-i18n="ap.members.lbl_photo">رابط الصورة الشخصية</label><input id="m-photo" dir="ltr" data-i18n-placeholder="ap.members.ph_photo" placeholder="https://drive.google.com/..."/></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="member">إلغاء</button>
-      <button class="btn btn-g" data-action="saveMember">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="member" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveMember" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -631,21 +676,24 @@
 <!-- ADVISOR MODAL -->
 <div class="overlay" id="ov-advisor">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3 id="advisor-modal-title">➕ إضافة مستشار</h3><button class="modal-close" data-action="closeModal" data-modal="advisor">✕</button></div>
+    <div class="modal-head"><h3 id="advisor-modal-title" data-i18n="ap.adv.modal_add">➕ إضافة مستشار</h3><button class="modal-close" data-action="closeModal" data-modal="advisor">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="adv-edit-id"/>
-      <div class="fg"><label>الاسم الكامل <span class="required">*</span></label><input id="adv-full-name"/></div>
-      <div class="fg"><label>الدور الاستشاري</label><input id="adv-role" placeholder="مستشار أكاديمي، مستشار إداري..."/></div>
+      <div class="fg"><label><span data-i18n="ap.adv.lbl_full_name">الاسم الكامل</span> <span class="required">*</span></label><input id="adv-full-name"/></div>
+      <div class="fg"><label data-i18n="ap.adv.lbl_advisory_role">الدور الاستشاري</label><input id="adv-role" data-i18n-placeholder="ap.adv.ph_advisory_role" placeholder="مستشار أكاديمي، مستشار إداري..."/></div>
       <div class="fg-row">
-        <div class="fg"><label>البريد</label><input id="adv-email" type="email" dir="ltr"/></div>
-        <div class="fg"><label>الهاتف</label><input id="adv-phone" dir="ltr"/></div>
+        <div class="fg"><label data-i18n="ap.adv.lbl_email">البريد</label><input id="adv-email" type="email" dir="ltr"/></div>
+        <div class="fg"><label data-i18n="ap.adv.lbl_phone">الهاتف</label><input id="adv-phone" dir="ltr"/></div>
       </div>
-      <div class="fg"><label>ملاحظات</label><textarea id="adv-notes"></textarea></div>
-      <div class="fg"><label>الحالة</label><select id="adv-status"><option>Active</option><option>Inactive</option></select></div>
+      <div class="fg"><label data-i18n="ap.adv.lbl_notes">ملاحظات</label><textarea id="adv-notes"></textarea></div>
+      <div class="fg"><label data-i18n="ap.adv.lbl_status">الحالة</label><select id="adv-status">
+        <option value="Active"   data-i18n="ap.status.active">Active</option>
+        <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
+      </select></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="advisor">إلغاء</button>
-      <button class="btn btn-g" data-action="saveAdvisor">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="advisor" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAdvisor" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -653,20 +701,23 @@
 <!-- COMMITTEE MODAL -->
 <div class="overlay" id="ov-committee">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3 id="committee-modal-title">➕ إضافة لجنة</h3><button class="modal-close" data-action="closeModal" data-modal="committee">✕</button></div>
+    <div class="modal-head"><h3 id="committee-modal-title" data-i18n="ap.com.modal_add">➕ إضافة لجنة</h3><button class="modal-close" data-action="closeModal" data-modal="committee">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="com-edit-id"/>
-      <div class="fg"><label>اسم اللجنة <span class="required">*</span></label><input id="com-name" placeholder="لجنة الفعاليات"/></div>
-      <div class="fg"><label>وصف اللجنة</label><textarea id="com-desc"></textarea></div>
+      <div class="fg"><label><span data-i18n="ap.com.lbl_name">اسم اللجنة</span> <span class="required">*</span></label><input id="com-name" data-i18n-placeholder="ap.com.ph_name" placeholder="لجنة الفعاليات"/></div>
+      <div class="fg"><label data-i18n="ap.com.lbl_desc">وصف اللجنة</label><textarea id="com-desc"></textarea></div>
       <div class="fg-row">
-        <div class="fg"><label>رئيس اللجنة</label><select id="com-head"><option value="">— اختر —</option></select></div>
-        <div class="fg"><label>نائب رئيس اللجنة</label><select id="com-vice"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.com.lbl_head">رئيس اللجنة</label><select id="com-head"><option value="" data-i18n="ap.com.choose">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.com.lbl_vice">نائب رئيس اللجنة</label><select id="com-vice"><option value="" data-i18n="ap.com.choose">— اختر —</option></select></div>
       </div>
-      <div class="fg"><label>الحالة</label><select id="com-status"><option>Active</option><option>Inactive</option></select></div>
+      <div class="fg"><label data-i18n="ap.com.lbl_status">الحالة</label><select id="com-status">
+        <option value="Active"   data-i18n="ap.status.active">Active</option>
+        <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
+      </select></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="committee">إلغاء</button>
-      <button class="btn btn-g" data-action="saveCommittee">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="committee" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveCommittee" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -733,45 +784,48 @@
 <div class="overlay" id="ov-account">
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
-      <h3 id="account-modal-title">🔑 إضافة حساب</h3>
+      <h3 id="account-modal-title" data-i18n="ap.acc.modal_add">🔑 إضافة حساب</h3>
       <button class="modal-close" data-action="closeModal" data-modal="account">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="acc-edit-id"/>
       <div class="fg">
-        <label>اسم المستخدم <span class="required">*</span></label>
-        <input id="acc-username" dir="ltr" placeholder="e.g. saad" autocomplete="off"/>
-        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">حروف وأرقام لاتينية فقط — يستخدمه المستخدم لتسجيل الدخول.</div>
+        <label><span data-i18n="ap.acc.lbl_username">اسم المستخدم</span> <span class="required">*</span></label>
+        <input id="acc-username" dir="ltr" data-i18n-placeholder="ap.acc.ph_username" placeholder="e.g. saad" autocomplete="off"/>
+        <div data-i18n="ap.acc.hint_username" style="font-size:.7rem;color:var(--tm);margin-top:.25rem">حروف وأرقام لاتينية فقط — يستخدمه المستخدم لتسجيل الدخول.</div>
       </div>
       <div class="fg" id="acc-pw-section">
-        <label>كلمة المرور <span class="required" id="acc-pw-required">*</span></label>
+        <label><span data-i18n="ap.acc.lbl_password">كلمة المرور</span> <span class="required" id="acc-pw-required">*</span></label>
         <div style="display:flex;gap:.4rem">
           <input id="acc-password" dir="ltr" style="flex:1" autocomplete="off"/>
-          <button type="button" class="btn btn-ol" data-action="generateAccountPw" style="padding:.4rem .7rem;font-size:.8rem">🎲 توليد</button>
+          <button type="button" class="btn btn-ol" data-action="generateAccountPw" data-i18n="ap.acc.gen_pw_btn" style="padding:.4rem .7rem;font-size:.8rem">🎲 توليد</button>
         </div>
-        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem" id="acc-pw-hint">على الأقل 6 أحرف. اتركها فارغة للاحتفاظ بكلمة المرور الحالية.</div>
+        <!-- acc-pw-hint is rewritten by openAccountModal() — t()-driven
+             text differs between create/edit. The data-i18n default is
+             the create-form value. -->
+        <div data-i18n="ap.acc.hint_password" style="font-size:.7rem;color:var(--tm);margin-top:.25rem" id="acc-pw-hint">على الأقل 6 أحرف. اتركها فارغة للاحتفاظ بكلمة المرور الحالية.</div>
       </div>
       <div class="fg">
-        <label>الصلاحية <span class="required">*</span></label>
+        <label><span data-i18n="ap.acc.lbl_access">الصلاحية</span> <span class="required">*</span></label>
         <select id="acc-access">
-          <option value="member">عضو (member)</option>
-          <option value="volunteer">متطوع (volunteer)</option>
-          <option value="head">رئيس لجنة (head)</option>
-          <option value="admin">إدارة (admin)</option>
-          <option value="superadmin">مطوّر (superadmin/dev)</option>
+          <option value="member"     data-i18n="ap.acc.access_member_opt">عضو (member)</option>
+          <option value="volunteer"  data-i18n="ap.acc.access_volunteer_opt">متطوع (volunteer)</option>
+          <option value="head"       data-i18n="ap.acc.access_head_opt">رئيس لجنة (head)</option>
+          <option value="admin"      data-i18n="ap.acc.access_admin_opt">إدارة (admin)</option>
+          <option value="superadmin" data-i18n="ap.acc.access_superadmin_opt">مطوّر (superadmin/dev)</option>
         </select>
       </div>
       <div class="fg">
-        <label>ربط بعضو موجود (اختياري)</label>
+        <label data-i18n="ap.acc.lbl_link_member">ربط بعضو موجود (اختياري)</label>
         <select id="acc-member">
-          <option value="">— حساب مدير غير مرتبط بعضو —</option>
+          <option value="" data-i18n="ap.acc.link_member_none_admin">— حساب مدير غير مرتبط بعضو —</option>
         </select>
-        <div style="font-size:.7rem;color:var(--tm);margin-top:.25rem">القائمة تعرض فقط الأعضاء الذين ليس لديهم حساب بعد. لإنشاء عضو جديد، استخدم تبويب الأعضاء أولاً.</div>
+        <div data-i18n="ap.acc.link_member_help" style="font-size:.7rem;color:var(--tm);margin-top:.25rem">القائمة تعرض فقط الأعضاء الذين ليس لديهم حساب بعد. لإنشاء عضو جديد، استخدم تبويب الأعضاء أولاً.</div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="account">إلغاء</button>
-      <button class="btn btn-g" data-action="saveAccount">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="account" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAccount" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -780,21 +834,21 @@
 <div class="overlay" id="ov-pw-shown">
   <div class="modal" style="max-width:460px">
     <div class="modal-head">
-      <h3>🔑 كلمة المرور المؤقتة</h3>
+      <h3 data-i18n="ap.acc.pwshown_title">🔑 كلمة المرور المؤقتة</h3>
       <button class="modal-close" data-action="closeModal" data-modal="pw-shown">✕</button>
     </div>
     <div class="modal-body" style="text-align:center">
-      <p style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
+      <p data-i18n="ap.acc.pwshown_lead" style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
         انسخها الآن — لن تظهر مرة أخرى. سلّمها للمستخدم بقناة آمنة وغيّرها بعد أول دخول.
       </p>
       <div style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;padding:.85rem;font-family:Menlo,Consolas,monospace;font-size:1.1rem;font-weight:700;color:#1A5C2E;letter-spacing:.05em;direction:ltr" id="pw-shown-value">—</div>
       <div style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
-        المستخدم: <span dir="ltr" id="pw-shown-username">—</span>
+        <span data-i18n="ap.acc.pwshown_user_label">المستخدم:</span> <span dir="ltr" id="pw-shown-username">—</span>
       </div>
-      <button class="btn btn-g" style="margin-top:1rem" data-action="copyShownPw">📋 نسخ كلمة المرور</button>
+      <button class="btn btn-g" style="margin-top:1rem" data-action="copyShownPw" data-i18n="ap.acc.pwshown_copy_btn">📋 نسخ كلمة المرور</button>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="pw-shown">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="pw-shown" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
 </div>
@@ -807,7 +861,7 @@
 <div class="overlay" id="ov-member-invite">
   <div class="modal" style="max-width:480px">
     <div class="modal-head">
-      <h3>📩 دعوة العضو إلى لوحة الأعضاء</h3>
+      <h3 data-i18n="ap.invite.title">📩 دعوة العضو إلى لوحة الأعضاء</h3>
       <button class="modal-close" data-action="closeModal" data-modal="member-invite">✕</button>
     </div>
     <div class="modal-body">
@@ -820,48 +874,51 @@
 
       <!-- STATE 1: pick a method -->
       <div id="invite-choose">
-        <p style="font-size:.85rem;margin-bottom:1rem">
+        <p data-i18n="ap.invite.choose_prompt" style="font-size:.85rem;margin-bottom:1rem">
           اختر طريقة الدعوة:
         </p>
-        <button class="btn btn-g" style="width:100%;margin-bottom:.5rem" data-action="sendInviteByEmail" id="invite-email-btn">
+        <button class="btn btn-g" style="width:100%;margin-bottom:.5rem" data-action="sendInviteByEmail" id="invite-email-btn" data-i18n="ap.invite.email_btn">
           📧 إرسال رابط بالبريد الإلكتروني
         </button>
-        <div style="font-size:.72rem;color:var(--tm);margin-bottom:.85rem;text-align:center" id="invite-email-help">
+        <!-- invite-email-help text is rewritten by openInviteModal() in
+             members.js depending on whether the member has an email on
+             file — default reflects the happy path. -->
+        <div data-i18n="ap.invite.email_help" style="font-size:.72rem;color:var(--tm);margin-bottom:.85rem;text-align:center" id="invite-email-help">
           يستلم العضو رابطاً صالحاً 7 أيام لاختيار كلمة المرور بنفسه.
         </div>
 
-        <button class="btn btn-y" style="width:100%" data-action="sendInviteByPin">
+        <button class="btn btn-y" style="width:100%" data-action="sendInviteByPin" data-i18n="ap.invite.pin_btn">
           🔢 إنشاء رمز PIN
         </button>
-        <div style="font-size:.72rem;color:var(--tm);margin-top:.4rem;text-align:center">
+        <div data-i18n="ap.invite.pin_help" style="font-size:.72rem;color:var(--tm);margin-top:.4rem;text-align:center">
           رمز من 6 أرقام يُسلَّم للعضو خارج النظام (واتساب، شفاهيًا…). صالح 72 ساعة.
         </div>
       </div>
 
       <!-- STATE 2: PIN result (only shown after sendInviteByPin returns) -->
       <div id="invite-pin-result" style="display:none;text-align:center">
-        <p style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
+        <p data-i18n="ap.invite.pin_result_lead" style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
           انسخ الرمز الآن — لن يظهر مرة أخرى. سلّمه للعضو بقناة آمنة.
         </p>
         <div style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;padding:.85rem;font-family:Menlo,Consolas,monospace;font-size:1.6rem;font-weight:700;color:#1A5C2E;letter-spacing:.3em;direction:ltr" id="invite-pin-value">—</div>
-        <div style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
+        <div data-i18n="ap.invite.pin_result_after" style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
           صالح لـ 72 ساعة. يستخدم العضو رقم الهوية + هذا الرمز عند الدخول إلى صفحة التسجيل.
         </div>
-        <button class="btn btn-g" style="margin-top:1rem;width:100%" data-action="copyShownPin">📋 نسخ الرمز</button>
+        <button class="btn btn-g" style="margin-top:1rem;width:100%" data-action="copyShownPin" data-i18n="ap.invite.pin_copy_btn">📋 نسخ الرمز</button>
       </div>
 
       <!-- STATE 3: email sent confirmation -->
       <div id="invite-email-result" style="display:none;text-align:center">
         <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">✅</div>
-        <p style="font-size:.95rem;font-weight:600;margin-bottom:.4rem">تم إرسال الدعوة</p>
+        <p data-i18n="ap.invite.email_sent_title" style="font-size:.95rem;font-weight:600;margin-bottom:.4rem">تم إرسال الدعوة</p>
         <p style="font-size:.78rem;color:var(--tm)" id="invite-email-result-target">—</p>
-        <p style="font-size:.72rem;color:var(--tm);margin-top:.75rem">
+        <p data-i18n="ap.invite.email_sent_help" style="font-size:.72rem;color:var(--tm);margin-top:.75rem">
           الرابط صالح لـ 7 أيام. إذا لم يصل البريد خلال ساعة، تحقق من مجلد الرسائل غير المرغوب فيها أو أعد الإرسال.
         </p>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="member-invite">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="member-invite" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
 </div>
@@ -870,7 +927,7 @@
 <div class="overlay" id="ov-application">
   <div class="modal" style="max-width:680px">
     <div class="modal-head">
-      <h3>📥 مراجعة طلب عضوية</h3>
+      <h3 data-i18n="ap.apps.modal_title">📥 مراجعة طلب عضوية</h3>
       <button class="modal-close" data-action="closeModal" data-modal="application">✕</button>
     </div>
     <div class="modal-body">
@@ -879,28 +936,28 @@
 
       <!-- PendingTriage: presidency assigns to a committee -->
       <div id="app-action-triage" style="display:none">
-        <div class="fg"><label>أسند الطلب إلى لجنة <span class="required">*</span></label>
-          <select id="app-assign-committee"><option value="">— اختر —</option></select>
+        <div class="fg"><label><span data-i18n="ap.apps.triage_label">أسند الطلب إلى لجنة</span> <span class="required">*</span></label>
+          <select id="app-assign-committee"><option value="" data-i18n="ap.apps.triage_choose">— اختر —</option></select>
         </div>
-        <button class="btn btn-g" data-action="appAssignCommittee">📤 إرسال لرئيس اللجنة</button>
-        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject">❌ رفض الطلب</button>
+        <button class="btn btn-g" data-action="appAssignCommittee" data-i18n="ap.apps.triage_send_btn">📤 إرسال لرئيس اللجنة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject" data-i18n="ap.apps.triage_reject_btn">❌ رفض الطلب</button>
       </div>
 
       <!-- AssignedToCommittee / InterviewRequested: head decides -->
       <div id="app-action-decide" style="display:none">
-        <div class="fg"><label>ملاحظات (اختياري)</label><textarea id="app-decision-note"></textarea></div>
-        <button class="btn btn-g" data-action="appAccept">✅ قبول وإضافة كعضو</button>
-        <button class="btn btn-y" style="margin-top:.4rem" data-action="appRequestInterview">💬 طلب مقابلة</button>
-        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject">❌ رفض</button>
+        <div class="fg"><label data-i18n="ap.apps.decide_note_label">ملاحظات (اختياري)</label><textarea id="app-decision-note"></textarea></div>
+        <button class="btn btn-g" data-action="appAccept" data-i18n="ap.apps.decide_accept_btn">✅ قبول وإضافة كعضو</button>
+        <button class="btn btn-y" style="margin-top:.4rem" data-action="appRequestInterview" data-i18n="ap.apps.decide_interview_btn">💬 طلب مقابلة</button>
+        <button class="btn btn-r" style="margin-top:.4rem" data-action="appReject" data-i18n="ap.apps.decide_reject_btn">❌ رفض</button>
       </div>
 
       <!-- Accepted / Rejected: read-only -->
-      <div id="app-action-final" style="display:none;text-align:center;color:var(--tm);font-size:.85rem;padding:1rem">
+      <div id="app-action-final" data-i18n="ap.apps.final_done" style="display:none;text-align:center;color:var(--tm);font-size:.85rem;padding:1rem">
         تم اتخاذ القرار. لمراجعة العضو الجديد أو لإعادة الفحص، استخدم تبويب الأعضاء.
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="application">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="application" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1204,13 +1261,15 @@
 <!-- DELETE CONFIRM MODAL -->
 <div class="overlay" id="ov-confirm">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>⚠️ تأكيد الحذف</h3><button class="modal-close" data-action="closeModal" data-modal="confirm">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.delete.title">⚠️ تأكيد الحذف</h3><button class="modal-close" data-action="closeModal" data-modal="confirm">✕</button></div>
     <div class="modal-body">
+      <!-- confirm-msg is rewritten by confirmDelete() in lib/ui.js to
+           include the target item's name — no data-i18n attr here. -->
       <p style="font-size:.88rem;color:var(--tl);line-height:1.7" id="confirm-msg">هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="confirm">إلغاء</button>
-      <button class="btn btn-r" id="confirm-btn">🗑️ حذف</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="confirm" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-r" id="confirm-btn" data-i18n="ap.delete.btn">🗑️ حذف</button>
     </div>
   </div>
 </div>

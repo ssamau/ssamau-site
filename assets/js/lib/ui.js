@@ -15,6 +15,7 @@
 import { callApi as _callApi } from './api.js';
 import { DB } from './state.js';
 import { esc, gv, sv } from './format.js';
+import { t } from './i18n.js';
 
 // Drop-in for the original local callApi — same signature, same envelope
 // flattening (lib/api.js does it). Keeps every call site below unchanged.
@@ -323,7 +324,7 @@ export async function refreshData() {
 // DELETE (generic confirm-and-call)
 // ══════════════════════════════════════════
 export function confirmDelete(type, id, name) {
-  document.getElementById('confirm-msg').textContent = `هل تريد حذف "${name}"؟ لا يمكن التراجع.`;
+  document.getElementById('confirm-msg').textContent = t('ap.delete.msg', { name });
   document.getElementById('confirm-btn').onclick = async () => {
     const actionMap = {
       member: 'deleteMember', advisor: 'deleteAdvisor', committee: 'deleteCommittee',
@@ -343,7 +344,7 @@ export function confirmDelete(type, id, name) {
     if (!fn) return;
     const res = await fn();
     if (res) {
-      toast('🗑️ تم الحذف');
+      toast(t('ap.delete.success'));
       closeModal('confirm');
       refreshData();
     }
