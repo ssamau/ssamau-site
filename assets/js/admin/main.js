@@ -189,10 +189,18 @@ const loaderMap = {
   advisors:         loadAdvisors,
   committees:       loadCommittees,
   projects:         loadProjects,
-  participants:     async () => { await ensureProjects(); populateProjectSelects(); loadParticipants(); },
-  opportunities:    async () => { await ensureProjects(); populateProjectSelects(); loadOpportunities(); },
-  attendance:       async () => { await ensureProjects(); populateProjectSelects(); loadAttendance(); },
-  hours:            async () => { await ensureProjects(); loadHours(); },
+  // The four below all chain ensureProjects → optional populate →
+  // actual loader. Each inner loader is `async` and returns a promise
+  // that previously wasn't awaited — so the wrapper resolved instantly
+  // after firing the load but before the data fetch finished, and
+  // refreshData stripped the .refreshing class while the spinner was
+  // mid-animation (visible only as a sub-frame flash on these tabs).
+  // Awaiting the inner load means the spinner runs for the full fetch
+  // lifetime, matching the dashboard/members/projects tabs above.
+  participants:     async () => { await ensureProjects(); populateProjectSelects(); await loadParticipants(); },
+  opportunities:    async () => { await ensureProjects(); populateProjectSelects(); await loadOpportunities(); },
+  attendance:       async () => { await ensureProjects(); populateProjectSelects(); await loadAttendance(); },
+  hours:            async () => { await ensureProjects(); await loadHours(); },
   profile:          loadProfileSelect,
   'my-profile':     async () => {
     // Lazy import — the self-edit profile module lives under member/
