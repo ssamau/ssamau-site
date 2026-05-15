@@ -251,6 +251,10 @@ function _initAdmin() {
     await loadCommittees();
     await loadMembers();
     await loadProjects();
+    // Phase D — preload advisors so the hours modal's advisor picker
+    // is populated whenever someone opens it, even if they haven't
+    // visited the advisors tab yet in this session.
+    await loadAdvisors();
     await loadDashboard();
     setApiStatus('ok', 'متصل');
     RBAC.applyUIRestrictions();

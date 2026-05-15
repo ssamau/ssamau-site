@@ -89,7 +89,7 @@ export function openModal(type) {
   }
   if (type === 'committee') populateMemberSelects();
   if (type === 'opportunity') _populateRolePresets();
-  if (type === 'hours') _populateHrsOpportunitySelect();
+  if (type === 'hours') { _populateHrsOpportunitySelect(); populateAdvisorSelects(); }
   // Set today's date defaults
   if (type === 'attendance') sv('att-date', new Date().toISOString().split('T')[0]);
   if (type === 'member' && !gv('m-join-date')) sv('m-join-date', new Date().toISOString().split('T')[0]);
@@ -156,6 +156,22 @@ export function populateCommitteeSelects() {
   const opts = '<option value="">— بدون لجنة —</option>' +
     DB.committees.map(c => `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`).join('');
   ['m-committee-id','opp-committee'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { const prev = el.value; el.innerHTML = opts; if (prev) el.value = prev; }
+  });
+}
+
+// Phase D — populate advisor pickers from DB.advisors. Only one site
+// today (hours modal); kept as its own helper so future admin tabs
+// that need an advisor picker can call it without duplicating the
+// option-building loop.
+export function populateAdvisorSelects() {
+  const opts = '<option value="">— اختر —</option>' +
+    (DB.advisors || [])
+      .filter(a => a.status === 'Active')
+      .map(a => `<option value="${a.id}">${esc(a.full_name)}</option>`)
+      .join('');
+  ['hrs-advisor'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { const prev = el.value; el.innerHTML = opts; if (prev) el.value = prev; }
   });
