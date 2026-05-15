@@ -102,6 +102,7 @@ export function onOppRolePreset() {
 
 export async function saveOpportunity() {
   const id = gv('opp-edit-id');
+  const notifyAfterSave = !!document.getElementById('opp-notify-after-save')?.checked;
   const body = {
     project_id:          gv('opp-project'),
     role_name:           gv('opp-role-name'),
@@ -122,7 +123,23 @@ export async function saveOpportunity() {
     toast('✅ تم الحفظ');
     closeModal('opportunity');
     clearForm('opportunity');
-    loadOpportunities();
+    await loadOpportunities();
+    // Auto-open the notify modal when the admin opted into broadcasting.
+    // For a new opportunity the server returns its id; for an edit we
+    // already have it. loadOpportunities() above refreshed DB.opportunities
+    // so the find() below sees the freshly-saved row.
+    if (notifyAfterSave) {
+      const oppId = id || res.data?.opportunity_id || res.opportunity_id;
+      const opp   = DB.opportunities.find(o => o.opportunity_id === oppId);
+      if (opp) {
+        const fakeEl = document.createElement('div');
+        fakeEl.dataset.id   = opp.opportunity_id;
+        fakeEl.dataset.role = opp.role_name || '';
+        openOpportunityNotify(fakeEl);
+      } else {
+        toast('انتهى الحفظ، اضغط 📧 في صف الفرصة لإرسال الإعلان', 'twarn');
+      }
+    }
   }
 }
 
@@ -138,6 +155,11 @@ export function editOpportunity(id) {
   sv('opp-committee', o.owning_committee_id || '');
   sv('opp-status', o.status || 'Open');
   sv('opp-notes', o.notes || '');
+  // Don't re-broadcast an existing opportunity by default when the admin
+  // is just tweaking notes / role / hours. They can still tick the box
+  // explicitly if they do want to re-blast.
+  const notify = document.getElementById('opp-notify-after-save');
+  if (notify) notify.checked = false;
   openModal('opportunity');
 }
 

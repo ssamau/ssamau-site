@@ -35,6 +35,26 @@
   to = "/.netlify/functions/api"
   status = 200
 
+# Vanity short-url for cert verification. The cert card footer shows
+# "ssamau.com/verify" as the verification URL — the president typed
+# that bare URL and got a Netlify 404 on 2026-05-15. Map it (with and
+# without trailing slash, with and without ?code=...) to the real
+# verify page so the literal string on the cert always works.
+[[redirects]]
+  from = "/verify"
+  to = "/verify-cert.html"
+  status = 301
+
+[[redirects]]
+  from = "/verify/"
+  to = "/verify-cert.html"
+  status = 301
+
+[[redirects]]
+  from = "/verify/:code"
+  to = "/verify-cert.html?code=:code"
+  status = 301
+
 # ─── Security headers ──────────────────────────────────────────────────────
 # Applied to every response Netlify serves. Tightens the surface for XSS,
 # clickjacking, MIME sniffing, and unwanted browser-feature access.

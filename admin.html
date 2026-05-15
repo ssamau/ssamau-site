@@ -895,16 +895,31 @@
         <div class="fg"><label>عدد المتطوعين المطلوب</label><input id="opp-headcount" type="number" min="1" value="1"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>اللجنة المستفيدة</label><select id="opp-committee"><option value="">— اختر —</option></select></div>
-        <div class="fg"><label>الحالة</label>
+        <div class="fg">
+          <label>اللجنة المستفيدة</label>
+          <select id="opp-committee"><option value="">🌍 كل اللجان (للجميع)</option></select>
+          <div class="hint" style="font-size:.72rem;color:var(--tm);margin-top:.25rem">اختر "كل اللجان" لإطلاق الفرصة لكل الأعضاء.</div>
+        </div>
+        <div class="fg">
+          <label>الحالة <span style="font-weight:400;color:var(--tm);font-size:.72rem">(للتصفية فقط)</span></label>
           <select id="opp-status">
-            <option value="Open">مفتوحة</option>
-            <option value="Filled">مكتملة</option>
-            <option value="NeedsHelp">تحتاج مساعدة</option>
+            <option value="Open">مفتوحة — يمكن التسجيل</option>
+            <option value="NeedsHelp">تحتاج مساعدة — أولوية للنشر</option>
+            <option value="Filled">مكتملة — اكتمل العدد</option>
+            <option value="Done">منتهية — انتهت الفعالية</option>
             <option value="Cancelled">ملغاة</option>
-            <option value="Done">منتهية</option>
           </select>
         </div>
+      </div>
+      <!-- Send-announcement toggle: when checked + opportunity saved, the
+           notify modal auto-opens pre-filled with "all members" mode so the
+           admin can compose + send the email blast without hunting for the
+           📧 icon. President asked for this on 2026-05-15. -->
+      <div class="fg">
+        <label class="fg-check" style="cursor:pointer">
+          <input type="checkbox" id="opp-notify-after-save"/>
+          <span>📧 إرسال إعلان للأعضاء فور الحفظ</span>
+        </label>
       </div>
       <div class="fg"><label>ملاحظات</label><textarea id="opp-notes"></textarea></div>
     </div>

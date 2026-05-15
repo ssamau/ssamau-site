@@ -153,12 +153,25 @@ export function populateProjectSelects() {
 }
 
 export function populateCommitteeSelects() {
-  const opts = '<option value="">— بدون لجنة —</option>' +
-    DB.committees.map(c => `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`).join('');
-  ['m-committee-id','opp-committee'].forEach(id => {
+  // Per-select placeholder: member rows can legitimately have no
+  // committee, but for an opportunity an empty value means "open to
+  // every committee" (broadcast). President flagged on 2026-05-15 that
+  // the "— بدون لجنة —" wording was confusing for opportunities — he
+  // expected an explicit "all committees" choice.
+  const PLACEHOLDERS = {
+    'm-committee-id': '— بدون لجنة —',
+    'opp-committee':  '🌍 كل اللجان (للجميع)',
+  };
+  const committeeOpts = DB.committees
+    .map(c => `<option value="${c.committee_id}">${esc(c.committee_name)}</option>`)
+    .join('');
+  for (const [id, placeholder] of Object.entries(PLACEHOLDERS)) {
     const el = document.getElementById(id);
-    if (el) { const prev = el.value; el.innerHTML = opts; if (prev) el.value = prev; }
-  });
+    if (!el) continue;
+    const prev = el.value;
+    el.innerHTML = `<option value="">${placeholder}</option>${committeeOpts}`;
+    if (prev) el.value = prev;
+  }
 }
 
 // Phase D — populate advisor pickers from DB.advisors. Only one site
@@ -219,6 +232,10 @@ export function clearForm(type) {
   ['hrs-before','hrs-during','hrs-after'].forEach(id => sv(id, '0'));
   if (type === 'hours') document.getElementById('hrs-total').textContent = '0';
   if (type === 'participant') document.getElementById('par-outstanding').checked = false;
+  if (type === 'opportunity') {
+    const notify = document.getElementById('opp-notify-after-save');
+    if (notify) notify.checked = false;
+  }
   // Reset modal titles
   const titles = {
     member: '➕ إضافة عضو', advisor: '➕ إضافة مستشار',

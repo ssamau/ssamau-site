@@ -101,24 +101,40 @@ export async function saveBulkCerts() {
   }
 }
 
+// Strip the time portion off an ISO timestamp so cert footers show
+// "2026-05-29" instead of "2026-05-29T00:00:00.000Z". Tolerates plain
+// "YYYY-MM-DD" strings (passes them through) and falsy values (returns '').
+function fmtDate(d) {
+  if (!d) return '';
+  return String(d).split('T')[0];
+}
+
 export function buildCertHTML(c) {
   // Map both old and new field names so this same builder works for
   // certs.list rows AND certs.verify rows. New backend uses
   // recipient_name / role / cert_code; old payload used
   // participant_name / participation_role / verify_code.
+  //
+  // All styling is inline `style=` attributes (not classes). The popup
+  // version of this HTML is rendered via document.write into a popup that
+  // inherits the opener's CSP, which has `style-src 'self'` (blocks
+  // <style> blocks) but `style-src-attr 'unsafe-inline'` (permits inline
+  // style attrs). Going attr-only keeps the popup looking right under
+  // CSP — the previous version dropped to white-on-white because the
+  // entire <style> block was blocked.
   const recipient = c.recipient_name || c.participant_name || c.member_preferred_name || c.member_full_name || c.volunteer_email || '—';
   const code      = c.cert_code      || c.verify_code      || '—';
-  return `<div class="cert-card">
+  return `<div style="background:linear-gradient(135deg,#0e3a1c 0%,#1e5f35 60%,#B8932A 100%);border-radius:12px;padding:1.75rem;color:#fff;text-align:center;max-width:440px;margin:0 auto">
     <div style="font-size:2rem;margin-bottom:.7rem">🌿</div>
     <div style="font-size:.7rem;color:rgba(255,255,255,.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">شهادة تطوع</div>
     <div style="font-size:1rem;font-weight:800">Saudi Students Association in Melbourne</div>
     <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin:.2rem 0 .75rem">نادي الطلبة السعوديين في ملبورن</div>
     <div style="font-size:.8rem;color:rgba(255,255,255,.6)">يُشهد بأن</div>
-    <div class="cert-name">${esc(recipient)}</div>
+    <div style="font-size:1rem;font-weight:800;color:#c9a032;margin:.6rem 0 .2rem">${esc(recipient)}</div>
     <div style="font-size:.85rem;color:rgba(255,255,255,.7);margin-top:.2rem">شارك في: ${esc(c.project_name || c.project_id || '—')}</div>
-    ${c.event_date ? `<div style="font-size:.78rem;color:rgba(255,255,255,.55)">بتاريخ: ${esc(c.event_date)}</div>` : ''}
+    ${c.event_date ? `<div style="font-size:.78rem;color:rgba(255,255,255,.55)">بتاريخ: ${esc(fmtDate(c.event_date))}</div>` : ''}
     ${c.hours ? `<div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-top:.3rem">⏱️ ${c.hours} ساعة تطوعية</div>` : ''}
-    <div class="cert-code-box">رمز التحقق: ${esc(code)}</div>
+    <div style="margin-top:.85rem;background:rgba(255,255,255,.12);border-radius:8px;padding:.4rem 1rem;font-family:monospace;font-size:.78rem;letter-spacing:.1em">رمز التحقق: ${esc(code)}</div>
     <div style="font-size:.67rem;color:rgba(255,255,255,.35);margin-top:.5rem">للتحقق: ssamau.com/verify</div>
   </div>`;
 }
@@ -126,13 +142,13 @@ export function buildCertHTML(c) {
 export function previewCertCard(c) {
   const w = window.open('','_blank','width=540,height=600');
   if (!w) { toast('يرجى السماح بالنوافذ المنبثقة', 'twarn'); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  // No <style> block here — CSP `style-src 'self'` (inherited by the
+  // about:blank popup in Chromium) blocks inline <style> contents. All
+  // styles live as `style=` attrs on individual elements, which fall
+  // under `style-src-attr 'unsafe-inline'` and render correctly.
+  w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>شهادة</title>
     <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>body{margin:0;padding:2rem;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:Almarai,sans-serif;}
-    .cert-card{background:linear-gradient(135deg,#0e3a1c 0%,#1e5f35 60%,#B8932A 100%);border-radius:12px;padding:1.75rem;color:#fff;text-align:center;max-width:440px;margin:0 auto;}
-    .cert-name{font-size:1rem;font-weight:800;color:#c9a032;margin:.6rem 0 .2rem;}
-    .cert-code-box{margin-top:.85rem;background:rgba(255,255,255,.12);border-radius:8px;padding:.4rem 1rem;font-family:monospace;font-size:.78rem;letter-spacing:.1em;}
-    </style></head><body>${buildCertHTML(c)}</body></html>`);
+    </head><body style="margin:0;padding:2rem;background:#111;font-family:Almarai,Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center">${buildCertHTML(c)}</body></html>`);
   w.document.close();
 }
 
