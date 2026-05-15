@@ -206,7 +206,7 @@ const certsList: Handler = async (body) => {
 
 const certsVerify: Handler = async (body) => {
   const cert_code = body.cert_code as string | undefined;
-  if (!cert_code) throw httpErr('Missing cert_code', 400);
+  if (!cert_code) throw httpErr('err.required.cert_code', 400);
   // member_gender is now joined so the verify-cert page can pick the
   // right Arabic 3rd-person possessive ("جهوده" for male / "جهودها"
   // for female). DB values are 'ذكر' / 'أنثى'; the frontend maps to

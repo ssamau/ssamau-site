@@ -72,7 +72,7 @@ const updateMember: Handler = async (body, user) => {
   const id = body.id as string | undefined;
   const data = (body.data ?? {}) as Record<string, unknown>;
   const [existing] = await sql`SELECT committee_id FROM members WHERE member_id = ${id}` as Array<{ committee_id: string | null }>;
-  if (!existing) throw httpErr('Member not found', 404);
+  if (!existing) throw httpErr('err.notfound.member', 404);
   requireAdminScope(user, existing.committee_id);
   if (data.committee_id && data.committee_id !== existing.committee_id) {
     requireAdminScope(user, data.committee_id as string | null | undefined);
@@ -116,7 +116,7 @@ const deleteMember: Handler = async (body) => {
 
 const membersGetOwn: Handler = async (_body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('هذا الحساب غير مرتبط بملف عضو.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
   const rows = await sql`
     SELECT m.*, c.committee_name
     FROM members m
@@ -124,7 +124,7 @@ const membersGetOwn: Handler = async (_body, user) => {
     WHERE m.member_id = ${user.member_id}
     LIMIT 1
   ` as Array<Record<string, unknown>>;
-  if (!rows[0]) throw httpErr('Member row not found.', 404);
+  if (!rows[0]) throw httpErr('err.notfound.member', 404);
   return rows[0];
 };
 
@@ -134,7 +134,7 @@ const membersGetOwn: Handler = async (_body, user) => {
 //   created_at, updated_at (timestamps)
 const membersUpdateOwn: Handler = async (body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('هذا الحساب غير مرتبط بملف عضو.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
   const data = (body.data ?? body) as Record<string, unknown>;
   await sql`
     UPDATE members SET

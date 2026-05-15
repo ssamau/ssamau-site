@@ -48,7 +48,7 @@ const setupSeedMembers: Handler = async () => ({ ok: true, note: 'Use `npm run s
 const setupBulkSeed: Handler = async (body) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   const phase = data.phase as string | undefined;
-  if (!phase) throw httpErr('phase is required: "wipe" | "committees" | "members" | "finalize"', 400);
+  if (!phase) throw httpErr('err.required.phase', 400);
 
   // ─── PHASE 1: wipe ───────────────────────────────────────────────
   // force:true → wipe everything app-level so the seed runs from a clean
@@ -59,7 +59,7 @@ const setupBulkSeed: Handler = async (body) => {
     if (!data.force) {
       const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users` as Array<{ count: number }>;
       if (count > 0) {
-        throw httpErr(`Already seeded (${count} users exist). Pass force:true to wipe + re-seed.`, 409);
+        throw httpErr('err.business.already_seeded', 409, { count });
       }
       return { ok: true, wiped: false, note: 'db was already empty' };
     }
@@ -88,7 +88,7 @@ const setupBulkSeed: Handler = async (body) => {
   // (which is xlsx order).
   if (phase === 'committees') {
     const committeeNames = Array.isArray(data.committees) ? data.committees as string[] : [];
-    if (!committeeNames.length) throw httpErr('committees[] is required for phase=committees', 400);
+    if (!committeeNames.length) throw httpErr('err.required.committees_phase', 400);
 
     const [{ max_n }] = await sql`
       SELECT COALESCE(MAX(NULLIF(REGEXP_REPLACE(committee_id, '\\D', '', 'g'), '')::INT), 0) AS max_n
@@ -121,7 +121,7 @@ const setupBulkSeed: Handler = async (body) => {
   if (phase === 'members') {
     const rows = Array.isArray(data.rows) ? data.rows as Array<Record<string, unknown>> : [];
     const committeeIdByName = (data.committee_id_by_name || {}) as Record<string, string>;
-    if (!rows.length) throw httpErr('rows[] is required for phase=members', 400);
+    if (!rows.length) throw httpErr('err.required.rows_members', 400);
 
     let inserted = 0;
     const memberIdByXlsxRow: Record<string, string> = {};
@@ -298,7 +298,7 @@ const setupBulkSeed: Handler = async (body) => {
     if (devAdmin && devAdmin.username) {
       const devUsername = String(devAdmin.username).toLowerCase().trim();
       const [clash] = await sql`SELECT id FROM users WHERE LOWER(username) = ${devUsername}` as Array<{ id: number }>;
-      if (clash) throw httpErr(`dev_admin username "${devUsername}" collides with a leadership account — pick a different one`, 409);
+      if (clash) throw httpErr('err.business.devadmin_collides', 409, { username: devUsername });
       const devPassword = devAdmin.password || randomBytesB64Url(7);
       const devHash = await bcryptHash(devPassword, 6);
       await sql`
@@ -316,7 +316,7 @@ const setupBulkSeed: Handler = async (body) => {
     // If this trips, something is wrong with the input (no presidency rows
     // AND no dev_admin). Refuse to commit so the operator notices.
     if (superadminCount === 0) {
-      throw httpErr('No superadmin account would be created — the xlsx contains no President/VP/DVP rows and no dev_admin was provided. Aborting to prevent lockout.', 500);
+      throw httpErr('err.business.no_superadmin_in_xlsx', 500);
     }
 
     return {
@@ -326,7 +326,7 @@ const setupBulkSeed: Handler = async (body) => {
     };
   }
 
-  throw httpErr(`Unknown phase: ${phase}. Expected one of: wipe, committees, members, finalize`, 400);
+  throw httpErr('err.business.unknown_phase', 400, { phase });
 };
 
 export const setupActions: Record<string, Handler> = {

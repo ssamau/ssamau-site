@@ -20,6 +20,7 @@ import { api } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Set of project_ids the member has already expressed interest in.
 // Populated FROM SERVER on every load via `interest.listOwn` so the
@@ -135,7 +136,7 @@ export async function expressInterest(_opportunityId, _label, el) {
     });
     const { toast } = await import('../../lib/ui.js');
     if (!res || !res.success) {
-      toast(res?.error || t('mp.opps.err_submit'), 'twarn');
+      toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_submit'), 'twarn');
       btn.disabled = false;
       btn.textContent = t('mp.opps.express_btn');
       return;

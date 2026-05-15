@@ -37,11 +37,28 @@ export function randomBytesB64Url(len = 7): string {
 }
 
 // ─── httpErr ────────────────────────────────────────────────────────────
-// Tags errors with a `.status` the dispatcher reads.
-export type HttpError = Error & { status?: number };
-export function httpErr(message: string, status = 400): HttpError {
-  const e = new Error(message) as HttpError;
+// Phase 6 (2026-05-16): every action throws `httpErr('err.<code>', status,
+// params?)` where the first arg is now a STABLE ERROR CODE (not a human
+// string). The client's localizeError() (assets/js/lib/api.js) looks the
+// code up in its i18n catalog and renders the translated message.
+//
+// `params` carries {placeholder} substitutions — e.g. for an entity-id
+// or count that the message wants to interpolate. Anything not declared
+// in the client catalog falls through to the raw code string, so unknown
+// codes still surface in the UI rather than vanishing.
+//
+// The Error.message stays equal to the code, which is what gets sent over
+// the wire and logged on the server side (handy for tailing logs and
+// grepping by stable identifier instead of full human strings).
+export type HttpError = Error & { status?: number; params?: Record<string, unknown> };
+export function httpErr(
+  code: string,
+  status = 400,
+  params?: Record<string, unknown>,
+): HttpError {
+  const e = new Error(code) as HttpError;
   e.status = status;
+  if (params) e.params = params;
   return e;
 }
 
@@ -65,7 +82,7 @@ export async function signToken(user: {
   id: number; username: string; access_level: string;
   member_id: string | null; committee_id?: string | null;
 }): Promise<string> {
-  if (!JWT_SECRET) throw new Error('JWT_SECRET not configured.');
+  if (!JWT_SECRET) throw httpErr('err.auth.jwt_not_configured', 500);
   const key = new TextEncoder().encode(JWT_SECRET);
   return new SignJWT({
     id: user.id,
@@ -231,7 +248,7 @@ export async function bcryptCompare(plain: string, hash: string): Promise<boolea
 // JWT payload — the dispatcher resolves both auth paths to UserContext
 // before invoking the handler, so guards don't care which path ran.
 export function requireAuth(user: UserContext | null): asserts user is UserContext {
-  if (!user) throw httpErr('Unauthorized', 401);
+  if (!user) throw httpErr('err.auth.unauthorized', 401);
 }
 
 // Role-system refactor (2026-05-15): split the old single-tier
@@ -249,7 +266,7 @@ export function requireAuth(user: UserContext | null): asserts user is UserConte
 export function requireSuperadmin(user: UserContext | null): asserts user is UserContext {
   requireAuth(user);
   if (user.access !== 'superadmin') {
-    throw httpErr('Forbidden — dev access required', 403);
+    throw httpErr('err.access.dev_only', 403);
   }
 }
 
@@ -259,7 +276,7 @@ export function requireSuperadmin(user: UserContext | null): asserts user is Use
 export function requireAdmin(user: UserContext | null): asserts user is UserContext {
   requireAuth(user);
   if (user.access !== 'superadmin' && user.access !== 'admin') {
-    throw httpErr('Forbidden — admin access required', 403);
+    throw httpErr('err.access.admin_only', 403);
   }
 }
 
@@ -272,9 +289,9 @@ export function requireAdminScope(user: UserContext | null, committeeId: string 
   if (user.access === 'superadmin' || user.access === 'admin') return;
   if (user.access === 'head') {
     if (!committeeId || user.committee_id === committeeId) return;
-    throw httpErr('Forbidden — committee head can only modify their own committee', 403);
+    throw httpErr('err.access.committee_scope', 403);
   }
-  throw httpErr('Forbidden', 403);
+  throw httpErr('err.access.forbidden', 403);
 }
 
 // ─── Public / superadmin allowlists ─────────────────────────────────────

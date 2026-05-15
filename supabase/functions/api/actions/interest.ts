@@ -56,7 +56,7 @@ const interestMarkReviewed: Handler = async (body, user) => {
   requireAdmin(user);
   const id       = body.id as number | undefined;
   const reviewed = body.reviewed !== false;  // default true
-  if (!id) throw httpErr('id is required', 400);
+  if (!id) throw httpErr('err.required.id', 400);
   await sql`
     UPDATE interest_requests
     SET    reviewed_at = ${reviewed ? sql`NOW()` : null}

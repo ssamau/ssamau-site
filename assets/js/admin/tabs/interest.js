@@ -19,6 +19,7 @@ import { DB } from '../../lib/state.js';
 import { esc, gv, sv, tag, setEl } from '../../lib/format.js';
 import { api, apiGet, toast, openModal, closeModal, populateNewSelects } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Availability enum (canonical English) → translation key. Shared with
 // the participant + opportunity availability vocabulary.
@@ -235,7 +236,7 @@ export async function confirmInterestAssign() {
       data: { opportunity_id: oppId, member_id: _activeInterest.member_id },
     });
     if (!r1 || !r1.success) {
-      toast(r1?.error || t('ap.int.assign_err_fail'), 'twarn');
+      toast(localizeError(r1?.error, r1?.errorParams) || t('ap.int.assign_err_fail'), 'twarn');
       return;
     }
     // Auto-mark reviewed on success — the typical case. If the

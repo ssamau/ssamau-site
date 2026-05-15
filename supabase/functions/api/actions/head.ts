@@ -24,7 +24,7 @@ const headDashboardSummary: Handler = async (body, user) => {
   // can pass an override for preview/testing.
   let committee_id: string | null = null;
   if (user!.access === 'head') {
-    if (!user!.committee_id) throw httpErr('Head account has no committee assigned', 409);
+    if (!user!.committee_id) throw httpErr('err.access.head_no_committee', 409);
     committee_id = user!.committee_id;
   } else if (user!.access === 'superadmin') {
     committee_id = (body.committee_id as string | undefined) || null;
@@ -38,9 +38,9 @@ const headDashboardSummary: Handler = async (body, user) => {
       ` as Array<{ committee_id: string }>;
       committee_id = rows[0]?.committee_id || null;
     }
-    if (!committee_id) throw httpErr('No committees available to preview', 404);
+    if (!committee_id) throw httpErr('err.business.no_committees_setup', 404);
   } else {
-    throw httpErr('Forbidden — head or superadmin only', 403);
+    throw httpErr('err.access.head_or_dev_only', 403);
   }
 
   // Committee meta — name + the head's own profile-friendly info.
@@ -53,7 +53,7 @@ const headDashboardSummary: Handler = async (body, user) => {
   ` as Array<{
     committee_id: string; committee_name: string; category: string; head_full_name: string | null;
   }>;
-  if (!committeeRow) throw httpErr('Committee not found', 404);
+  if (!committeeRow) throw httpErr('err.notfound.committee', 404);
 
   // ─── KPI counts ─────────────────────────────────────────────────────
   const [counts] = await sql`

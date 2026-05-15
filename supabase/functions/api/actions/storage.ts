@@ -40,7 +40,7 @@ type Kind = keyof typeof BUCKETS;
 
 function svcClient() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw httpErr('Storage service not configured', 500);
+    throw httpErr('err.misc.storage_not_configured', 500);
   }
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -80,7 +80,7 @@ function safeFilename(raw: string, kind: Kind): string {
 // repointing the members.<column> at the new path.
 const uploadMemberFile: Handler = async (body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
 
   const data         = (body.data ?? body) as Record<string, unknown>;
   const kind         = data.kind as Kind | undefined;
@@ -90,13 +90,15 @@ const uploadMemberFile: Handler = async (body, user) => {
   // Admin can upload on behalf of another member; defaults to own.
   const targetMember = (data.member_id as string) || user.member_id;
 
-  if (!kind || !(kind in BUCKETS))       throw httpErr('Unknown kind. Must be "cv" or "photo".', 400);
+  if (!kind || !(kind in BUCKETS))       throw httpErr('err.misc.unknown_kind_storage', 400);
   if (!filename || !contentType || !base64Data) {
-    throw httpErr('filename, contentType, and base64Data are required', 400);
+    throw httpErr('err.required.storage_fields', 400);
   }
   const cfg = BUCKETS[kind];
   if (!cfg.mimes.includes(contentType)) {
-    throw httpErr(`Content-Type ${contentType} not allowed. Expected one of: ${cfg.mimes.join(', ')}`, 415);
+    throw httpErr('err.business.content_type_not_allowed_list', 415, {
+      contentType, allowed: cfg.mimes.join(', '),
+    });
   }
 
   // Self-only by default; admin/head can upload on behalf via the
@@ -104,13 +106,13 @@ const uploadMemberFile: Handler = async (body, user) => {
   // member's committee.
   if (targetMember !== user.member_id) {
     const [target] = await sql`SELECT committee_id FROM members WHERE member_id = ${targetMember}` as Array<{ committee_id: string | null }>;
-    if (!target) throw httpErr('Target member not found', 404);
+    if (!target) throw httpErr('err.notfound.target_member', 404);
     requireAdminScope(user, target.committee_id);
   }
 
   const bytes = b64ToBytes(base64Data);
   if (bytes.length > cfg.sizeCap) {
-    throw httpErr(`File exceeds ${cfg.sizeCap} bytes`, 413);
+    throw httpErr('err.business.file_too_large', 413, { limit: cfg.sizeCap });
   }
 
   const path = `${targetMember}/${safeFilename(filename, kind)}`;
@@ -120,7 +122,7 @@ const uploadMemberFile: Handler = async (body, user) => {
   });
   if (error) {
     console.error('[storage.upload]', error);
-    throw httpErr(`Upload failed: ${error.message}`, 500);
+    throw httpErr('err.business.upload_failed', 500, { message: error.message });
   }
 
   // Repoint the row at the new path. We deliberately keep the OLD
@@ -146,13 +148,13 @@ const getMemberFile: Handler = async (body, user) => {
   const kind         = data.kind as Kind | undefined;
   const targetMember = (data.member_id as string) || user.member_id;
 
-  if (!kind || !(kind in BUCKETS)) throw httpErr('Unknown kind', 400);
-  if (!targetMember)               throw httpErr('member_id required', 400);
+  if (!kind || !(kind in BUCKETS)) throw httpErr('err.misc.unknown_kind', 400);
+  if (!targetMember)               throw httpErr('err.required.member_id', 400);
 
   // Permission check: self / admin / head (scoped).
   if (targetMember !== user.member_id) {
     const [target] = await sql`SELECT committee_id FROM members WHERE member_id = ${targetMember}` as Array<{ committee_id: string | null }>;
-    if (!target) throw httpErr('Target member not found', 404);
+    if (!target) throw httpErr('err.notfound.target_member', 404);
     requireAdminScope(user, target.committee_id);
   }
 
@@ -177,7 +179,7 @@ const getMemberFile: Handler = async (body, user) => {
     if (msg.includes('not found') || msg.includes('object_not_found')) {
       return { url: null, missing: true };
     }
-    throw httpErr(`Could not generate signed URL: ${error.message}`, 500);
+    throw httpErr('err.business.signed_url_failed', 500, { message: error.message });
   }
   return { url: signed.signedUrl, expires_in: 3600 };
 };
@@ -189,12 +191,12 @@ const deleteMemberFile: Handler = async (body, user) => {
   const data         = (body.data ?? body) as Record<string, unknown>;
   const kind         = data.kind as Kind | undefined;
   const targetMember = (data.member_id as string) || user.member_id;
-  if (!kind || !(kind in BUCKETS)) throw httpErr('Unknown kind', 400);
-  if (!targetMember)               throw httpErr('member_id required', 400);
+  if (!kind || !(kind in BUCKETS)) throw httpErr('err.misc.unknown_kind', 400);
+  if (!targetMember)               throw httpErr('err.required.member_id', 400);
 
   if (targetMember !== user.member_id) {
     const [target] = await sql`SELECT committee_id FROM members WHERE member_id = ${targetMember}` as Array<{ committee_id: string | null }>;
-    if (!target) throw httpErr('Target member not found', 404);
+    if (!target) throw httpErr('err.notfound.target_member', 404);
     requireAdminScope(user, target.committee_id);
   }
 

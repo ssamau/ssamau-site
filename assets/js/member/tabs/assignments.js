@@ -13,6 +13,7 @@
 import { api, toast } from '../../lib/ui.js';
 import { esc, fmtDate, gv, sv } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Attendance enum → translation key. Values are the canonical English
 // strings stored on assignments.attendance_status; t() resolves the
@@ -184,7 +185,7 @@ export async function submitLogHours() {
       },
     });
     if (!res || !res.success) {
-      toast(res?.error || t('mp.logh.err_submit'), 'twarn');
+      toast(localizeError(res?.error, res?.errorParams) || t('mp.logh.err_submit'), 'twarn');
       if (btn) { btn.disabled = false; btn.textContent = t('mp.logh.submit'); }
       return;
     }

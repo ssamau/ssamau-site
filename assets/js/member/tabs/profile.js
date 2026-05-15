@@ -22,6 +22,7 @@ import { api, callApi, toast } from '../../lib/ui.js';
 import { esc, gv, sv, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Phase-A storage uploaders (CV + profile photo). Both files go to
 // private Supabase Storage buckets via `storage.uploadMemberFile`;
@@ -228,7 +229,7 @@ export async function submitUploader(el) {
       data: { kind, filename: file.name, contentType: file.type, base64Data },
     });
     if (!res || !res.success) {
-      toast(res?.error || t('mp.profile.upl_failed'), 'twarn');
+      toast(localizeError(res?.error, res?.errorParams) || t("mp.profile.upl_failed"), 'twarn');
       return;
     }
     toast(t('mp.profile.upl_success'), 'tok');
@@ -245,7 +246,7 @@ export async function deleteUploader(el) {
   if (!confirm(t(confirmKey))) return;
   const res = await api('storage.deleteMemberFile', { data: { kind } });
   if (!res || !res.success) {
-    toast(res?.error || t('mp.profile.upl_delete_failed'), 'twarn');
+    toast(localizeError(res?.error, res?.errorParams) || t("mp.profile.upl_delete_failed"), 'twarn');
     return;
   }
   toast(t('mp.profile.upl_delete_success'), 'tok');
@@ -320,7 +321,7 @@ export async function saveProfile() {
   try {
     const res = await api('members.updateOwn', { data: diff });
     if (!res || !res.success) {
-      toast(res?.error || t('mp.profile.save_failed'), 'twarn');
+      toast(localizeError(res?.error, res?.errorParams) || t("mp.profile.save_failed"), 'twarn');
       return;
     }
     toast(t('mp.profile.save_success'), 'tok');

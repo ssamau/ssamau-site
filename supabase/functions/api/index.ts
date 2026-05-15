@@ -16,7 +16,7 @@
 // esm.sh / deno.land — no node_modules.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { resolveUserContext, PUBLIC_ACTIONS, ADMIN_ACTIONS, SUPERADMIN_ACTIONS, type Handler } from './_helpers.ts';
+import { resolveUserContext, PUBLIC_ACTIONS, ADMIN_ACTIONS, SUPERADMIN_ACTIONS, httpErr, type Handler } from './_helpers.ts';
 
 // Action modules. Each one exports a `Record<string, Handler>` keyed by
 // the same action names the frontend uses (`getMembers`, `users.create`,
@@ -64,9 +64,18 @@ function ok(data: unknown) {
   });
 }
 
-function fail(error: string | Error, status = 400) {
-  const msg = error instanceof Error ? error.message : String(error);
-  return new Response(JSON.stringify({ success: false, error: msg }), {
+// Phase 6: emits { error: '<code>', errorParams: {...} } so the client
+// can localize via assets/js/lib/api.js `localizeError()`. Accepts
+// either a bare code string OR an Error (typically HttpError from
+// _helpers.ts) — the HttpError's `.params` flows through to
+// errorParams so messages like "Member not found ({id})" can
+// interpolate runtime data.
+function fail(error: string | (Error & { params?: Record<string, unknown> }), status = 400) {
+  const msg    = error instanceof Error ? error.message : String(error);
+  const params = error instanceof Error ? (error.params ?? null) : null;
+  const body: Record<string, unknown> = { success: false, error: msg };
+  if (params) body.errorParams = params;
+  return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
@@ -113,21 +122,26 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   if (req.method !== 'POST') {
-    return fail('Only POST is supported on this endpoint.', 405);
+    return fail('err.dispatcher.method_not_allowed', 405);
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return fail('Request body must be JSON.', 400);
+    return fail('err.dispatcher.body_must_be_json', 400);
   }
 
   const action = String(body.action ?? '').trim();
-  if (!action) return fail('`action` is required.', 400);
+  if (!action) return fail('err.dispatcher.action_required', 400);
 
   const handler = actions[action];
-  if (!handler) return fail(`Unknown action: ${action}`, 404);
+  if (!handler) {
+    // Build a real HttpError so fail() picks up the `params` for
+    // `errorParams` interpolation (a plain object wouldn't satisfy
+    // `instanceof Error`).
+    return fail(httpErr('err.dispatcher.unknown_action', 404, { action }), 404);
+  }
 
   // Auth gate. Public actions are dispatched anonymously; everything
   // else requires either a Supabase Auth JWT (migrated accounts) or a
@@ -137,17 +151,17 @@ serve(async (req) => {
   let user: Awaited<ReturnType<typeof resolveUserContext>> = null;
   if (!PUBLIC_ACTIONS.has(action)) {
     user = await resolveUserContext(req.headers.get('authorization'));
-    if (!user) return fail('Unauthorized', 401);
+    if (!user) return fail('err.auth.unauthorized', 401);
     // Role-system refactor (2026-05-15): admin-tier and superadmin-tier
     // allowlists are checked separately. ADMIN_ACTIONS opens the action
     // to presidency-or-dev (most operational ops); SUPERADMIN_ACTIONS
     // stays dev-only (currently empty, reserved for future dev-shaped
     // ops like the dev-account-handover flow).
     if (ADMIN_ACTIONS.has(action) && user.access !== 'superadmin' && user.access !== 'admin') {
-      return fail('Forbidden — admin access required', 403);
+      return fail('err.access.admin_only', 403);
     }
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
-      return fail('Forbidden — dev access required', 403);
+      return fail('err.access.dev_only', 403);
     }
   }
 
@@ -155,8 +169,8 @@ serve(async (req) => {
     const data = await handler(body, user);
     return ok(data);
   } catch (e) {
-    const err = e as Error & { status?: number };
+    const err = e as Error & { status?: number; params?: Record<string, unknown> };
     console.error(`[${action}]`, err);
-    return fail(err.message || 'Server error', err.status || 500);
+    return fail(err.message ? err : 'err.server', err.status || 500);
   }
 });

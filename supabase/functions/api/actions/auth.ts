@@ -99,7 +99,7 @@ const authResolveIdentifier: Handler = async (body) => {
 const auth: Handler = async (body) => {
   const username = body.username as string | undefined;
   const password = body.password as string | undefined;
-  if (!username || !password) throw httpErr('Missing credentials', 400);
+  if (!username || !password) throw httpErr('err.auth.missing_credentials', 400);
 
   const rows = await sql`
     SELECT u.id, u.username, u.password_hash, u.access_level, u.member_id,
@@ -115,10 +115,10 @@ const auth: Handler = async (body) => {
   }>;
 
   const u = rows[0];
-  if (!u) throw httpErr('Invalid credentials', 401);
+  if (!u) throw httpErr('err.auth.invalid_credentials', 401);
 
   const okPw = await bcryptCompare(password, u.password_hash);
-  if (!okPw) throw httpErr('Invalid credentials', 401);
+  if (!okPw) throw httpErr('err.auth.invalid_credentials', 401);
 
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
@@ -177,7 +177,7 @@ const usersList: Handler = async (_body, user) => {
         m.full_name
     `;
   }
-  if (user.access !== 'superadmin') throw httpErr('Forbidden', 403);
+  if (user.access !== 'superadmin') throw httpErr('err.access.forbidden', 403);
 
   return sql`
     SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at,
@@ -217,10 +217,10 @@ const usersCreate: Handler = async (body, user) => {
   const memberId = (data.member_id as string | null) || null;
   const access   = (data.access_level as string) || 'member';
 
-  if (!username) throw httpErr('username is required', 400);
-  if (!password || password.length < 6) throw httpErr('password must be at least 6 characters', 400);
+  if (!username) throw httpErr('err.required.username', 400);
+  if (!password || password.length < 6) throw httpErr('err.auth.password_too_short_admin', 400);
   if (!['superadmin','admin','head','member','volunteer'].includes(access)) {
-    throw httpErr(`invalid access_level: ${access}`, 400);
+    throw httpErr('err.business.invalid_access_level', 400, { access });
   }
   // Privilege ceiling: an admin can't promote anyone to superadmin —
   // that tier is reserved for the dev and is only granted via the
@@ -229,18 +229,20 @@ const usersCreate: Handler = async (body, user) => {
   // by creating a new superadmin user. requireSuperadmin path stays
   // open for the dev to do the same op without restriction.
   if (access === 'superadmin' && user!.access !== 'superadmin') {
-    throw httpErr('Only the dev (superadmin) can create another superadmin account', 403);
+    throw httpErr('err.access.dev_only_create_super', 403);
   }
 
   const [existsByUser] = await sql`SELECT id FROM users WHERE LOWER(username) = ${username}` as Array<{ id: number }>;
-  if (existsByUser) throw httpErr(`Username "${username}" is already taken`, 409);
+  if (existsByUser) throw httpErr('err.business.username_taken', 409, { username });
 
   if (memberId) {
     const [member] = await sql`SELECT member_id, full_name FROM members WHERE member_id = ${memberId}` as Array<{ member_id: string; full_name: string }>;
-    if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+    if (!member) throw httpErr('err.notfound.member_with_id', 404, { id: memberId });
     const [existingForMember] = await sql`SELECT id, username FROM users WHERE member_id = ${memberId}` as Array<{ id: number; username: string }>;
     if (existingForMember) {
-      throw httpErr(`Member ${memberId} (${member.full_name}) already has an account: "${existingForMember.username}"`, 409);
+      throw httpErr('err.business.member_already_has_account', 409, {
+        id: memberId, name: member.full_name, username: existingForMember.username,
+      });
     }
   }
 
@@ -265,42 +267,42 @@ const usersUpdate: Handler = async (body, user) => {
   requireAdmin(user);
   const data = (body.data ?? body) as Record<string, unknown>;
   const id = data.id as number | undefined;
-  if (!id) throw httpErr('id is required', 400);
+  if (!id) throw httpErr('err.required.id', 400);
 
   const [target] = await sql`SELECT * FROM users WHERE id = ${id}` as Array<{
     id: number; username: string; password_hash: string; access_level: string; member_id: string | null;
   }>;
-  if (!target) throw httpErr('User not found', 404);
+  if (!target) throw httpErr('err.notfound.user', 404);
 
   // Privilege ceiling — an admin cannot touch a superadmin row at all.
   if (target.access_level === 'superadmin' && user!.access !== 'superadmin') {
-    throw httpErr('Only the dev (superadmin) can modify another superadmin account', 403);
+    throw httpErr('err.access.dev_only_modify_super', 403);
   }
   // Privilege ceiling — an admin cannot promote anyone to superadmin.
   if (data.access_level === 'superadmin' && user!.access !== 'superadmin') {
-    throw httpErr('Only the dev (superadmin) can grant superadmin access', 403);
+    throw httpErr('err.access.dev_only_grant_super', 403);
   }
 
   if (target.access_level === 'superadmin' && data.access_level && data.access_level !== 'superadmin') {
     const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'` as Array<{ count: number }>;
-    if (count <= 1) throw httpErr('Cannot demote the only remaining superadmin', 409);
+    if (count <= 1) throw httpErr('err.access.last_super_demote', 409);
   }
 
   if (data.username) {
     const newU = String(data.username).trim().toLowerCase();
     if (newU !== target.username.toLowerCase()) {
       const [clash] = await sql`SELECT id FROM users WHERE LOWER(username) = ${newU} AND id <> ${id}` as Array<{ id: number }>;
-      if (clash) throw httpErr(`Username "${newU}" is already taken`, 409);
+      if (clash) throw httpErr('err.business.username_taken', 409, { username: newU });
     }
   }
   if (data.member_id && data.member_id !== target.member_id) {
     const [clash] = await sql`SELECT id, username FROM users WHERE member_id = ${data.member_id} AND id <> ${id}` as Array<{ id: number; username: string }>;
-    if (clash) throw httpErr(`That member already has an account: "${clash.username}"`, 409);
+    if (clash) throw httpErr('err.business.target_member_has_account', 409, { username: clash.username });
     const [member] = await sql`SELECT member_id FROM members WHERE member_id = ${data.member_id}` as Array<{ member_id: string }>;
-    if (!member) throw httpErr(`Member ${data.member_id} not found`, 404);
+    if (!member) throw httpErr('err.notfound.member_with_id', 404, { id: data.member_id });
   }
   if (data.access_level && !['superadmin','admin','head','member','volunteer'].includes(data.access_level as string)) {
-    throw httpErr(`invalid access_level: ${data.access_level}`, 400);
+    throw httpErr('err.business.invalid_access_level', 400, { access: data.access_level });
   }
 
   // member_id needs an explicit-clear path: COALESCE swallows null and
@@ -348,13 +350,13 @@ const usersDelete: Handler = async (body, user) => {
   // The "last superadmin" count check below still fires for the dev
   // themselves attempting to delete the only remaining superadmin.
   if (target.access_level === 'superadmin' && user!.access !== 'superadmin') {
-    throw httpErr('Only the dev (superadmin) can delete another superadmin account', 403);
+    throw httpErr('err.access.dev_only_delete_super', 403);
   }
   if (target.access_level === 'superadmin') {
     const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE access_level = 'superadmin'` as Array<{ count: number }>;
-    if (count <= 1) throw httpErr('Cannot delete the only remaining superadmin', 409);
+    if (count <= 1) throw httpErr('err.access.last_super_delete', 409);
   }
-  if (target.id === user!.id) throw httpErr('You cannot delete your own account', 409);
+  if (target.id === user!.id) throw httpErr('err.access.cannot_self_delete', 409);
 
   // Delete auth.users FIRST when present, then public.users. This
   // ordering matters:
@@ -380,7 +382,7 @@ const usersDelete: Handler = async (body, user) => {
     // admin sees what went wrong rather than getting a half-deleted state.
     if (error && !/not_found|user not found/i.test(error.message || '')) {
       console.error('[users.delete] auth.users deletion failed:', error);
-      throw httpErr(`Supabase auth delete failed: ${error.message}`, 500);
+      throw httpErr('err.business.upstream_supabase', 500, { message: error.message });
     }
   }
 
@@ -403,7 +405,7 @@ const usersResetPassword: Handler = async (body, user) => {
     id: number; username: string; access_level: string;
     member_id: string | null; member_committee_id: string | null;
   }>;
-  if (!target) throw httpErr('User not found', 404);
+  if (!target) throw httpErr('err.notfound.user', 404);
 
   // Role-system refactor (2026-05-15): three-tier ladder.
   //   head  → can reset passwords for members in their own committee
@@ -413,19 +415,19 @@ const usersResetPassword: Handler = async (body, user) => {
   //   super → can reset anyone (including other superadmins, though
   //           there's only one right now).
   if (user!.access === 'head') {
-    if (!target.member_id) throw httpErr('Forbidden', 403);
+    if (!target.member_id) throw httpErr('err.access.forbidden', 403);
     if (target.access_level === 'superadmin' || target.access_level === 'admin' || target.access_level === 'head') {
-      throw httpErr('Committee heads cannot reset admin/dev/head passwords', 403);
+      throw httpErr('err.access.head_cannot_reset_admin_dev_head', 403);
     }
     if (target.member_committee_id !== user!.committee_id) {
-      throw httpErr('Forbidden — that member is not in your committee', 403);
+      throw httpErr('err.access.member_committee_scope', 403);
     }
   } else if (user!.access === 'admin') {
     if (target.access_level === 'superadmin') {
-      throw httpErr('Only the dev (superadmin) can reset another superadmin password', 403);
+      throw httpErr('err.access.dev_only_reset_super', 403);
     }
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
 
   const tempPw = randomBytesB64Url(7);
@@ -455,7 +457,7 @@ const usersResetPassword: Handler = async (body, user) => {
 const usersSendPasswordReset: Handler = async (body, user) => {
   requireAuth(user);
   const id = body.id as number | undefined;
-  if (!id) throw httpErr('id is required', 400);
+  if (!id) throw httpErr('err.required.id', 400);
 
   const [target] = await sql`
     SELECT u.id, u.username, u.access_level, u.member_id, u.auth_user_id,
@@ -470,26 +472,22 @@ const usersSendPasswordReset: Handler = async (body, user) => {
     member_id: string | null; auth_user_id: string | null;
     member_committee_id: string | null; auth_email: string | null;
   }>;
-  if (!target) throw httpErr('User not found', 404);
+  if (!target) throw httpErr('err.notfound.user', 404);
 
   if (!target.auth_user_id || !target.auth_email) {
-    throw httpErr(
-      'This account is on legacy auth — use the temp-password reset instead. ' +
-      'Or add an email to the linked member and re-run the backfill.',
-      409,
-    );
+    throw httpErr('err.business.legacy_account_use_temp_reset', 409);
   }
 
   // Same scope rules as users.resetPassword.
   if (user!.access === 'head') {
     if (target.access_level === 'superadmin' || target.access_level === 'head') {
-      throw httpErr('Committee heads cannot reset admin or head passwords', 403);
+      throw httpErr('err.access.head_cannot_reset_admin_or_head', 403);
     }
     if (target.member_committee_id !== user!.committee_id) {
-      throw httpErr('Forbidden — that member is not in your committee', 403);
+      throw httpErr('err.access.member_committee_scope', 403);
     }
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
 
   // Fire the Supabase Auth recovery email. `redirectTo` is taken from
@@ -510,7 +508,7 @@ const usersSendPasswordReset: Handler = async (body, user) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { error } = await admin.auth.resetPasswordForEmail(target.auth_email, { redirectTo });
-  if (error) throw httpErr(`Supabase: ${error.message}`, 500);
+  if (error) throw httpErr('err.business.upstream_supabase', 500, { message: error.message });
 
   return {
     id: target.id,
@@ -643,7 +641,7 @@ const authInviteByEmail: Handler = async (body, user) => {
   const memberId   = String(body.member_id ?? '').trim();
   const redirectTo = (body.redirectTo as string | undefined)?.trim()
     || 'https://ssamau.com/signup.html';
-  if (!memberId) throw httpErr('member_id is required', 400);
+  if (!memberId) throw httpErr('err.required.member_id', 400);
 
   const [member] = await sql`
     SELECT m.member_id, m.full_name, m.preferred_name, m.email, m.committee_id,
@@ -656,20 +654,18 @@ const authInviteByEmail: Handler = async (body, user) => {
     email: string | null; committee_id: string | null;
     committee_name: string | null;
   }>;
-  if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+  if (!member) throw httpErr('err.notfound.member_with_id', 404, { id: memberId });
   if (!member.email) {
-    throw httpErr(
-      `Member ${memberId} has no email on file — use auth.invite.byPin instead, ` +
-      `or add an email to their member record first.`, 400);
+    throw httpErr('err.business.member_no_email_for_email_invite', 400, { id: memberId });
   }
 
   // Scope: head can only invite within their own committee.
   if (user!.access === 'head') {
     if (member.committee_id !== user!.committee_id) {
-      throw httpErr('Forbidden — that member is not in your committee', 403);
+      throw httpErr('err.access.member_committee_scope', 403);
     }
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
 
   // Look up existing users row (if any) for this member.
@@ -680,9 +676,9 @@ const authInviteByEmail: Handler = async (body, user) => {
   ` as Array<{ id: number; signup_completed_at: string | null; auth_user_id: string | null }>;
 
   if (existing?.signup_completed_at || existing?.auth_user_id) {
-    throw httpErr(
-      `Member ${memberId} (${member.full_name}) has already joined the portal. ` +
-      `Use users.sendPasswordReset to send them a password recovery email instead.`, 409);
+    throw httpErr('err.business.member_already_joined_use_reset', 409, {
+      id: memberId, name: member.full_name,
+    });
   }
 
   const token = generateInviteToken();
@@ -756,7 +752,7 @@ const authInviteByEmail: Handler = async (body, user) => {
 const authInviteByPin: Handler = async (body, user) => {
   requireAuth(user);
   const memberId = String(body.member_id ?? '').trim();
-  if (!memberId) throw httpErr('member_id is required', 400);
+  if (!memberId) throw httpErr('err.required.member_id', 400);
 
   const [member] = await sql`
     SELECT m.member_id, m.full_name, m.committee_id, m.national_id
@@ -766,20 +762,17 @@ const authInviteByPin: Handler = async (body, user) => {
     member_id: string; full_name: string;
     committee_id: string | null; national_id: string | null;
   }>;
-  if (!member) throw httpErr(`Member ${memberId} not found`, 404);
+  if (!member) throw httpErr('err.notfound.member_with_id', 404, { id: memberId });
   if (!member.national_id) {
-    throw httpErr(
-      `Member ${memberId} has no national_id on file — required for PIN-based ` +
-      `signup. Use auth.invite.byEmail if they have an email, or update the ` +
-      `member record first.`, 400);
+    throw httpErr('err.business.member_no_nid_for_pin_invite', 400, { id: memberId });
   }
 
   if (user!.access === 'head') {
     if (member.committee_id !== user!.committee_id) {
-      throw httpErr('Forbidden — that member is not in your committee', 403);
+      throw httpErr('err.access.member_committee_scope', 403);
     }
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
 
   const [existing] = await sql`
@@ -789,8 +782,9 @@ const authInviteByPin: Handler = async (body, user) => {
   ` as Array<{ id: number; signup_completed_at: string | null; auth_user_id: string | null }>;
 
   if (existing?.signup_completed_at || existing?.auth_user_id) {
-    throw httpErr(
-      `Member ${memberId} (${member.full_name}) has already joined the portal.`, 409);
+    throw httpErr('err.business.member_already_joined_short', 409, {
+      id: memberId, name: member.full_name,
+    });
   }
 
   // 6-digit numeric PIN. Math.random() isn't cryptographically strong,
@@ -846,7 +840,7 @@ const authInviteByPin: Handler = async (body, user) => {
 const authInviteRevoke: Handler = async (body, user) => {
   requireAuth(user);
   const memberId = String(body.member_id ?? '').trim();
-  if (!memberId) throw httpErr('member_id is required', 400);
+  if (!memberId) throw httpErr('err.required.member_id', 400);
 
   const [existing] = await sql`
     SELECT u.id, u.signup_completed_at, u.auth_user_id,
@@ -858,20 +852,18 @@ const authInviteRevoke: Handler = async (body, user) => {
     id: number; signup_completed_at: string | null;
     auth_user_id: string | null; committee_id: string | null;
   }>;
-  if (!existing) throw httpErr('No pending invite to revoke', 404);
+  if (!existing) throw httpErr('err.auth.no_invite_to_revoke', 404);
 
   if (existing.signup_completed_at || existing.auth_user_id) {
-    throw httpErr(
-      'That member has already joined the portal — use users.delete ' +
-      '(superadmin only) if you really need to remove their account.', 409);
+    throw httpErr('err.business.cannot_revoke_joined', 409);
   }
 
   if (user!.access === 'head') {
     if (existing.committee_id !== user!.committee_id) {
-      throw httpErr('Forbidden — that member is not in your committee', 403);
+      throw httpErr('err.access.member_committee_scope', 403);
     }
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
 
   await sql`DELETE FROM public.users WHERE id = ${existing.id}`;
@@ -896,8 +888,8 @@ const authInviteRevoke: Handler = async (body, user) => {
 const authSignupCompleteByToken: Handler = async (body) => {
   const token    = String(body.token    ?? '').trim();
   const password = String(body.password ?? '');
-  if (!token)             throw httpErr('Invite link is invalid', 400);
-  if (password.length < 8) throw httpErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل / Password must be at least 8 characters', 400);
+  if (!token)              throw httpErr('err.auth.invite_invalid', 400);
+  if (password.length < 8) throw httpErr('err.auth.password_too_short', 400);
 
   const [row] = await sql`
     SELECT u.id, u.member_id, u.signup_token_expires_at, u.signup_completed_at, u.auth_user_id,
@@ -914,21 +906,21 @@ const authSignupCompleteByToken: Handler = async (body) => {
 
   if (!row) {
     console.warn('[auth.signup.completeByToken] token not found');
-    throw httpErr('هذا الرابط لم يعد صالحاً / Invite link is invalid or expired', 410);
+    throw httpErr('err.auth.invite_invalid', 410);
   }
   if (row.signup_completed_at || row.auth_user_id) {
     console.warn(`[auth.signup.completeByToken] user ${row.id} already activated`);
-    throw httpErr('هذا الحساب مفعّل سابقاً، الرجاء تسجيل الدخول مباشرةً / Account already activated — please sign in', 409);
+    throw httpErr('err.auth.account_already_active', 409);
   }
   if (row.signup_token_expires_at && new Date(row.signup_token_expires_at) < new Date()) {
     console.warn(`[auth.signup.completeByToken] token expired for user ${row.id}`);
-    throw httpErr('انتهت صلاحية الدعوة، الرجاء طلب دعوة جديدة من المسؤول / Invite expired — ask the admin for a new one', 410);
+    throw httpErr('err.auth.invite_expired', 410);
   }
   if (!row.email) {
     // Shouldn't happen: invite.byEmail validates email-exists at issue time.
     // But the member's email column COULD have been cleared between issue
     // and completion. Refuse rather than create an unmappable auth.users.
-    throw httpErr('لا يوجد بريد إلكتروني للعضو، الرجاء التواصل مع المسؤول / Member has no email on file — contact admin', 400);
+    throw httpErr('err.auth.member_no_email', 400);
   }
 
   // Create the auth.users row via the Supabase admin SDK (service role
@@ -955,7 +947,7 @@ const authSignupCompleteByToken: Handler = async (body) => {
     // feedback (e.g. "User already registered" if they re-clicked the
     // link after a successful activation that didn't redirect cleanly).
     console.error('[auth.signup.completeByToken] createUser failed:', error);
-    throw httpErr(error?.message || 'Failed to activate account', 500);
+    throw httpErr('err.business.activate_failed', 500, { message: error?.message || '' });
   }
 
   // Link + clear signup state. Done in one UPDATE so a crash between
@@ -999,8 +991,8 @@ const authSignupCompleteByPin: Handler = async (body) => {
   const nationalId = String(body.national_id ?? '').trim();
   const pin        = String(body.pin         ?? '').trim();
   const password   = String(body.password    ?? '');
-  if (!nationalId || !pin) throw httpErr('بيانات ناقصة / Missing credentials', 400);
-  if (password.length < 8) throw httpErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل / Password must be at least 8 characters', 400);
+  if (!nationalId || !pin) throw httpErr('err.auth.missing_credentials', 400);
+  if (password.length < 8) throw httpErr('err.auth.password_too_short', 400);
 
   // Single query covering member lookup + linked users row + PIN state.
   // Returning eagerly with a uniform error message means the attacker
@@ -1021,7 +1013,7 @@ const authSignupCompleteByPin: Handler = async (body) => {
     email: string | null; full_name: string; preferred_name: string | null;
   }>;
 
-  const generic = httpErr('بيانات الدخول غير صحيحة / Invalid credentials', 401);
+  const generic = httpErr('err.auth.invalid_credentials', 401);
 
   if (!row || !row.id || !row.signup_pin_hash) {
     console.warn(`[auth.signup.completeByPin] no pending PIN for NID ${nationalId}`);
@@ -1034,17 +1026,17 @@ const authSignupCompleteByPin: Handler = async (body) => {
   }
   if (row.signup_completed_at || row.auth_user_id) {
     console.warn(`[auth.signup.completeByPin] user ${row.id} already activated`);
-    throw httpErr('هذا الحساب مفعّل سابقاً، الرجاء تسجيل الدخول مباشرةً / Account already activated — please sign in', 409);
+    throw httpErr('err.auth.account_already_active', 409);
   }
   if (row.signup_pin_expires_at && new Date(row.signup_pin_expires_at) < new Date()) {
     console.warn(`[auth.signup.completeByPin] PIN expired for user ${row.id}`);
-    throw httpErr('انتهت صلاحية الرمز، الرجاء طلب دعوة جديدة من المسؤول / PIN expired — ask the admin for a new one', 410);
+    throw httpErr('err.auth.pin_expired', 410);
   }
   if (!row.email) {
     // PIN flow doesn't strictly REQUIRE email at invite time (per
     // auth.invite.byPin), but Supabase Auth needs an email to create
     // an auth.users row. Refuse here with a clear message.
-    throw httpErr('لا يوجد بريد إلكتروني للعضو، الرجاء التواصل مع المسؤول / Member has no email on file — contact admin', 400);
+    throw httpErr('err.auth.member_no_email', 400);
   }
 
   const pinOk = await bcryptCompare(pin, row.signup_pin_hash);
@@ -1071,7 +1063,7 @@ const authSignupCompleteByPin: Handler = async (body) => {
   });
   if (error || !data?.user) {
     console.error('[auth.signup.completeByPin] createUser failed:', error);
-    throw httpErr(error?.message || 'Failed to activate account', 500);
+    throw httpErr('err.business.activate_failed', 500, { message: error?.message || '' });
   }
 
   await sql`

@@ -38,9 +38,9 @@ const assignmentsList: Handler = async (body) => {
 const assignmentsAdd: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   requireAuth(user);
-  if (!data.opportunity_id) throw httpErr('opportunity_id is required', 400);
+  if (!data.opportunity_id) throw httpErr('err.required.opportunity_id', 400);
   if (!data.member_id && !data.volunteer_name) {
-    throw httpErr('member_id or volunteer_name is required', 400);
+    throw httpErr('err.required.member_or_volunteer', 400);
   }
   const [r] = await sql`
     INSERT INTO assignments (opportunity_id, member_id, volunteer_name, volunteer_email,
@@ -64,7 +64,7 @@ const assignmentsMarkAttendance: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   requireAuth(user);
   if (!data.assignment_id || !data.attendance_status) {
-    throw httpErr('assignment_id and attendance_status are required', 400);
+    throw httpErr('err.required.assignment_attendance', 400);
   }
   await sql`
     UPDATE assignments SET
@@ -80,7 +80,7 @@ const assignmentsMarkAttendance: Handler = async (body, user) => {
 const assignmentsBulkMarkAttendance: Handler = async (body, user) => {
   requireAuth(user);
   const records = body.records as Array<Record<string, unknown>> | undefined;
-  if (!Array.isArray(records)) throw httpErr('records[] required', 400);
+  if (!Array.isArray(records)) throw httpErr('err.required.records', 400);
   let count = 0;
   for (const r of records) {
     if (!r.assignment_id || !r.attendance_status) continue;
@@ -105,7 +105,7 @@ const assignmentsBulkMarkAttendance: Handler = async (body, user) => {
 // Upcoming vs Past on the client.
 const assignmentsListOwn: Handler = async (_body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
   return sql`
     SELECT a.*,
       o.role_name, o.role_key, o.estimated_hours, o.project_id, o.owning_committee_id,

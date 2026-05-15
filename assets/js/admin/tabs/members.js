@@ -22,6 +22,7 @@ import {
 } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Club-role enum (canonical English) → translation key. Also drives the
 // localized label inside the row's role tag. ROLE_COLORS still keys off
@@ -186,7 +187,7 @@ export async function openMemberFile(memberId, kind) {
     // knows to ask the member to re-upload rather than retry.
     const friendly = res?.data?.missing
       ? t('ap.members.file_missing')
-      : (res?.error || t('ap.members.file_failed'));
+      : (localizeError(res?.error, res?.errorParams) || t('ap.members.file_failed'));
     toast(friendly, 'twarn');
     return;
   }

@@ -13,6 +13,7 @@ import { DB } from '../../lib/state.js';
 import { esc, gv, tag } from '../../lib/format.js';
 import { api, toast, closeModal, populateNewSelects } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // ── CERTIFICATES ─────────────────────────────────────────────
 export async function loadCerts(pid) {
@@ -175,7 +176,7 @@ export async function verifyCert() {
     area.innerHTML = buildCertHTML(r.certificate);
   } else {
     area.innerHTML = `<div style="background:var(--dnb);border:1.5px solid rgba(220,38,38,.25);border-radius:var(--rs);padding:1rem;font-size:.84rem;color:var(--dn);text-align:center">
-      ❌ ${esc(r?.error || t('ap.cert.verify_invalid'))}
+      ❌ ${esc(localizeError(r?.error, r?.errorParams) || t('ap.cert.verify_invalid'))}
     </div>`;
   }
 }

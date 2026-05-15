@@ -18,6 +18,7 @@ import {
 import { showPage } from '../router.js';
 import { loadBulkAttGrid } from './attendance.js';
 import { t } from '../../lib/i18n.js';
+import { localizeError } from '../../lib/api.js';
 
 // Project type + status enum → translation key. Tag colors stay keyed
 // off the canonical English values so STATUS_COLORS keeps working.
@@ -187,7 +188,7 @@ export async function uploadProjectPhotoFromForm() {
       data: { project_id: projectId, filename: file.name, contentType: file.type, base64Data },
     });
     if (!res || !res.success) {
-      toast(res?.error || t('ap.prj.err_upload_failed'), 'twarn');
+      toast(localizeError(res?.error, res?.errorParams) || t('ap.prj.err_upload_failed'), 'twarn');
       return;
     }
     toast(t('ap.prj.success_upload'), 'tok');

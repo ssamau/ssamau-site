@@ -1344,6 +1344,151 @@ export default {
   'ap.prf.empty_hours':         'لا توجد ساعات مسجّلة لهذا العضو',
 
 
+  // ─── Server errors (Phase 6) ──────────────────────────────────────
+  // Edge Function actions throw `httpErr('err.<code>', status, params?)`.
+  // The dispatcher (supabase/functions/api/index.ts) emits the code as
+  // the JSON error field; the client's localizeError() helper looks it
+  // up here. Codes are stable identifiers — never rename without a
+  // matching server-side rename, or running clients will stop
+  // localizing the moment a new server build ships.
+  //
+  // Where a message embeds runtime data (an id, a count, an enum
+  // option list), {placeholder} syntax interpolates from errorParams.
+  // Anything not present in this map falls through to the raw server
+  // text, so legacy / future / not-yet-converted errors still surface
+  // rather than vanishing.
+  //
+  // Connection-layer messages (network failures the client itself
+  // detects, never traverses the wire) live under err.net.*.
+
+  // — Network + generic —
+  'err.net.connection':         'خطأ في الاتصال: {message}',
+  'err.net.short':              'خطأ: {message}',
+  'err.refresh_failed':         'فشل التحديث: {message}',
+  'err.unknown':                'حدث خطأ غير معروف',
+  'err.server':                 'خطأ في الخادم',
+
+  // — Auth flows —
+  'err.auth.unauthorized':            'يجب تسجيل الدخول للمتابعة',
+  'err.auth.invalid_credentials':     'بيانات الدخول غير صحيحة',
+  'err.auth.missing_credentials':     'بيانات الدخول ناقصة',
+  'err.auth.invite_invalid':          'الرابط لم يعد صالحاً',
+  'err.auth.invite_expired':          'انتهت صلاحية الدعوة، الرجاء طلب دعوة جديدة من المسؤول',
+  'err.auth.pin_expired':             'انتهت صلاحية الرمز، الرجاء طلب دعوة جديدة من المسؤول',
+  'err.auth.account_already_active':  'هذا الحساب مفعّل سابقاً، الرجاء تسجيل الدخول مباشرةً',
+  'err.auth.password_too_short':      'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+  'err.auth.password_too_short_admin':'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+  'err.auth.no_member_link':          'هذا الحساب غير مرتبط بملف عضو',
+  'err.auth.member_no_email':         'لا يوجد بريد إلكتروني للعضو، الرجاء التواصل مع المسؤول',
+  'err.auth.jwt_not_configured':      'تكوين الخادم غير مكتمل (JWT)',
+  'err.auth.no_invite_to_revoke':     'لا توجد دعوة معلّقة للإلغاء',
+
+  // — Forbidden / access tiers —
+  'err.access.forbidden':                'لا توجد صلاحية',
+  'err.access.admin_only':               'هذه العملية مقتصرة على الإدارة',
+  'err.access.dev_only':                 'هذه العملية مقتصرة على المطوّر',
+  'err.access.head_or_dev_only':         'هذه العملية مقتصرة على رئيس اللجنة أو المطوّر',
+  'err.access.committee_scope':          'رئيس اللجنة يمكنه التعديل على لجنته فقط',
+  'err.access.member_committee_scope':   'العضو ليس في لجنتك',
+  'err.access.head_no_committee':        'حساب رئيس اللجنة بدون لجنة معيّنة',
+  'err.access.dev_only_create_super':    'إنشاء حساب مطوّر يتطلّب صلاحية المطوّر',
+  'err.access.dev_only_delete_super':    'حذف حساب مطوّر يتطلّب صلاحية المطوّر',
+  'err.access.dev_only_grant_super':     'منح صلاحية المطوّر يتطلّب صلاحية المطوّر',
+  'err.access.dev_only_modify_super':    'تعديل حساب مطوّر يتطلّب صلاحية المطوّر',
+  'err.access.dev_only_reset_super':     'إعادة تعيين كلمة مرور المطوّر يتطلّب صلاحية المطوّر',
+  'err.access.last_super_delete':        'لا يمكن حذف آخر حساب مطوّر متبقٍ',
+  'err.access.last_super_demote':        'لا يمكن تخفيض آخر حساب مطوّر متبقٍ',
+  'err.access.head_cannot_reset_admin_or_head':   'رئيس اللجنة لا يمكنه إعادة تعيين كلمات مرور الإدارة أو الرؤساء',
+  'err.access.head_cannot_reset_admin_dev_head':  'رئيس اللجنة لا يمكنه إعادة تعيين كلمات مرور الإدارة أو المطوّر أو الرؤساء',
+  'err.access.cannot_self_delete':       'لا يمكنك حذف حسابك بنفسك',
+
+  // — Not-found entities —
+  'err.notfound.application':   'الطلب غير موجود',
+  'err.notfound.assignment':    'الإسناد غير موجود',
+  'err.notfound.committee':     'اللجنة غير موجودة',
+  'err.notfound.hours':         'سجل الساعات غير موجود',
+  'err.notfound.member':        'العضو غير موجود',
+  'err.notfound.target_member': 'العضو الهدف غير موجود',
+  'err.notfound.opportunity':   'الفرصة غير موجودة',
+  'err.notfound.project':       'المشروع غير موجود',
+  'err.notfound.user':          'المستخدم غير موجود',
+
+  // — Required fields —
+  'err.required.id':                'المعرّف مطلوب (id)',
+  'err.required.assignment_id':     'assignment_id مطلوب',
+  'err.required.committee_id':      'معرّف اللجنة مطلوب',
+  'err.required.member_id':         'معرّف العضو مطلوب',
+  'err.required.opportunity_id':    'معرّف الفرصة مطلوب',
+  'err.required.username':          'اسم المستخدم مطلوب',
+  'err.required.name_ar':           'الاسم بالعربية أو الاسم الكامل مطلوب',
+  'err.required.email_or_phone':    'البريد أو الهاتف مطلوب',
+  'err.required.project_role':      'المشروع واسم الدور مطلوبان',
+  'err.required.assignment_attendance': 'assignment_id وحالة الحضور مطلوبان',
+  'err.required.member_or_volunteer':   'معرّف العضو أو اسم المتطوع مطلوب',
+  'err.required.confirmation':      'يجب الموافقة على الإقرار',
+  'err.required.recipients_members':'recipients[] مطلوب لوضع الأعضاء المحددين',
+  'err.required.records':           'records[] مطلوبة',
+  'err.required.rows_members':      'rows[] مطلوبة لمرحلة members',
+  'err.required.phase':             'phase مطلوب: wipe / committees / members / finalize',
+  'err.required.committees_phase':  'committees[] مطلوبة لمرحلة committees',
+  'err.required.storage_fields':    'filename و contentType و base64Data مطلوبة',
+  'err.required.project_storage_fields': 'project_id و filename و contentType و base64Data مطلوبة',
+  'err.required.cert_code':         'رمز الشهادة مطلوب (cert_code)',
+
+  // — Business-logic violations —
+  'err.business.assignment_not_yours':  'هذا الإسناد لا يخصّك',
+  'err.business.hours_already_recorded':'تم تسجيل ساعات لهذا الإسناد بالفعل. اطلب من رئيس اللجنة التعديل إن لزم.',
+  'err.business.hours_needs_attended':  'الساعات تُسجَّل فقط لإسناد محسوب "حضر" (المبدأ الثاني).',
+  'err.business.hours_zero':            'إجمالي الساعات يجب أن يكون أكبر من صفر',
+  'err.business.app_not_triaged':       'الطلب لم تتم فرزته بعد',
+  'err.business.app_needs_committee':   'يجب إسناد الطلب للجنة قبل القبول',
+  'err.business.multi_recipient':       'حدّد واحدة فقط: advisor_id أو member_id أو volunteer_email',
+  'err.business.no_emails':             'لا توجد عناوين بريد صالحة في recipients[]',
+  'err.business.no_committees_setup':   'لا توجد لجان للمعاينة',
+  'err.business.no_superadmin_in_xlsx': 'لن يُنشأ حساب مطوّر — الملف لا يحوي صفّاً للرئيس/النواب ولم يُمرَّر dev_admin. إيقاف العملية لمنع فقدان الوصول.',
+
+  // — Misc / technical —
+  'err.misc.storage_not_configured': 'خدمة التخزين غير مهيّأة',
+  'err.misc.unknown_kind':           'نوع غير معروف',
+  'err.misc.unknown_kind_storage':   'نوع غير معروف. يجب أن يكون "cv" أو "photo".',
+
+  // — Dispatcher-level (Edge Function entry) —
+  'err.dispatcher.method_not_allowed':'هذا المسار يقبل POST فقط',
+  'err.dispatcher.body_must_be_json': 'محتوى الطلب يجب أن يكون JSON',
+  'err.dispatcher.action_required':   'حقل action مطلوب',
+  'err.dispatcher.unknown_action':    'إجراء غير معروف: {action}',
+
+  // — Parameterized variants (status / upload / setup phase / etc.) —
+  'err.business.cannot_triage_status':       'لا يمكن فرز الطلب في حالة {status}',
+  'err.business.cannot_request_interview_status':'لا يمكن طلب مقابلة في حالة {status}',
+  'err.business.cannot_accept_status':       'لا يمكن قبول الطلب في حالة {status}',
+  'err.business.app_already_status':         'الطلب بالفعل {status}',
+  'err.business.cannot_primary_approve_status':'لا يمكن الاعتماد الأولي في حالة {status}',
+  'err.business.final_requires_primary':     'الاعتماد النهائي يتطلّب الاعتماد الأولي (الحالة الحالية {status})',
+  'err.business.member_already_has_account': 'العضو {id} ({name}) لديه حساب بالفعل: "{username}"',
+  'err.business.target_member_has_account':  'هذا العضو لديه حساب بالفعل: "{username}"',
+  'err.business.username_taken':             'اسم المستخدم "{username}" مأخوذ',
+  'err.business.devadmin_collides':          'اسم dev_admin "{username}" يتعارض مع حساب قيادي — اختر اسماً آخر',
+  'err.business.already_seeded':             'تم البذر مسبقاً ({count} مستخدم). مرّر force:true لإعادة البذر.',
+  'err.business.unknown_phase':              'مرحلة غير معروفة: {phase}. القيم المتوقعة: wipe / committees / members / finalize',
+  'err.business.unknown_mode':               'وضع غير معروف: {mode}',
+  'err.business.invalid_access_level':       'صلاحية غير صالحة: {access}',
+  'err.business.upload_failed':              'فشل الرفع: {message}',
+  'err.business.signed_url_failed':          'تعذّر توليد رابط موقَّع: {message}',
+  'err.business.content_type_not_allowed':   'نوع المحتوى {contentType} غير مسموح',
+  'err.business.content_type_not_allowed_list':'نوع المحتوى {contentType} غير مسموح. الأنواع المتاحة: {allowed}',
+  'err.business.photo_too_large':            'الصورة أكبر من {limit} بايت',
+  'err.business.file_too_large':             'الملف أكبر من {limit} بايت',
+  'err.business.activate_failed':            'فشل تفعيل الحساب: {message}',
+  'err.business.upstream_supabase':          'تعذّر الاتصال بـ Supabase: {message}',
+  'err.notfound.member_with_id':             'العضو {id} غير موجود',
+  'err.business.member_no_email_for_email_invite': 'العضو {id} ليس له بريد إلكتروني — استخدم دعوة PIN، أو أضف بريداً للعضو أولاً.',
+  'err.business.member_no_nid_for_pin_invite': 'العضو {id} ليس له رقم هوية — لا يمكن استخدام دعوة PIN. استخدم البريد، أو حدّث ملف العضو.',
+  'err.business.member_already_joined_use_reset': 'العضو {id} ({name}) انضم بالفعل إلى لوحة الأعضاء. استخدم إعادة تعيين كلمة المرور بدلاً من الدعوة.',
+  'err.business.member_already_joined_short': 'العضو {id} ({name}) انضم بالفعل إلى لوحة الأعضاء.',
+  'err.business.cannot_revoke_joined': 'العضو انضم بالفعل — لإزالة الحساب استخدم users.delete (للمطوّر فقط).',
+  'err.business.legacy_account_use_temp_reset': 'هذا الحساب يستخدم المسار القديم — استخدم إعادة تعيين كلمة المرور المؤقتة بدلاً منه، أو أضف بريداً للعضو وأعد التهيئة.',
+
   // ─── Common runtime messages ──────────────────────────────────────
   'common.loading':             'جاري التحميل...',
   'common.please_fill':         'يرجى إدخال المعرّف وكلمة المرور',
@@ -1351,6 +1496,7 @@ export default {
   'common.generic_error':       'حدث خطأ، حاول مجدداً',
   'common.connected':           'متصل',
   'common.refresh':             'تحديث',
+  'common.refresh_success':     '✅ تم التحديث',
   'common.logout':              'خروج',
   'common.confirm_logout':      'هل تريد تسجيل الخروج؟',
   'common.skip_to_content':     'تجاوز إلى المحتوى',

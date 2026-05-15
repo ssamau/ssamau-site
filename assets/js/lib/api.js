@@ -15,6 +15,28 @@
 // every page that imports this module gets that behaviour for free.
 
 import { clearSession, getToken } from './auth.js';
+import { t } from './i18n.js';
+
+// ─── Server-error localization ──────────────────────────────────────
+// Edge Function actions (supabase/functions/api/*) emit error CODES of
+// the form `err.<namespace>.<name>` instead of human-readable strings.
+// The dispatcher returns `{ success: false, error: '<code>', errorParams }`;
+// localizeError() looks the code up in the i18n catalog and returns a
+// translated string. Codes that aren't recognised (legacy errors from a
+// not-yet-redeployed Edge Function, or anything else) fall through to
+// their raw value so the user still sees *something* rather than a
+// silent blank — Phase 6 ships in two halves and this is how the client
+// stays useful while waiting on the Edge Function deploy.
+//
+// Safe to call with any input — null/undefined/empty → '' so call sites
+// can do `toast(localizeError(res.error) || t('local.fallback'))`.
+export function localizeError(raw, params) {
+  if (!raw) return '';
+  // Server-emitted code → catalog lookup.
+  if (typeof raw === 'string' && /^err\./.test(raw)) return t(raw, params);
+  // Anything else (legacy string, free-form message, etc.) — pass through.
+  return raw;
+}
 
 // Supabase project URL + Edge Function endpoint. Same project hosts
 // both — /functions/v1/api is our custom Edge Function (action
@@ -57,10 +79,16 @@ export async function callApi(action, params = {}) {
   const json = await resp.json().catch(() => null);
   if (!json) return null;
 
-  // Flatten { success, data } → { success, error, data, ...inner } so callers
-  // can read either shape.
+  // Flatten { success, data } → { success, error, errorParams, data, ...inner }
+  // so callers can read either shape. errorParams carries {placeholder}
+  // substitutions for the i18n catalog entry the `error` code points at.
   const inner = json.data;
-  const flat  = { success: json.success, error: json.error, data: inner };
+  const flat  = {
+    success:     json.success,
+    error:       json.error,
+    errorParams: json.errorParams,
+    data:        inner,
+  };
   if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
     Object.assign(flat, inner);
   }
@@ -69,9 +97,12 @@ export async function callApi(action, params = {}) {
 
 // Thin wrapper that throws on { success:false } so callers can use try/catch.
 // Used by login/apply forms where we want explicit error handling.
+// The thrown Error carries the localized message so existing
+// `catch (e) { toast(e.message) }` call sites surface the right
+// language without further changes.
 export async function apiOrThrow(action, params = {}) {
   const r = await callApi(action, params);
-  if (!r) throw new Error('network');
-  if (!r.success) throw new Error(r.error || 'unknown error');
+  if (!r) throw new Error(t('err.unknown'));
+  if (!r.success) throw new Error(localizeError(r.error, r.errorParams) || t('err.unknown'));
   return r;
 }

@@ -58,7 +58,7 @@ const getDashboardStats: Handler = async () => {
 const dashboardProjectDetail: Handler = async (body) => {
   const project_id = body.project_id as string | undefined;
   const [project] = await sql`SELECT * FROM projects WHERE project_id = ${project_id}` as Array<Record<string, unknown>>;
-  if (!project) throw httpErr('Project not found', 404);
+  if (!project) throw httpErr('err.notfound.project', 404);
   const participants = await sql`
     SELECT pa.*, m.full_name AS member_full_name, m.preferred_name AS member_preferred_name,
            m.email AS member_email

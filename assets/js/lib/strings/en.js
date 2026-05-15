@@ -1319,6 +1319,142 @@ export default {
   'ap.prf.empty_hours':         'No hours logged for this member.',
 
 
+  // ─── Server errors (Phase 6) ──────────────────────────────────────
+  // Edge Function actions throw `httpErr('err.<code>', status, params?)`.
+  // The dispatcher emits the code as the JSON error field; the client's
+  // localizeError() helper looks it up here. Codes are stable
+  // identifiers — never rename without a matching server-side rename.
+  // Anything not present in this map falls through to the raw server
+  // text, so legacy / future / not-yet-converted errors still surface.
+
+  // — Network + generic —
+  'err.net.connection':         'Connection error: {message}',
+  'err.net.short':              'Error: {message}',
+  'err.refresh_failed':         'Refresh failed: {message}',
+  'err.unknown':                'Unknown error.',
+  'err.server':                 'Server error.',
+
+  // — Auth flows —
+  'err.auth.unauthorized':            'You must be signed in.',
+  'err.auth.invalid_credentials':     'Invalid credentials.',
+  'err.auth.missing_credentials':     'Missing credentials.',
+  'err.auth.invite_invalid':          'Invite link is no longer valid.',
+  'err.auth.invite_expired':          'Invite expired — ask the admin for a new one.',
+  'err.auth.pin_expired':             'PIN expired — ask the admin for a new one.',
+  'err.auth.account_already_active':  'Account is already activated — please sign in.',
+  'err.auth.password_too_short':      'Password must be at least 8 characters.',
+  'err.auth.password_too_short_admin':'Password must be at least 6 characters.',
+  'err.auth.no_member_link':          'This account isn’t linked to a member profile.',
+  'err.auth.member_no_email':         'Member has no email on file — contact the admin.',
+  'err.auth.jwt_not_configured':      'Server is missing JWT configuration.',
+  'err.auth.no_invite_to_revoke':     'No pending invite to revoke.',
+
+  // — Forbidden / access tiers —
+  'err.access.forbidden':                'Forbidden.',
+  'err.access.admin_only':               'Admin access required.',
+  'err.access.dev_only':                 'Dev (superadmin) access required.',
+  'err.access.head_or_dev_only':         'Committee head or dev access required.',
+  'err.access.committee_scope':          'Committee heads can only modify their own committee.',
+  'err.access.member_committee_scope':   'That member isn’t in your committee.',
+  'err.access.head_no_committee':        'Head account has no committee assigned.',
+  'err.access.dev_only_create_super':    'Only the dev (superadmin) can create another superadmin account.',
+  'err.access.dev_only_delete_super':    'Only the dev (superadmin) can delete another superadmin account.',
+  'err.access.dev_only_grant_super':     'Only the dev (superadmin) can grant superadmin access.',
+  'err.access.dev_only_modify_super':    'Only the dev (superadmin) can modify another superadmin account.',
+  'err.access.dev_only_reset_super':     'Only the dev (superadmin) can reset another superadmin password.',
+  'err.access.last_super_delete':        'Cannot delete the only remaining superadmin.',
+  'err.access.last_super_demote':        'Cannot demote the only remaining superadmin.',
+  'err.access.head_cannot_reset_admin_or_head':   'Committee heads cannot reset admin or head passwords.',
+  'err.access.head_cannot_reset_admin_dev_head':  'Committee heads cannot reset admin / dev / head passwords.',
+  'err.access.cannot_self_delete':       'You can’t delete your own account.',
+
+  // — Not-found entities —
+  'err.notfound.application':   'Application not found.',
+  'err.notfound.assignment':    'Assignment not found.',
+  'err.notfound.committee':     'Committee not found.',
+  'err.notfound.hours':         'Hours row not found.',
+  'err.notfound.member':        'Member not found.',
+  'err.notfound.target_member': 'Target member not found.',
+  'err.notfound.opportunity':   'Opportunity not found.',
+  'err.notfound.project':       'Project not found.',
+  'err.notfound.user':          'User not found.',
+
+  // — Required fields —
+  'err.required.id':                'id is required.',
+  'err.required.assignment_id':     'assignment_id is required.',
+  'err.required.committee_id':      'committee_id is required.',
+  'err.required.member_id':         'member_id is required.',
+  'err.required.opportunity_id':    'opportunity_id is required.',
+  'err.required.username':          'Username is required.',
+  'err.required.name_ar':           'Arabic name (or full_name) is required.',
+  'err.required.email_or_phone':    'Email or phone is required.',
+  'err.required.project_role':      'Project and role name are required.',
+  'err.required.assignment_attendance': 'assignment_id and attendance_status are required.',
+  'err.required.member_or_volunteer':   'member_id or volunteer_name is required.',
+  'err.required.confirmation':      'You must confirm before submitting.',
+  'err.required.recipients_members':'recipients[] is required when mode=members.',
+  'err.required.records':           'records[] is required.',
+  'err.required.rows_members':      'rows[] is required for phase=members.',
+  'err.required.phase':             'phase is required: wipe / committees / members / finalize.',
+  'err.required.committees_phase':  'committees[] is required for phase=committees.',
+  'err.required.storage_fields':    'filename, contentType, and base64Data are required.',
+  'err.required.project_storage_fields': 'project_id, filename, contentType, and base64Data are required.',
+  'err.required.cert_code':         'cert_code is required.',
+
+  // — Business-logic violations —
+  'err.business.assignment_not_yours':  'This assignment doesn’t belong to you.',
+  'err.business.hours_already_recorded':'Hours already recorded for this assignment. Ask a committee head to edit if needed.',
+  'err.business.hours_needs_attended':  'Hours can only be recorded for assignments marked Attended (Principle 2).',
+  'err.business.hours_zero':            'Total hours must be greater than zero.',
+  'err.business.app_not_triaged':       'This application has not been triaged yet.',
+  'err.business.app_needs_committee':   'Application must be assigned to a committee before acceptance.',
+  'err.business.multi_recipient':       'Provide only one of advisor_id, member_id, or volunteer_email.',
+  'err.business.no_emails':             'No valid email addresses in recipients[].',
+  'err.business.no_committees_setup':   'No committees available to preview.',
+  'err.business.no_superadmin_in_xlsx': 'No superadmin account would be created — the xlsx has no President/VP/DVP rows and no dev_admin was provided. Aborting to prevent lockout.',
+
+  // — Misc / technical —
+  'err.misc.storage_not_configured': 'Storage service is not configured.',
+  'err.misc.unknown_kind':           'Unknown kind.',
+  'err.misc.unknown_kind_storage':   'Unknown kind. Must be "cv" or "photo".',
+
+  // — Dispatcher-level (Edge Function entry) —
+  'err.dispatcher.method_not_allowed':'Only POST is supported on this endpoint.',
+  'err.dispatcher.body_must_be_json': 'Request body must be JSON.',
+  'err.dispatcher.action_required':   '`action` is required.',
+  'err.dispatcher.unknown_action':    'Unknown action: {action}',
+
+  // — Parameterized variants (status / upload / setup phase / etc.) —
+  'err.business.cannot_triage_status':       'Can’t triage an application in status {status}.',
+  'err.business.cannot_request_interview_status':'Can’t request an interview for status {status}.',
+  'err.business.cannot_accept_status':       'Can’t accept an application in status {status}.',
+  'err.business.app_already_status':         'Application is already {status}.',
+  'err.business.cannot_primary_approve_status':'Can’t primary-approve a row in status {status}.',
+  'err.business.final_requires_primary':     'Final approval requires PrimaryApproved (currently {status}).',
+  'err.business.member_already_has_account': 'Member {id} ({name}) already has an account: "{username}".',
+  'err.business.target_member_has_account':  'That member already has an account: "{username}".',
+  'err.business.username_taken':             'Username "{username}" is already taken.',
+  'err.business.devadmin_collides':          'dev_admin username "{username}" collides with a leadership account — pick a different one.',
+  'err.business.already_seeded':             'Already seeded ({count} users exist). Pass force:true to wipe + re-seed.',
+  'err.business.unknown_phase':              'Unknown phase: {phase}. Expected one of: wipe, committees, members, finalize.',
+  'err.business.unknown_mode':               'Unknown mode: {mode}',
+  'err.business.invalid_access_level':       'Invalid access_level: {access}',
+  'err.business.upload_failed':              'Upload failed: {message}',
+  'err.business.signed_url_failed':          'Could not generate signed URL: {message}',
+  'err.business.content_type_not_allowed':   'Content-Type {contentType} not allowed.',
+  'err.business.content_type_not_allowed_list':'Content-Type {contentType} not allowed. Allowed: {allowed}.',
+  'err.business.photo_too_large':            'Photo exceeds {limit} bytes.',
+  'err.business.file_too_large':             'File exceeds {limit} bytes.',
+  'err.business.activate_failed':            'Failed to activate account: {message}',
+  'err.business.upstream_supabase':          'Supabase upstream error: {message}',
+  'err.notfound.member_with_id':             'Member {id} not found.',
+  'err.business.member_no_email_for_email_invite': 'Member {id} has no email on file — use auth.invite.byPin instead, or add an email to their record first.',
+  'err.business.member_no_nid_for_pin_invite': 'Member {id} has no national_id on file — required for PIN-based signup. Use auth.invite.byEmail if they have an email, or update the member record first.',
+  'err.business.member_already_joined_use_reset': 'Member {id} ({name}) has already joined the portal. Use users.sendPasswordReset to send them a password recovery email instead.',
+  'err.business.member_already_joined_short': 'Member {id} ({name}) has already joined the portal.',
+  'err.business.cannot_revoke_joined': 'That member has already joined the portal — use users.delete (superadmin only) if you really need to remove their account.',
+  'err.business.legacy_account_use_temp_reset': 'This account is on legacy auth — use the temp-password reset instead. Or add an email to the linked member and re-run the backfill.',
+
   // ─── Common runtime messages ──────────────────────────────────────
   'common.loading':             'Loading...',
   'common.please_fill':         'Please enter both your identifier and password.',
@@ -1326,6 +1462,7 @@ export default {
   'common.generic_error':       'Something went wrong. Try again.',
   'common.connected':           'Connected',
   'common.refresh':             'Refresh',
+  'common.refresh_success':     '✅ Refreshed.',
   'common.logout':              'Sign out',
   'common.confirm_logout':      'Sign out of your account?',
   'common.skip_to_content':     'Skip to content',

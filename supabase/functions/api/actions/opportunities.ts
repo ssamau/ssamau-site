@@ -39,7 +39,7 @@ const opportunitiesList: Handler = async (body) => {
 const opportunitiesCreate: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   if (!data.project_id || !data.role_name) {
-    throw httpErr('project_id and role_name are required', 400);
+    throw httpErr('err.required.project_role', 400);
   }
   requireAdminScope(user, data.owning_committee_id as string | null | undefined);
   const id = (data.opportunity_id as string | undefined) || shortId('OPP');
@@ -59,7 +59,7 @@ const opportunitiesUpdate: Handler = async (body, user) => {
   const id = body.id as string | undefined;
   const data = (body.data ?? {}) as Record<string, unknown>;
   const [existing] = await sql`SELECT owning_committee_id FROM opportunities WHERE opportunity_id = ${id}` as Array<{ owning_committee_id: string | null }>;
-  if (!existing) throw httpErr('Opportunity not found', 404);
+  if (!existing) throw httpErr('err.notfound.opportunity', 404);
   requireAdminScope(user, existing.owning_committee_id);
   if (data.owning_committee_id) requireAdminScope(user, data.owning_committee_id as string | null | undefined);
   await sql`
@@ -111,7 +111,7 @@ const opportunitiesNotify: Handler = async (body, user) => {
   const recipients     = (body.recipients as string[] | undefined) || [];
   const custom_message = (body.custom_message as string | undefined) || '';
 
-  if (!opportunity_id) throw httpErr('opportunity_id is required', 400);
+  if (!opportunity_id) throw httpErr('err.required.opportunity_id', 400);
 
   // Pull the opportunity + project for body content.
   const [opp] = await sql`
@@ -130,7 +130,7 @@ const opportunitiesNotify: Handler = async (body, user) => {
     event_date: string | null; location: string | null;
     committee_name: string | null;
   }>;
-  if (!opp) throw httpErr('Opportunity not found', 404);
+  if (!opp) throw httpErr('err.notfound.opportunity', 404);
   // Committee-head scope check — head can only notify for own-committee
   // opportunities; admin/superadmin pass through.
   requireAdminScope(user, opp.owning_committee_id);
@@ -158,7 +158,7 @@ const opportunitiesNotify: Handler = async (body, user) => {
     ` as Array<{ email: string }>;
     targets = rows.map(r => r.email);
   } else if (mode === 'members') {
-    if (!recipients.length) throw httpErr('recipients[] required for mode=members', 400);
+    if (!recipients.length) throw httpErr('err.required.recipients_members', 400);
     const rows = await sql`
       SELECT email FROM members
       WHERE member_id = ANY(${recipients}) AND email IS NOT NULL AND email <> ''
@@ -168,9 +168,9 @@ const opportunitiesNotify: Handler = async (body, user) => {
     targets = recipients
       .map(s => String(s).trim())
       .filter(s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
-    if (!targets.length) throw httpErr('No valid email addresses in recipients[]', 400);
+    if (!targets.length) throw httpErr('err.business.no_emails', 400);
   } else {
-    throw httpErr(`Unknown mode: ${mode}`, 400);
+    throw httpErr('err.business.unknown_mode', 400, { mode });
   }
 
   // ── Send ───────────────────────────────────────────────────────────

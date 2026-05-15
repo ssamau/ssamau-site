@@ -56,7 +56,7 @@ const updateProject: Handler = async (body, user) => {
   const data = (body.data ?? {}) as Record<string, unknown>;
   if (user!.access === 'head') {
     const [p] = await sql`SELECT owning_committee_id FROM projects WHERE project_id = ${id}` as Array<{ owning_committee_id: string | null }>;
-    if (!p) throw httpErr('Project not found', 404);
+    if (!p) throw httpErr('err.notfound.project', 404);
     requireAdminScope(user, p.owning_committee_id);
   }
   await sql`

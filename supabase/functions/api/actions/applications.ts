@@ -32,12 +32,12 @@ const applicationsSubmit: Handler = async (body) => {
   // Display name: prefer the new structured name_ar; fall back to full_name
   // for any old/legacy callers still posting the original v1 schema.
   const displayName = data.name_ar || data.full_name;
-  if (!displayName) throw httpErr('name_ar (or full_name) is required', 400);
+  if (!displayName) throw httpErr('err.required.name_ar', 400);
   if (!data.email && !data.phone) {
-    throw httpErr('email or phone is required', 400);
+    throw httpErr('err.required.email_or_phone', 400);
   }
   if (data.confirmation_accepted !== true) {
-    throw httpErr('confirmation_accepted must be true', 400);
+    throw httpErr('err.required.confirmation', 400);
   }
 
   const id = (data.application_id as string | undefined) || shortId('APP');
@@ -393,11 +393,11 @@ const applicationsAssignCommittee: Handler = async (body, user) => {
   requireAdmin(user);
   const id = body.id as string | undefined;
   const committee_id = body.committee_id as string | undefined;
-  if (!committee_id) throw httpErr('committee_id is required', 400);
+  if (!committee_id) throw httpErr('err.required.committee_id', 400);
   const [row] = await sql`SELECT status FROM membership_applications WHERE application_id = ${id}` as Array<{ status: string }>;
-  if (!row) throw httpErr('Application not found', 404);
+  if (!row) throw httpErr('err.notfound.application', 404);
   if (row.status !== 'PendingTriage') {
-    throw httpErr(`Cannot triage an application in status ${row.status}`, 409);
+    throw httpErr('err.business.cannot_triage_status', 409, { status: row.status });
   }
   await sql`
     UPDATE membership_applications SET
@@ -415,10 +415,10 @@ const applicationsRequestInterview: Handler = async (body, user) => {
   const [row] = await sql`SELECT status, assigned_committee_id FROM membership_applications WHERE application_id = ${id}` as Array<{
     status: string; assigned_committee_id: string | null;
   }>;
-  if (!row) throw httpErr('Application not found', 404);
+  if (!row) throw httpErr('err.notfound.application', 404);
   requireAdminScope(user, row.assigned_committee_id);
   if (row.status !== 'AssignedToCommittee' && row.status !== 'InterviewRequested') {
-    throw httpErr(`Cannot request interview for status ${row.status}`, 409);
+    throw httpErr('err.business.cannot_request_interview_status', 409, { status: row.status });
   }
   await sql`
     UPDATE membership_applications SET
@@ -455,13 +455,13 @@ const applicationsAccept: Handler = async (body, user) => {
   const [app] = await sql`
     SELECT * FROM membership_applications WHERE application_id = ${id}
   ` as Array<Record<string, unknown>>;
-  if (!app) throw httpErr('Application not found', 404);
+  if (!app) throw httpErr('err.notfound.application', 404);
   requireAdminScope(user, app.assigned_committee_id as string | null | undefined);
   if (app.status !== 'AssignedToCommittee' && app.status !== 'InterviewRequested') {
-    throw httpErr(`Cannot accept an application in status ${app.status}`, 409);
+    throw httpErr('err.business.cannot_accept_status', 409, { status: String(app.status) });
   }
   if (!app.assigned_committee_id) {
-    throw httpErr('Application must be assigned to a committee before acceptance', 400);
+    throw httpErr('err.business.app_needs_committee', 400);
   }
   const memberId = shortId('MBR');
   // Display name preference: structured Arabic name first, then full_name
@@ -573,18 +573,18 @@ const applicationsReject: Handler = async (body, user) => {
   const [app] = await sql`SELECT status, assigned_committee_id FROM membership_applications WHERE application_id = ${id}` as Array<{
     status: string; assigned_committee_id: string | null;
   }>;
-  if (!app) throw httpErr('Application not found', 404);
+  if (!app) throw httpErr('err.notfound.application', 404);
   // Heads can reject only within their committee's scope, but only after
   // triage. Presidency can reject anything (including PendingTriage) for
   // obvious-spam cases.
   if (user!.access === 'head') {
-    if (!app.assigned_committee_id) throw httpErr('This application has not been triaged yet', 409);
+    if (!app.assigned_committee_id) throw httpErr('err.business.app_not_triaged', 409);
     requireAdminScope(user, app.assigned_committee_id);
   } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
+    throw httpErr('err.access.forbidden', 403);
   }
   if (app.status === 'Accepted' || app.status === 'Rejected') {
-    throw httpErr(`Application already ${app.status}`, 409);
+    throw httpErr('err.business.app_already_status', 409, { status: app.status });
   }
   await sql`
     UPDATE membership_applications SET

@@ -12,7 +12,7 @@
 // Behaviour is identical to the previous in-file copies — this module is a
 // pure structural relocation; no logic was changed during the split.
 
-import { callApi as _callApi } from './api.js';
+import { callApi as _callApi, localizeError } from './api.js';
 import { DB } from './state.js';
 import { esc, gv, sv } from './format.js';
 import { t } from './i18n.js';
@@ -27,16 +27,22 @@ export async function callApi(action, params = {}) { return _callApi(action, par
 export async function api(action, body = {}) {
   try {
     const data = await callApi(action, body);
-    if (data && !data.success && data.error) throw new Error(data.error);
+    // Throw a localized version of the server error so the catch-arm
+    // toast surfaces it in the user's language. localizeError() turns
+    // `err.foo.bar` codes into the catalog string (and returns raw
+    // text for anything not matching the err.* shape).
+    if (data && !data.success && data.error) {
+      throw new Error(localizeError(data.error, data.errorParams) || t('err.unknown'));
+    }
     // Clear stale "err" pill — every successful call resets the
     // connection status so a single past failure doesn't stay
     // displayed forever (the symptom: switching tabs after a failed
     // members.getOwn call left "هذا الحساب غير مرتبط بملف عضو" stuck
     // at the top right even after every subsequent call succeeded).
-    setApiStatus('ok', 'متصل');
+    setApiStatus('ok', t('common.connected'));
     return data;
   } catch (err) {
-    toast('خطأ في الاتصال: ' + err.message, 'terr');
+    toast(t('err.net.connection', { message: err.message }), 'terr');
     setApiStatus('err', err.message);
     return null;
   }
@@ -51,10 +57,10 @@ export async function apiGet(action, params = {}) {
     // pill stuck on whatever its previous state was — most visibly
     // 'pending' after a refresh click, since refreshData primes the
     // pill before calling the loader.
-    setApiStatus('ok', 'متصل');
+    setApiStatus('ok', t('common.connected'));
     return data;
   } catch (err) {
-    toast('خطأ: ' + err.message, 'terr');
+    toast(t('err.net.short', { message: err.message }), 'terr');
     setApiStatus('err', err.message);
     return null;
   }
@@ -310,10 +316,10 @@ export async function refreshData() {
     // — see setRefreshLoaders below.
     const loader = _loaderMap[page];
     if (loader) await loader();
-    toast('✅ تم التحديث');
+    toast(t('common.refresh_success'));
   } catch (e) {
-    toast('فشل التحديث: ' + (e?.message || 'unknown'), 'terr');
-    setApiStatus('err', e?.message || 'unknown');
+    toast(t('err.refresh_failed', { message: e?.message || t('err.unknown') }), 'terr');
+    setApiStatus('err', e?.message || t('err.unknown'));
   } finally {
     btn?.classList.remove('refreshing');
     if (btn) btn.disabled = false;

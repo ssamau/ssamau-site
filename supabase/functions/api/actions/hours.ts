@@ -37,9 +37,9 @@ const recordHours: Handler = async (body, user) => {
       attendance_status: string; a_member_id: string | null;
       a_volunteer_email: string | null; o_project_id: string;
     }>;
-    if (!a) throw httpErr('Assignment not found', 404);
+    if (!a) throw httpErr('err.notfound.assignment', 404);
     if (a.attendance_status !== 'Attended') {
-      throw httpErr('Hours can only be recorded for assignments marked Attended (Principle 2).', 422);
+      throw httpErr('err.business.hours_needs_attended', 422);
     }
     // Backfill project_id / member from the assignment if the caller didn't supply them.
     if (!data.project_id)      data.project_id      = a.o_project_id;
@@ -56,7 +56,7 @@ const recordHours: Handler = async (body, user) => {
   const advisor_id = data.advisor_id ? Number(data.advisor_id) : null;
   if (advisor_id) {
     if (data.member_id || data.volunteer_email) {
-      throw httpErr('Provide only one of advisor_id, member_id, or volunteer_email.', 422);
+      throw httpErr('err.business.multi_recipient', 422);
     }
     if (!data.participant_type) data.participant_type = 'advisor';
   }
@@ -123,9 +123,9 @@ const hoursPrimaryApprove: Handler = async (body, user) => {
     id: number; member_id: string | null; advisor_id: number | null;
     approval_status: string; committee_id: string | null;
   }>;
-  if (!row) throw httpErr('Hours row not found', 404);
+  if (!row) throw httpErr('err.notfound.hours', 404);
   if (row.approval_status !== 'Draft') {
-    throw httpErr(`Cannot primary-approve a row in status ${row.approval_status}`, 409);
+    throw httpErr('err.business.cannot_primary_approve_status', 409, { status: row.approval_status });
   }
   requireAdminScope(user, row.committee_id);
   await sql`
@@ -154,9 +154,9 @@ const hoursFinalApprove: Handler = async (body, user) => {
     id: number; member_id: string | null; advisor_id: number | null;
     approval_status: string; committee_id: string | null;
   }>;
-  if (!row) throw httpErr('Hours row not found', 404);
+  if (!row) throw httpErr('err.notfound.hours', 404);
   if (row.approval_status !== 'PrimaryApproved') {
-    throw httpErr(`Final approval requires PrimaryApproved (currently ${row.approval_status})`, 409);
+    throw httpErr('err.business.final_requires_primary', 409, { status: row.approval_status });
   }
   requireAdminScope(user, row.committee_id);
   await sql`
@@ -186,7 +186,7 @@ const hoursReject: Handler = async (body, user) => {
     id: number; member_id: string | null; advisor_id: number | null;
     approval_status: string; committee_id: string | null;
   }>;
-  if (!row) throw httpErr('Hours row not found', 404);
+  if (!row) throw httpErr('err.notfound.hours', 404);
   // Anyone with admin scope over the row's committee can reject at any
   // stage — including rolling back a FinalApproved row. Heads now own
   // the full approval chain for their committee so they also own the
@@ -290,10 +290,10 @@ async function recomputeAdvisorTotalHours(advisor_id: number | null | undefined)
 //     existing updateHours path.)
 const hoursRecordOwn: Handler = async (body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
   const data = (body.data ?? body) as Record<string, unknown>;
   const assignment_id = data.assignment_id as string | undefined;
-  if (!assignment_id) throw httpErr('assignment_id is required', 400);
+  if (!assignment_id) throw httpErr('err.required.assignment_id', 400);
 
   const [a] = await sql`
     SELECT a.assignment_id, a.member_id, a.attendance_status,
@@ -305,16 +305,16 @@ const hoursRecordOwn: Handler = async (body, user) => {
     assignment_id: string; member_id: string | null;
     attendance_status: string; o_project_id: string;
   }>;
-  if (!a) throw httpErr('Assignment not found', 404);
+  if (!a) throw httpErr('err.notfound.assignment', 404);
   // Server-side self-scope: the assignment must belong to the caller.
   // Without this a member could pass a stranger's assignment_id and
   // log hours into their record.
   if (a.member_id !== user.member_id) {
-    throw httpErr('Assignment does not belong to this member.', 403);
+    throw httpErr('err.business.assignment_not_yours', 403);
   }
   // Principle 2 — only attended assignments earn hours.
   if (a.attendance_status !== 'Attended') {
-    throw httpErr('Hours can only be recorded for assignments marked Attended (Principle 2).', 422);
+    throw httpErr('err.business.hours_needs_attended', 422);
   }
   // One self-submission per assignment. Members fix mistakes via their
   // committee head — keeping the audit trail clean is more important
@@ -324,14 +324,14 @@ const hoursRecordOwn: Handler = async (body, user) => {
     SELECT id FROM hours WHERE assignment_id = ${assignment_id} LIMIT 1
   ` as Array<{ id: number }>;
   if (existing) {
-    throw httpErr('Hours already recorded for this assignment. Ask a committee head to edit if needed.', 409);
+    throw httpErr('err.business.hours_already_recorded', 409);
   }
 
   const before = parseFloat(data.hours_before as string) || 0;
   const during = parseFloat(data.hours_during as string) || 0;
   const after  = parseFloat(data.hours_after  as string) || 0;
   if (before + during + after <= 0) {
-    throw httpErr('Total hours must be greater than zero.', 422);
+    throw httpErr('err.business.hours_zero', 422);
   }
 
   const [r] = await sql`
@@ -358,7 +358,7 @@ const hoursRecordOwn: Handler = async (body, user) => {
 // own data on their own portal, which is correct.
 const hoursListOwn: Handler = async (_body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
   return sql`
     SELECT h.id AS hours_id, h.*,
            p.project_name, p.event_date,
