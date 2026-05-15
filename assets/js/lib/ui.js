@@ -43,9 +43,18 @@ export async function api(action, body = {}) {
 
 export async function apiGet(action, params = {}) {
   try {
-    return await callApi(action, params);
+    const data = await callApi(action, params);
+    // Match api()'s status-pill behaviour: any successful network round
+    // trip resets the pill to 'ok'. Without this, loaders that read via
+    // apiGet (members, projects, committees, dashboard, etc.) left the
+    // pill stuck on whatever its previous state was — most visibly
+    // 'pending' after a refresh click, since refreshData primes the
+    // pill before calling the loader.
+    setApiStatus('ok', 'متصل');
+    return data;
   } catch (err) {
     toast('خطأ: ' + err.message, 'terr');
+    setApiStatus('err', err.message);
     return null;
   }
 }
