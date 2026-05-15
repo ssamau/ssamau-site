@@ -53,7 +53,7 @@ function certDeliveryEmail(opts: {
     </div>
     <div dir="rtl" style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75;text-align:right">
       <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">السلام عليكم ${escHtml(opts.recipientName)},</p>
-      <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">يسعدنا تقديم شهادة تقدير لك على مشاركتك في:</p>
+      <p dir="rtl" style="margin:0 0 .85rem 0;text-align:right">يسعدنا منحك شهادة مشاركة في:</p>
 
       <div dir="rtl" style="background:#f9fafb;border-radius:10px;padding:1rem;margin:.85rem 0;font-size:.86rem;text-align:right">
         <div dir="rtl" style="margin-bottom:.4rem"><span style="color:#6b7280">الفعالية:</span> <strong>${escHtml(opts.projectName)}</strong></div>

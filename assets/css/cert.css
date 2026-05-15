@@ -62,16 +62,7 @@
     font-weight: 800;
     color: #1A5C2E;
     letter-spacing: .03em;
-    margin: .25rem 0 .1rem;
-    z-index: 1;
-  }
-  .cert-title-en {
-    font-size: clamp(.7rem, 1.4vw, 1rem);
-    font-weight: 700;
-    color: #b8932a;
-    letter-spacing: .25em;
-    text-transform: uppercase;
-    margin: 0 0 .35rem;
+    margin: .25rem 0 .45rem;
     z-index: 1;
   }
   .cert-divider {

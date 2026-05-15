@@ -89,20 +89,19 @@ function showCertificate(cert) {
   const code      = cert.cert_code || '';
 
   // Arabic 3rd-person possessive needs the right gender suffix:
-  //   male   → "جهوده الكريمة ومشاركته الفاعلة"  (his)
-  //   female → "جهودها الكريمة ومشاركتها الفاعلة"  (her)
+  //   male   → "لمشاركته الفاعلة وجهوده الكريمة"  (his)
+  //   female → "لمشاركتها الفاعلة وجهودها الكريمة"  (her)
   // DB stores 'ذكر' / 'أنثى' / NULL. NULL (volunteer cert with no
   // linked member row, or member row with empty gender) falls back to
   // the masculine form — that's the conventional Arabic default when
-  // the speaker doesn't know the recipient's gender (and matches how
-  // the cert read before this fix).
-  // Note: the preposition `ل` is part of the efforts phrase ("لجهوده" =
-  // "for his efforts"); keeping it in the variable avoids losing it
-  // in the template, which earlier dropped the ل and produced the
-  // ungrammatical "تقديراً جهوده" without the preposition.
+  // the speaker doesn't know the recipient's gender.
+  // Prepositions are baked into each variable: `ل` ("for") on partake
+  // (leads the phrase) and `و` ("and") on efforts (joins the second
+  // half). Keeping them in the strings avoids losing them in the
+  // template glue.
   const isFemale  = cert.member_gender === 'أنثى';
-  const efforts   = isFemale ? 'لجهودها الكريمة'     : 'لجهوده الكريمة';
-  const partake   = isFemale ? 'ومشاركتها الفاعلة'  : 'ومشاركته الفاعلة';
+  const partake   = isFemale ? 'لمشاركتها الفاعلة' : 'لمشاركته الفاعلة';
+  const efforts   = isFemale ? 'وجهودها الكريمة'   : 'وجهوده الكريمة';
   const committee = cert.committee_name || '';
 
   // Issuing signer — currently hardcoded to the president for every
@@ -120,15 +119,14 @@ function showCertificate(cert) {
     <div class="cert-stage">
       <div class="cert-sheet">
         <img class="cert-logo" src="assets/img/logo-200.png" alt="SSAM"/>
-        <div class="cert-title-ar">شهادة تقدير</div>
-        <div class="cert-title-en">Certificate of Appreciation</div>
+        <div class="cert-title-ar">شهادة مشاركة</div>
         <div class="cert-divider"></div>
 
         <div class="cert-intro">تُمنح هذه الشهادة إلى</div>
         <div class="cert-recipient">${escapeHtml(name)}</div>
 
         <div class="cert-body-text">
-          تقديراً ${efforts} ${partake} في
+          ${partake} ${efforts} في
           <span class="cert-project">${escapeHtml(project)}</span>
         </div>
 
