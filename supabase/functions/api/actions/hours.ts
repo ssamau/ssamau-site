@@ -98,7 +98,7 @@ const updateHours: Handler = async (body) => {
 
 // ─── HOURS APPROVAL (§7) ─────────────────────────────────────────────
 // Two-stage approval, both stages now belonging to the head tier
-// (Committee Head / Committee Vice Head / Deputy Vice President — all
+// (Committee Head / Committee Vice Head / Deputy Vice Head — all
 // scoped to their own committee). Per the 2026-05-16 president
 // clarification: final approval also lives with heads, not presidency,
 // "so the role of head means something". Presidency keeps unscoped

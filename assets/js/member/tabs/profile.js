@@ -340,18 +340,22 @@ export async function saveProfile() {
 // of presidency members + the user's committee head/vice into the
 // #contact-cards container under the profile tab.
 
+// Presidency is exactly 3 roles (President + 2 Vice Presidents).
+// Deputy-Vice-Head moved to HEAD_ROLES below — it's a committee-level
+// position, not presidency, despite the prior "Deputy Vice President"
+// label leaking that distinction.
 const LEADERSHIP_ROLES = new Set([
-  'President', 'Vice President', 'Deputy Vice President',
+  'President', 'Vice President',
 ]);
 const HEAD_ROLES = new Set([
-  'Committee Head', 'Committee Vice Head',
+  'Committee Head', 'Committee Vice Head', 'Deputy Vice Head',
 ]);
 const ROLE_LABEL_AR = {
   'President':              'الرئيس',
   'Vice President':         'نائب الرئيس',
-  'Deputy Vice President':  'مساعد نائب الرئيس',
   'Committee Head':         'رئيس اللجنة',
   'Committee Vice Head':    'نائب رئيس اللجنة',
+  'Deputy Vice Head':       'مساعد نائب رئيس اللجنة',
 };
 
 async function loadContactDirectory() {

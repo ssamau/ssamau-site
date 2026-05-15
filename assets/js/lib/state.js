@@ -27,16 +27,16 @@ export const DB = {
 // main.js scope; living here means a single import wherever they're needed.
 
 export const ROLE_COLORS = {
-  'President':             't-o',
-  'Vice President':        't-o',
-  'Deputy Vice President': 't-o',
-  'Committee Head':        't-g',
-  'Committee Vice Head':   't-g',
-  'Project Manager':       't-b',
-  'Event Manager':         't-b',
-  'Member':                't-gr',
-  'Volunteer':             't-p',
-  'Advisor':               't-y',
+  'President':           't-o',
+  'Vice President':      't-o',
+  'Committee Head':      't-g',
+  'Committee Vice Head': 't-g',
+  'Deputy Vice Head':    't-g',
+  'Project Manager':     't-b',
+  'Event Manager':       't-b',
+  'Member':              't-gr',
+  'Volunteer':           't-p',
+  'Advisor':             't-y',
 };
 
 export const STATUS_COLORS = {

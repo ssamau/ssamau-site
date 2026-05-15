@@ -41,7 +41,7 @@ const getMembers: Handler = async () => sql`
     CASE m.club_role
       WHEN 'President' THEN 1
       WHEN 'Vice President' THEN 2
-      WHEN 'Deputy Vice President' THEN 3
+      WHEN 'Deputy Vice Head' THEN 3
       WHEN 'Committee Head' THEN 4
       WHEN 'Committee Vice Head' THEN 5
       ELSE 9

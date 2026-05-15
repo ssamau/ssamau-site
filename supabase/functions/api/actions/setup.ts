@@ -172,7 +172,7 @@ const setupBulkSeed: Handler = async (body) => {
     // ─── 4a. Committee head / vice-head FK wiring ─────────────────
     // xlsx rule: a club President/VP/DVP who is ALSO assigned to a
     // committee is that committee's head/vice. So someone whose
-    // club_role is "Deputy Vice President" and whose committee_id is
+    // club_role is "Deputy Vice Head" and whose committee_id is
     // Communications is Communications' vice-head, not just a board
     // member. Without this, the bulkSeed left the vice slot null for
     // four committees and the public homepage ended up showing 8 board
@@ -183,7 +183,7 @@ const setupBulkSeed: Handler = async (body) => {
     // resolve to the same person anyway, but if the xlsx disagrees with
     // itself the explicit committee role is the source of truth.
     const HEAD_ROLES = new Set(['Committee Head', 'President']);
-    const VICE_ROLES = new Set(['Committee Vice Head', 'Vice President', 'Deputy Vice President']);
+    const VICE_ROLES = new Set(['Committee Vice Head', 'Vice President', 'Deputy Vice Head']);
 
     let headsAssigned = 0;
     const headAssigned = new Set<string>();   // committee_ids that already got a head this batch
@@ -242,13 +242,13 @@ const setupBulkSeed: Handler = async (body) => {
     const leadership = await sql`
       SELECT member_id, full_name, email, national_id, club_role
       FROM members
-      WHERE club_role IN ('President','Vice President','Deputy Vice President',
+      WHERE club_role IN ('President','Vice President','Deputy Vice Head',
                           'Committee Head','Committee Vice Head')
       ORDER BY
         CASE club_role
           WHEN 'President' THEN 1
           WHEN 'Vice President' THEN 2
-          WHEN 'Deputy Vice President' THEN 3
+          WHEN 'Deputy Vice Head' THEN 3
           WHEN 'Committee Head' THEN 4
           WHEN 'Committee Vice Head' THEN 5
         END,
@@ -273,7 +273,7 @@ const setupBulkSeed: Handler = async (body) => {
 
       const access = (m.club_role === 'President'
                    || m.club_role === 'Vice President'
-                   || m.club_role === 'Deputy Vice President')
+                   || m.club_role === 'Deputy Vice Head')
         ? 'superadmin' : 'head';
       if (access === 'superadmin') superadminCount++;
 

@@ -602,17 +602,19 @@ function shortName(full) {
 }
 
 function updateBoard(members) {
-  const roles  = ['President', 'Vice President', 'Deputy Vice President'];
-  const roleAr = { President: 'رئيس النادي السعودي في ملبورن', 'Vice President': 'نائب الرئيس', 'Deputy Vice President': 'نائبة الرئيس' };
-  const roleEn = { President: 'President of SSAM',             'Vice President': 'Vice President',  'Deputy Vice President': 'Deputy VP' };
+  // The 3 presidency roles, per the 2026-05-16 clarification: President
+  // + 2 Vice Presidents — fixed at 3, no other roles belong on the board.
+  // "Deputy Vice Head" (previously mistagged as "Deputy Vice President")
+  // is now correctly a committee-level role and never appears here.
+  const roles  = ['President', 'Vice President'];
+  const roleAr = { President: 'رئيس النادي السعودي في ملبورن', 'Vice President': 'نائب الرئيس' };
+  const roleEn = { President: 'President of SSAM',             'Vice President': 'Vice President' };
 
-  // Per the xlsx rule (clarified by user): a club VP/DVP who also has a
-  // committee assignment is THAT COMMITTEE'S vice-head, not a board member.
-  // The board (مجلس الإدارة) is just the 3 people with no committee_id:
-  // the President + the VPs/DVPs who serve purely at the club level.
-  // Without this filter, after the API patch the board page balloons from
-  // the correct 3 cards to 8 (every VP/DVP including those embedded in a
-  // committee), which was the bug visible in prod.
+  // Defence-in-depth: board members must have NO committee_id (those
+  // are committee-level VPs, not presidency) and must be Active. The
+  // role filter above already excludes Deputy Vice Heads, but keeping
+  // the committee_id guard means even a misclassified VP doesn't leak
+  // onto the homepage.
   //
   // Also filter to status='Active' — president flagged that an Inactive
   // member's name was still appearing on the homepage after the admin

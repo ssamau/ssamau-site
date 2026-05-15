@@ -30,7 +30,7 @@ export const COMMITTEE_CANONICAL = {
 export const ROLE_MAP = {
   'الرئيس':              { club_role: 'President',             access: 'superadmin' },
   'نائب الرئيس':         { club_role: 'Vice President',        access: 'superadmin' },
-  'نائبة الرئيس':        { club_role: 'Deputy Vice President', access: 'superadmin' },
+  'نائبة الرئيس':        { club_role: 'Deputy Vice Head', access: 'superadmin' },
   'رئيس اللجنة':         { club_role: 'Committee Head',        access: 'head' },
   'رئيسة اللجنة':        { club_role: 'Committee Head',        access: 'head' },
   'نائب رئيس اللجنة':    { club_role: 'Committee Vice Head',   access: 'head' },

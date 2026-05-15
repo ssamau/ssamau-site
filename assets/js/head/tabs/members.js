@@ -6,11 +6,12 @@ import { esc } from '../../lib/format.js';
 import { api } from '../../lib/ui.js';
 
 const CLUB_ROLE_AR = {
-  'President':             'رئيس النادي',
-  'Vice President':        'نائب الرئيس',
-  'Deputy Vice President': 'نائب الرئيس (مساعد)',
-  'Committee Head':        'رئيس اللجنة',
-  'Member':                'عضو',
+  'President':          'رئيس النادي',
+  'Vice President':     'نائب الرئيس',
+  'Committee Head':     'رئيس اللجنة',
+  'Committee Vice Head':'نائب رئيس اللجنة',
+  'Deputy Vice Head':   'مساعد نائب رئيس اللجنة',
+  'Member':             'عضو',
 };
 
 export async function loadHeadMembers() {
@@ -34,7 +35,12 @@ export async function loadHeadMembers() {
   }
   // Sort: leadership-roles first, then by name.
   members.sort((a, b) => {
-    const rank = r => ({ 'Committee Head': 0, 'Deputy Vice President': 1, 'Member': 2 }[r] ?? 3);
+    const rank = r => ({
+      'Committee Head': 0,
+      'Committee Vice Head': 1,
+      'Deputy Vice Head': 2,
+      'Member': 3,
+    }[r] ?? 4);
     const ra = rank(a.club_role), rb = rank(b.club_role);
     return ra !== rb ? ra - rb : (a.full_name || '').localeCompare(b.full_name || '', 'ar');
   });
