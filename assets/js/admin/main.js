@@ -355,8 +355,15 @@ setHandlers({
   onHrsAssignmentChange, onHrsOpportunityChange, onOppRolePreset,
   toggleAttFields, toggleHrsFields, toggleParticipantFields,
   loadApplications, loadOpportunities,
-  openAccountModal,
   sendInviteByEmail, sendInviteByPin,
+
+  // openAccountModal takes an optional `forEditId`. Bare-reference
+  // dispatch (`openAccountModal,`) would pass the button element as
+  // that arg — the element is truthy, so the modal opened in EDIT
+  // mode and stamped "[object HTMLButtonElement]" into the hidden id
+  // field. On save, parseInt(that, 10) = NaN → JSON null → server
+  // 'id is required' error. Wrapping discards the dispatcher args.
+  openAccountModal: () => openAccountModal(),
 
   // Self-edit profile (admin's own #/admin/my-profile tab). Lazy-load
   // the module so the admin bundle doesn't pull profile.js eagerly —

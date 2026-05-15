@@ -295,10 +295,21 @@ const usersUpdate: Handler = async (body, user) => {
     throw httpErr(`invalid access_level: ${data.access_level}`, 400);
   }
 
+  // member_id needs an explicit-clear path: COALESCE swallows null and
+  // keeps the existing value, which made unlinking a member during
+  // edit impossible (frontend sends member_id: null, server kept the
+  // old link). For member_id we now use the sentinel — only set when
+  // the key is present in the request, and use what the caller sent
+  // (including null). username and access_level keep COALESCE so they
+  // stay backwards-compatible with partial updates.
+  const hasMemberKey = Object.prototype.hasOwnProperty.call(data, 'member_id');
+  const memberIdFrag = hasMemberKey
+    ? sql`${(data.member_id as string | null) ?? null}`
+    : sql`member_id`;
   await sql`
     UPDATE users SET
       username     = COALESCE(${data.username ? String(data.username).trim().toLowerCase() : null}, username),
-      member_id    = COALESCE(${data.member_id}, member_id),
+      member_id    = ${memberIdFrag},
       access_level = COALESCE(${data.access_level}, access_level)
     WHERE id = ${id}
   `;
