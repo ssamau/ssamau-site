@@ -96,11 +96,16 @@
       <a href="apply.html" class="btn-primary">انضم إلى النادي</a>
       <a href="#events" class="btn-secondary">الفعاليات القادمة</a>
     </div>
+    <!--
+      data-stat attributes tag the live-updatable numbers so index.js's
+      patcher can find them by intent rather than text-matching (which
+      was the bug: only "59+" was being replaced, "10" was static).
+    -->
     <div class="hero-stats">
-      <div><div class="stat-n">59+</div><div class="stat-l">عضو نشط</div><div class="stat-l-en">Active Members</div></div>
+      <div><div class="stat-n" data-stat="active-members">59+</div><div class="stat-l">عضو نشط</div><div class="stat-l-en">Active Members</div></div>
       <div><div class="stat-n">30+</div><div class="stat-l">فعالية سنوياً</div><div class="stat-l-en">Annual Events</div></div>
       <div><div class="stat-n">2000+</div><div class="stat-l">حضور سنوي</div><div class="stat-l-en">Annual Attendees</div></div>
-      <div><div class="stat-n">10</div><div class="stat-l">لجان متخصصة</div><div class="stat-l-en">Committees</div></div>
+      <div><div class="stat-n" data-stat="specialized-committees">9</div><div class="stat-l">لجان متخصصة</div><div class="stat-l-en">Committees</div></div>
     </div>
   </div>
 </section>
@@ -126,10 +131,10 @@
         </div>
       </div>
       <div class="kpis">
-        <div class="kpi"><div class="kpi-n">59+</div><div class="kpi-l">عضو نشط</div><div class="kpi-l-en">Active Members</div></div>
+        <div class="kpi"><div class="kpi-n" data-stat="active-members">59+</div><div class="kpi-l">عضو نشط</div><div class="kpi-l-en">Active Members</div></div>
         <div class="kpi"><div class="kpi-n">30+</div><div class="kpi-l">فعالية سنوياً</div><div class="kpi-l-en">Annual Events</div></div>
         <div class="kpi"><div class="kpi-n">2000+</div><div class="kpi-l">حضور في الفعاليات</div><div class="kpi-l-en">Event Attendees</div></div>
-        <div class="kpi"><div class="kpi-n">10</div><div class="kpi-l">لجان متخصصة</div><div class="kpi-l-en">Committees</div></div>
+        <div class="kpi"><div class="kpi-n" data-stat="specialized-committees">9</div><div class="kpi-l">لجان متخصصة</div><div class="kpi-l-en">Committees</div></div>
       </div>
     </div>
   </div>
