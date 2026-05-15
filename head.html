@@ -19,10 +19,10 @@
 <div id="app">
 
 <!--
-  Heads' SPA shell. MVP scope is a single tab — لوحتي (Dashboard) —
-  scoped to the head's committee. Heads still navigate to admin.html
-  for management actions (create event, opportunity, assignment, etc.);
-  this page is their entry point and "what needs my attention" view.
+  Heads' SPA shell. All committee management lives here — dashboard,
+  members roster, opportunities, hours-approval queue, applications.
+  Each tab is committee-scoped server-side (the existing endpoints
+  already enforce user.committee_id filtering for heads).
 -->
 
 <aside class="sidebar" id="sidebar">
@@ -45,19 +45,19 @@
     <div class="sb-item active" data-page="dashboard" data-action="showPage">
       <span class="sb-ic">📊</span>لوحتي
     </div>
-    <div class="sb-section">أدوات إدارية</div>
-    <a class="sb-item" href="admin.html#/admin/members" style="text-decoration:none;color:inherit">
+    <div class="sb-section">إدارة لجنتي</div>
+    <div class="sb-item" data-page="members" data-action="showPage">
       <span class="sb-ic">👥</span>أعضاء اللجنة
-    </a>
-    <a class="sb-item" href="admin.html#/admin/opportunities" style="text-decoration:none;color:inherit">
+    </div>
+    <div class="sb-item" data-page="opportunities" data-action="showPage">
       <span class="sb-ic">🎯</span>الفرص التطوعية
-    </a>
-    <a class="sb-item" href="admin.html#/admin/hours" style="text-decoration:none;color:inherit">
+    </div>
+    <div class="sb-item" data-page="hours" data-action="showPage">
       <span class="sb-ic">⏱️</span>الساعات
-    </a>
-    <a class="sb-item" href="admin.html#/admin/applications" style="text-decoration:none;color:inherit">
+    </div>
+    <div class="sb-item" data-page="applications" data-action="showPage">
       <span class="sb-ic">📥</span>طلبات الانضمام
-    </a>
+    </div>
   </nav>
 
   <div class="sb-theme">
@@ -89,7 +89,6 @@
     <!-- ══════════ DASHBOARD (landing) ══════════ -->
     <div class="page active" id="page-dashboard">
 
-      <!-- Welcome card -->
       <div class="hd-welcome">
         <div class="hd-welcome-text">
           <div class="hd-welcome-greeting" id="hd-greeting">مرحباً</div>
@@ -98,7 +97,6 @@
         <div class="hd-welcome-emoji">🌿</div>
       </div>
 
-      <!-- KPI grid -->
       <div class="hd-kpi-grid" id="hd-kpi-grid">
         <div class="hd-kpi-card" data-kind="members">
           <div class="hd-kpi-icon">👥</div>
@@ -122,13 +120,12 @@
         </div>
       </div>
 
-      <!-- Pending queue: applications + hours side-by-side on desktop -->
       <div class="hd-queue-grid">
         <div class="card">
           <div class="card-head">
             <h3>📥 طلبات الانضمام للجنتك</h3>
             <div class="card-head-right">
-              <a class="btn btn-ol btn-sm" href="admin.html#/admin/applications">عرض الكل ←</a>
+              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="applications">عرض الكل ←</button>
             </div>
           </div>
           <div id="hd-applications-list" class="hd-queue-list">
@@ -140,7 +137,7 @@
           <div class="card-head">
             <h3>⏱️ ساعات بانتظار اعتمادك الأولي</h3>
             <div class="card-head-right">
-              <a class="btn btn-ol btn-sm" href="admin.html#/admin/hours">عرض الكل ←</a>
+              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="hours">عرض الكل ←</button>
             </div>
           </div>
           <div id="hd-hours-list" class="hd-queue-list">
@@ -149,40 +146,151 @@
         </div>
       </div>
 
-      <!-- Quick actions strip -->
       <div class="card hd-quickactions">
         <div class="card-head">
           <h3>⚡ إجراءات سريعة</h3>
         </div>
         <div class="hd-quickactions-row">
-          <a class="hd-qa" href="admin.html#/admin/opportunities">
-            <div class="hd-qa-ic">➕</div>
+          <button class="hd-qa" data-action="showPage" data-page="opportunities">
+            <div class="hd-qa-ic">🎯</div>
             <div>
-              <div class="hd-qa-t">إنشاء فرصة جديدة</div>
-              <div class="hd-qa-s">للفعاليات القادمة في لجنتك</div>
+              <div class="hd-qa-t">الفرص التطوعية</div>
+              <div class="hd-qa-s">قائمة فرص لجنتك</div>
             </div>
-          </a>
-          <a class="hd-qa" href="admin.html#/admin/projects">
+          </button>
+          <a class="hd-qa" href="admin.html#/admin/projects" style="text-decoration:none;color:inherit">
             <div class="hd-qa-ic">📅</div>
             <div>
               <div class="hd-qa-t">إنشاء فعالية</div>
-              <div class="hd-qa-s">حدث جديد للجنتك</div>
+              <div class="hd-qa-s">حدث جديد للجنتك (عبر الإدارة)</div>
             </div>
           </a>
-          <a class="hd-qa" href="admin.html#/admin/members">
+          <button class="hd-qa" data-action="showPage" data-page="members">
             <div class="hd-qa-ic">👥</div>
             <div>
-              <div class="hd-qa-t">إدارة الأعضاء</div>
+              <div class="hd-qa-t">أعضاء اللجنة</div>
               <div class="hd-qa-s">قائمة أعضاء لجنتك</div>
             </div>
-          </a>
+          </button>
         </div>
       </div>
 
     </div>
 
+    <!-- ══════════ MEMBERS ══════════ -->
+    <div class="page" id="page-members">
+      <div class="card">
+        <div class="card-head">
+          <h3>👥 أعضاء اللجنة</h3>
+          <div class="card-head-right">
+            <input class="search-input" placeholder="بحث بالاسم..." data-action="filterTable" data-target="hd-members-tbody" data-event="input"/>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>الدور</th>
+                <th>الجامعة / التخصص</th>
+                <th>الساعات</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ OPPORTUNITIES ══════════ -->
+    <div class="page" id="page-opportunities">
+      <div class="card">
+        <div class="card-head">
+          <h3>🎯 الفرص التطوعية</h3>
+          <div class="card-head-right">
+            <a class="btn btn-g btn-sm" href="admin.html#/admin/opportunities" style="text-decoration:none">➕ إنشاء فرصة (عبر الإدارة)</a>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+          الفرص الخاصة بلجنتك. إنشاء فرصة جديدة وإدارة الحالة تتم عبر لوحة الإدارة.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الفرصة</th>
+                <th>المشروع</th>
+                <th>الساعات التقديرية</th>
+                <th>عدد المطلوبين</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="hd-opps-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ HOURS ══════════ -->
+    <div class="page" id="page-hours">
+      <div class="card">
+        <div class="card-head">
+          <h3>⏱️ ساعات أعضاء لجنتك</h3>
+        </div>
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+          الساعات المسجلة لأعضاء لجنتك. اعتماد المرحلة الأولى يتم من هنا؛
+          الاعتماد النهائي يبقى من اختصاص الرئاسة.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>العضو</th>
+                <th>المشروع / الدور</th>
+                <th>الساعات</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="hd-hours-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ APPLICATIONS ══════════ -->
+    <div class="page" id="page-applications">
+      <div class="card">
+        <div class="card-head">
+          <h3>📥 طلبات الانضمام للجنتك</h3>
+        </div>
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+          الطلبات الموجّهة إلى لجنتك. يمكنك القبول المباشر أو الرفض مع ذكر السبب.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المتقدم</th>
+                <th>الجامعة / التخصص</th>
+                <th>تاريخ التقديم</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="hd-apps-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
+
+<!-- Toast container — referenced by lib/ui.js `toast()`. Without this
+     element the api() error path throws and the UI freezes mid-load. -->
+<div id="toast"></div>
 
 </div>
 

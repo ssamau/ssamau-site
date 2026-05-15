@@ -69,8 +69,8 @@ const headDashboardSummary: Handler = async (body, user) => {
           AND h.approval_status = 'Draft') AS hours_pending_count,
       (SELECT COUNT(*) FROM public.opportunities o
         JOIN public.projects p ON p.project_id = o.project_id
-        WHERE o.committee_id = ${committee_id}
-          AND COALESCE(o.status, 'Open') NOT IN ('Cancelled', 'Completed')
+        WHERE o.owning_committee_id = ${committee_id}
+          AND o.status NOT IN ('Cancelled', 'Done')
           AND (p.event_date IS NULL OR p.event_date >= CURRENT_DATE - INTERVAL '7 days'))
           AS open_opportunities_count
   ` as Array<Record<string, number>>;

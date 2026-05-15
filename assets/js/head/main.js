@@ -1,31 +1,33 @@
 // Heads' portal — entry module.
 //
-// Single-tab MVP: lands on the dashboard, renders KPIs + pending queue.
-// Management actions deep-link out to admin.html (which heads can use
-// freely — see admin/main.js auth guard).
-//
-// Mirrors member/main.js structure where it makes sense, but skips the
-// router/dispatch modules — only one page, only a handful of
-// data-action handlers, all wired inline below.
+// Five tabs now (dashboard + members/opps/hours/applications), all
+// scoped to the head's committee server-side. Mirrors member/main.js
+// structure: tiny auth guard, router-driven page switching, slim
+// delegated-event router for data-action buttons.
 
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 applyStoredTheme();
 
 import {
-  getSession, clearSession, isLoggedIn, signOut, landingPageForAccess,
+  getSession, clearSession, isLoggedIn, signOut,
 } from '../lib/auth.js';
-import { setApiStatus } from '../lib/ui.js';
-import { loadDashboard } from './tabs/dashboard.js';
+import { setApiStatus, filterTable } from '../lib/ui.js';
+import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from './router.js';
+
+import { loadDashboard }       from './tabs/dashboard.js';
+import { loadHeadMembers }     from './tabs/members.js';
+import { loadHeadOpportunities } from './tabs/opportunities.js';
+import {
+  loadHeadHours, primaryApproveHours, rejectHours,
+} from './tabs/hours.js';
+import {
+  loadHeadApplications, acceptApplication, rejectApplication,
+} from './tabs/applications.js';
 
 
 // ════════════════════════════════════════════════════════════════════
-// AUTH GUARD
+// AUTH GUARD — head + superadmin allowed; others bounced to their portal.
 // ════════════════════════════════════════════════════════════════════
-// Heads (and superadmin for preview) only. Member/volunteer go to
-// member.html; admin tier goes to admin.html. Same `pageshow` listener
-// as member/main.js so bfcache restore after logout doesn't show a
-// ghost of the portal.
-
 function _requireHeadAuthOrRedirect() {
   const user = getSession();
   if (!user || !isLoggedIn()) {
@@ -38,9 +40,6 @@ function _requireHeadAuthOrRedirect() {
     return false;
   }
   if (user.access === 'admin') {
-    // Admin tier → bounce to admin.html. Superadmin allowed for testing
-    // (their landingPageForAccess is 'admin.html', but we let them
-    // preview head.html if they navigate here manually).
     window.location.replace('admin.html');
     return false;
   }
@@ -60,24 +59,21 @@ async function logout() {
 
 
 // ════════════════════════════════════════════════════════════════════
+// ROUTER WIRING
+// ════════════════════════════════════════════════════════════════════
+const loaderMap = {
+  dashboard:     loadDashboard,
+  members:       loadHeadMembers,
+  opportunities: loadHeadOpportunities,
+  hours:         loadHeadHours,
+  applications:  loadHeadApplications,
+};
+setLoaders(loaderMap);
+
+
+// ════════════════════════════════════════════════════════════════════
 // SIDEBAR + TOPBAR
 // ════════════════════════════════════════════════════════════════════
-
-function openSidebar() {
-  document.getElementById('sidebar')?.classList.add('open');
-  document.getElementById('sb-backdrop')?.classList.add('open');
-  document.getElementById('sb-toggle')?.setAttribute('aria-expanded', 'true');
-}
-function closeSidebar() {
-  document.getElementById('sidebar')?.classList.remove('open');
-  document.getElementById('sb-backdrop')?.classList.remove('open');
-  document.getElementById('sb-toggle')?.setAttribute('aria-expanded', 'false');
-}
-function toggleSidebar() {
-  const open = document.getElementById('sidebar')?.classList.contains('open');
-  if (open) closeSidebar(); else openSidebar();
-}
-
 document.getElementById('sb-toggle')   ?.addEventListener('click', toggleSidebar);
 document.getElementById('sb-backdrop') ?.addEventListener('click', closeSidebar);
 
@@ -85,7 +81,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSidebar();
 });
 
-// Theme button active-state sync (mirrors admin + member portal).
 function _syncThemeButtons() {
   const current = getTheme();
   document.querySelectorAll('.sb-theme-btn').forEach(btn => {
@@ -112,25 +107,27 @@ if (window.CURRENT_USER) {
 // ════════════════════════════════════════════════════════════════════
 // DELEGATED EVENT HANDLERS
 // ════════════════════════════════════════════════════════════════════
-// One small delegated click listener instead of the full dispatch
-// module — the head portal only has a handful of data-action targets
-// (logout, theme buttons, the placeholder showPage). If this grows,
-// graduate to a proper dispatch module like member/dispatch.js.
-
+// One delegated listener per event type — covers click for action
+// buttons and input for the live-filter on the members search box.
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const action = el.dataset.action;
   switch (action) {
-    case 'logout':   logout(); break;
-    case 'setTheme': setTheme(el.dataset.value); break;
-    case 'showPage':
-      // Single-tab MVP — only 'dashboard' exists, so just refresh it
-      // and close the mobile drawer.
-      loadDashboard();
-      closeSidebar();
-      break;
+    case 'logout':                   logout(); break;
+    case 'setTheme':                 setTheme(el.dataset.value); break;
+    case 'showPage':                 showPage(el.dataset.page); break;
+    case 'hd.hours.primaryApprove':  primaryApproveHours(el.dataset.id); break;
+    case 'hd.hours.reject':          rejectHours(el.dataset.id); break;
+    case 'hd.apps.accept':           acceptApplication(el.dataset.id); break;
+    case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
   }
+});
+
+document.addEventListener('input', (e) => {
+  const el = e.target.closest('[data-action="filterTable"][data-event="input"]');
+  if (!el) return;
+  filterTable(el.dataset.target, el.value);
 });
 
 
@@ -139,7 +136,11 @@ document.addEventListener('click', (e) => {
 // ════════════════════════════════════════════════════════════════════
 function _initHead() {
   setApiStatus('ok', 'متصل');
-  loadDashboard();
+  // Respect the URL hash so refresh / shared link lands on the
+  // intended tab. Default to dashboard otherwise.
+  const m = location.hash.match(/^#\/head\/([a-z-]+)$/);
+  const initial = m && loaderMap[m[1]] ? m[1] : 'dashboard';
+  showPage(initial);
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _initHead);

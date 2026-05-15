@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v14-2026-05-16-heads-dashboard';
+const CACHE_VERSION = 'v15-2026-05-16-heads-tabs';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -82,7 +82,12 @@ const SHELL_URLS = [
   '/assets/js/member/tabs/opportunities.js',
   '/assets/js/member/tabs/assignments.js',
   '/assets/js/head/main.js',
+  '/assets/js/head/router.js',
   '/assets/js/head/tabs/dashboard.js',
+  '/assets/js/head/tabs/members.js',
+  '/assets/js/head/tabs/opportunities.js',
+  '/assets/js/head/tabs/hours.js',
+  '/assets/js/head/tabs/applications.js',
   // Icons
   '/assets/img/logo-200.png',
   '/assets/img/icon-192.png',
