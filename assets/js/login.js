@@ -25,6 +25,11 @@
 import { applyStoredTheme } from './lib/theme.js';
 applyStoredTheme();
 
+// i18n side-effects on import: sets <html dir/lang> + applies the
+// data-i18n attributes against the saved/detected language. Exported
+// helpers below are used by the language-toggle buttons.
+import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
+
 import { callApi, apiOrThrow } from './lib/api.js';
 import {
   saveSession, saveSupabaseSession,
@@ -46,6 +51,22 @@ if (isLoggedIn()) {
 const idInput  = $('#identifier');
 const lastUser = getLastUsername();
 if (idInput && lastUser) idInput.value = lastUser;
+
+// ── Language toggle wiring ──────────────────────────────────────────
+// The two .lang-btn pills carry `data-action="setLang"` + a value.
+// Sync the active-class indicator + flip language on click. The
+// applyI18n() side of the work runs inside setLang() in lib/i18n.js.
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(_syncLangButtons);
+_syncLangButtons();
 
 // ── Wire handlers ───────────────────────────────────────────────────
 $('#login-btn')?.addEventListener('click', doLogin);
@@ -72,7 +93,7 @@ async function doLogin() {
   const password   = $('#password').value;
 
   if (!identifier || !password) {
-    showError('يرجى إدخال المعرّف وكلمة المرور');
+    showError(t('common.please_fill'));
     return;
   }
 
@@ -130,10 +151,10 @@ async function doLogin() {
     const isNetwork    = m === 'network';
     const isBadInvalid = m === 'invalid' || /credentials|invalid/i.test(m);
     const msg = isNetwork
-      ? 'تعذّر الاتصال بالخادم، حاول مجدداً'
+      ? t('common.network_error')
       : isBadInvalid
-        ? 'المعرّف أو كلمة المرور غير صحيحة'
-        : 'حدث خطأ، حاول مجدداً';
+        ? t('login.error_invalid').replace(/^❌\s*/, '')  // showError adds the ❌ prefix
+        : t('common.generic_error');
     showError(msg);
     // Shake animation. Restart by removing + reflow + adding.
     const card = $('.login-card');

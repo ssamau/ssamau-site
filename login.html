@@ -16,99 +16,103 @@
 <body>
 
 <div class="login-card">
+  <!-- Language toggle — sits at the top of the card so users see the
+       option before reading the form. Two pill buttons; setLang flips
+       <html dir/lang>, persists choice, and re-applies data-i18n. -->
+  <div class="lang-toggle" role="radiogroup" data-i18n-aria-label="lang.label" aria-label="اللغة">
+    <button type="button" class="lang-btn" data-action="setLang" data-value="ar" data-i18n="lang.arabic">العربية</button>
+    <button type="button" class="lang-btn" data-action="setLang" data-value="en" data-i18n="lang.english">English</button>
+  </div>
+
   <div class="lc-header">
-    <div class="lc-logo"><img src="logo.png" alt="شعار النادي"/></div>
-    <div class="lc-title">نادي الطلبة السعوديين في ملبورن</div>
-    <div class="lc-sub">Saudi Students Association in Melbourne</div>
+    <div class="lc-logo"><img src="logo.png" data-i18n-alt="brand.logo_alt" alt="شعار النادي"/></div>
+    <div class="lc-title" data-i18n="brand.ssam_full_ar">نادي الطلبة السعوديين في ملبورن</div>
+    <div class="lc-sub"   data-i18n="brand.ssam_full_en">Saudi Students Association in Melbourne</div>
   </div>
 
   <div class="lc-body" id="lc-body">
     <!-- ─── Login pane (default) ─────────────────────────────────────── -->
     <div class="login-pane">
-      <p class="lc-welcome">مرحباً — يرجى تسجيل الدخول للوصول إلى لوحة الإدارة</p>
+      <p class="lc-welcome" data-i18n="login.welcome">مرحباً — يرجى تسجيل الدخول للوصول إلى لوحة الإدارة</p>
 
       <div class="fg">
-        <label>البريد الإلكتروني، الهوية الوطنية، أو اسم المستخدم</label>
+        <label data-i18n="login.identifier_label">البريد الإلكتروني، الهوية الوطنية، أو اسم المستخدم</label>
         <div class="fg-icon-wrap">
           <span class="fg-icon">👤</span>
-          <input type="text" id="identifier" placeholder="أدخل أحد المعرّفات" autocomplete="username" autocapitalize="off" inputmode="email"/>
+          <input type="text" id="identifier"
+                 data-i18n-placeholder="login.identifier_placeholder"
+                 placeholder="أدخل أحد المعرّفات"
+                 autocomplete="username" autocapitalize="off" inputmode="email"/>
         </div>
       </div>
 
       <div class="fg">
-        <label>كلمة المرور</label>
+        <label data-i18n="login.password_label">كلمة المرور</label>
         <div class="fg-icon-wrap">
           <span class="fg-icon">🔒</span>
-          <input type="password" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password"/>
+          <input type="password" id="password"
+                 data-i18n-placeholder="login.password_placeholder"
+                 placeholder="أدخل كلمة المرور"
+                 autocomplete="current-password"/>
           <button class="pw-toggle" type="button" id="pw-eye">👁️</button>
         </div>
       </div>
 
       <button class="login-btn" id="login-btn" type="button">
-        <span id="login-btn-txt">تسجيل الدخول</span>
+        <span id="login-btn-txt" data-i18n="login.submit">تسجيل الدخول</span>
       </button>
 
-      <div class="error-msg" id="error-msg">❌ المعرّف أو كلمة المرور غير صحيحة</div>
+      <div class="error-msg" id="error-msg" data-i18n="login.error_invalid">❌ المعرّف أو كلمة المرور غير صحيحة</div>
 
       <!-- Forgot-password entry point. Click swaps lc-body into reset
            mode (no page navigation). Identifier carries over so the
            user doesn't have to retype it. -->
       <div class="forgot-link">
-        <a id="forgot-link" role="button" tabindex="0">نسيت كلمة المرور؟</a>
+        <a id="forgot-link" role="button" tabindex="0" data-i18n="login.forgot">نسيت كلمة المرور؟</a>
       </div>
 
-      <!--
-        First-time activation entry point — for newly-invited members who
-        have either an email link (handled by signup.html?token=…) or a
-        PIN from the committee head. Visible on EVERY login load so a
-        member who doesn't know to look in their inbox first can still
-        get to the activation form. The link is intentionally low-emphasis
-        relative to the primary login button — most visitors to /login.html
-        already have an account.
-      -->
       <div class="activate-link">
-        <span>عضو جديد ولديك دعوة من المسؤول؟ </span>
-        <a href="signup.html">فعّل حسابك هنا ←</a>
+        <span data-i18n="login.activate_prompt">عضو جديد ولديك دعوة من المسؤول؟ </span>
+        <a href="signup.html" data-i18n="login.activate_cta">فعّل حسابك هنا ←</a>
       </div>
     </div>
 
     <!-- ─── Reset-request pane (toggled in by #forgot-link) ──────────── -->
-    <!-- Inline display:none is the fail-closed default. The pane should
-         be hidden until the user explicitly clicks "نسيت كلمة المرور؟",
-         even if the CSS file fails to load (CSP block, cache hiccup).
-         login.js toggles this inline style directly on click. -->
+    <!-- Inline display:none is the fail-closed default. -->
     <div class="reset-pane" style="display:none">
-      <p class="lc-welcome">إعادة تعيين كلمة المرور</p>
-      <p class="reset-intro">
+      <p class="lc-welcome"  data-i18n="reset.title">إعادة تعيين كلمة المرور</p>
+      <p class="reset-intro" data-i18n="reset.intro">
         أدخل بريدك الإلكتروني أو هويتك الوطنية، وسنرسل لك رابط استعادة
         إلى البريد المسجّل في حسابك.
       </p>
 
       <div class="fg">
-        <label>البريد الإلكتروني أو الهوية الوطنية</label>
+        <label data-i18n="reset.identifier_label">البريد الإلكتروني أو الهوية الوطنية</label>
         <div class="fg-icon-wrap">
           <span class="fg-icon">📧</span>
-          <input type="text" id="reset-identifier" placeholder="أدخل المعرّف" autocomplete="username" autocapitalize="off"/>
+          <input type="text" id="reset-identifier"
+                 data-i18n-placeholder="reset.identifier_placeholder"
+                 placeholder="أدخل المعرّف"
+                 autocomplete="username" autocapitalize="off"/>
         </div>
       </div>
 
       <button class="login-btn" id="reset-btn" type="button">
-        <span id="reset-btn-txt">إرسال رابط الاستعادة</span>
+        <span id="reset-btn-txt" data-i18n="reset.submit">إرسال رابط الاستعادة</span>
       </button>
 
       <div class="error-msg" id="reset-error">❌</div>
       <div class="error-msg" id="reset-success" style="background:#0f5132;color:#d1e7dd;border-color:#0f5132">✅</div>
 
       <div class="reset-back">
-        <a id="reset-back-link" role="button" tabindex="0">← العودة إلى تسجيل الدخول</a>
+        <a id="reset-back-link" role="button" tabindex="0" data-i18n="reset.back">← العودة إلى تسجيل الدخول</a>
       </div>
     </div>
   </div>
 
   <div class="lc-footer">
-    <a href="index.html" class="lc-back" data-ar>← العودة إلى الصفحة الرئيسية</a>
-    <a href="index.html" class="lc-back" data-en style="display:none">← Back to home</a>
-    <div class="lc-footer-txt">لوحة إدارة النادي — للاستخدام الداخلي فقط</div>
+    <a href="index.html" class="lc-back" data-i18n="footer.back_home">← العودة إلى الصفحة الرئيسية</a>
+    <div class="lc-footer-txt" data-i18n="footer.admin_internal">لوحة إدارة النادي — للاستخدام الداخلي فقط</div>
     <div class="lc-version">v3.0 · 2026</div>
   </div>
 </div>

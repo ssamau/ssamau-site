@@ -255,3 +255,33 @@ body::before {
   cursor: pointer;
 }
 .reset-back a:hover { text-decoration: underline; }
+
+/* ── Language toggle ──────────────────────────────────────────────────
+   Sits at the top of the login card. Two pill buttons; the active one
+   gets a brand-green fill. Mirrors the .sb-theme-row pattern from the
+   admin / member / head sidebars, scaled down for the login card. */
+.lang-toggle {
+  display: flex;
+  gap: .3rem;
+  justify-content: center;
+  margin: 0 0 1rem;
+  padding: 0 .25rem;
+}
+.lang-btn {
+  font-family: inherit;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .35rem .75rem;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--bg-soft);
+  color: var(--tm);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.lang-btn:hover { color: var(--g); border-color: var(--g); }
+.lang-btn.active {
+  background: var(--g);
+  color: #fff;
+  border-color: var(--g);
+}
