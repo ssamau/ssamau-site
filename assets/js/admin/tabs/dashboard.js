@@ -9,6 +9,7 @@
 import { STATUS_COLORS } from '../../lib/state.js';
 import { esc, fmtDate, tag } from '../../lib/format.js';
 import { apiGet, setApiStatus } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
 
 // ══════════════════════════════════════════
 // DASHBOARD
@@ -25,7 +26,7 @@ export async function loadDashboard() {
   document.getElementById('b-members').textContent    = s.total_members    || 0;
   document.getElementById('b-projects').textContent   = s.total_projects   || 0;
 
-  setApiStatus('ok', 'متصل');
+  setApiStatus('ok', t('common.connected'));
 
   // Top volunteers
   const volEl = document.getElementById('dash-top-volunteers');
@@ -34,10 +35,10 @@ export async function loadDashboard() {
       <div class="vol-rank">
         <div class="rank-badge ${i < 3 ? 'rk' + (i+1) : 'rkx'}">${i+1}</div>
         <div class="vol-name">${v.name}</div>
-        <div class="vol-hours">${v.hours} ساعة</div>
+        <div class="vol-hours">${v.hours} ${esc(t('mp.hours.hours_unit'))}</div>
       </div>`).join('');
   } else {
-    volEl.innerHTML = '<p style="color:var(--tm);font-size:.84rem">لا توجد بيانات بعد</p>';
+    volEl.innerHTML = `<p style="color:var(--tm);font-size:.84rem">${esc(t('ap.dash.empty_no_data'))}</p>`;
   }
 
   // Committee chart
@@ -55,7 +56,7 @@ export async function loadDashboard() {
         <div style="font-size:.72rem;color:var(--tm);flex-shrink:0">${c.member_count}م</div>
       </div>`).join('');
   } else {
-    comEl.innerHTML = '<p style="color:var(--tm);font-size:.84rem">لا توجد بيانات بعد</p>';
+    comEl.innerHTML = `<p style="color:var(--tm);font-size:.84rem">${esc(t('ap.dash.empty_no_data'))}</p>`;
   }
 
   // Recent projects
@@ -68,6 +69,6 @@ export async function loadDashboard() {
       <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
     </tr>`).join('');
   } else {
-    prjTbody.innerHTML = '<tr class="empty-row"><td colspan="4">لا توجد مشاريع بعد</td></tr>';
+    prjTbody.innerHTML = `<tr class="empty-row"><td colspan="4">${esc(t('ap.dash.empty_no_projects'))}</td></tr>`;
   }
 }

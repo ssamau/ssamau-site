@@ -12,25 +12,30 @@
 
 import { toast } from '../lib/ui.js';
 import { RBAC } from '../lib/rbac.js';
+import { t } from '../lib/i18n.js';
 
+// PAGE_TITLES stores i18n keys (not literal strings). showPage()
+// resolves the current language at navigation time, and onLangChange
+// in main.js re-fires the active loader so the title flips with the
+// rest of the chrome.
 export const PAGE_TITLES = {
-  dashboard:       'Dashboard',
-  members:         'الأعضاء',
-  advisors:        'المستشارون',
-  committees:      'اللجان',
-  projects:        'المشاريع والفعاليات',
-  participants:    'المشاركون',
-  attendance:      'سجل الحضور',
-  hours:           'الساعات التطوعية',
-  profile:         'ملف العضو',
-  'project-detail':'📋 تفاصيل المشروع',
-  interest:        '🙋 طلبات المشاركة',
-  emails:          '💌 الإيميلات والشكر',
-  certificates:    '🏅 الشهادات',
-  opportunities:   '🎯 الفرص التطوعية',
-  applications:    '📥 طلبات العضوية',
-  accounts:        '🔑 حسابات المستخدمين',
-  'my-profile':    '🪪 ملفي الشخصي',
+  dashboard:       'ap.title.dashboard',
+  members:         'ap.title.members',
+  advisors:        'ap.title.advisors',
+  committees:      'ap.title.committees',
+  projects:        'ap.title.projects',
+  participants:    'ap.title.participants',
+  attendance:      'ap.title.attendance',
+  hours:           'ap.title.hours',
+  profile:         'ap.title.profile',
+  'project-detail':'ap.title.project_detail',
+  interest:        'ap.title.interest',
+  emails:          'ap.title.emails',
+  certificates:    'ap.title.certificates',
+  opportunities:   'ap.title.opportunities',
+  applications:    'ap.title.applications',
+  accounts:        'ap.title.accounts',
+  'my-profile':    'ap.title.my_profile',
 };
 
 // Loader dispatch — filled in by main.js after every tab module has been
@@ -96,12 +101,12 @@ export function showPage(page) {
   if (el) el.classList.add('active');
   const si = document.querySelector(`[data-page="${page}"]`);
   if (si) si.classList.add('active');
-  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
 
   // Load data on navigation
   // تحقق من صلاحية الصفحة
   if (!RBAC.canSeePage(page)) {
-    toast('ليس لديك صلاحية للوصول لهذه الصفحة', 'twarn');
+    toast(t('ap.access_denied'), 'twarn');
     return;
   }
 

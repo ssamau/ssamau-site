@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
 </head>
 <body>
-<a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
+<a class="skip-link" href="#main-content" data-i18n="common.skip_to_content">تجاوز إلى المحتوى</a>
 <div id="app">
 
 <aside class="sidebar" id="sidebar">
@@ -22,7 +22,7 @@
     <div class="sb-logo">🌿</div>
     <div class="sb-brand-text">
       <div class="t1">SSAM Admin</div>
-      <div class="t2">Saudi Students · Melbourne</div>
+      <div class="t2" data-i18n="ap.sb.brand_sub">Saudi Students · Melbourne</div>
     </div>
   </div>
   <div class="sb-user">
@@ -33,84 +33,91 @@
     </div>
   </div>
   <nav class="sb-nav">
-    <div class="sb-section">لوحة المعلومات</div>
+    <div class="sb-section" data-i18n="ap.sb.section_dashboard">لوحة المعلومات</div>
     <div class="sb-item active" data-page="dashboard" data-action="showPage">
-      <span class="sb-ic">📊</span>Dashboard
+      <span class="sb-ic">📊</span><span data-i18n="ap.sb.tab_dashboard">لوحة المعلومات</span>
     </div>
 
-    <div class="sb-section">إدارة الأعضاء</div>
+    <div class="sb-section" data-i18n="ap.sb.section_members_mgmt">إدارة الأعضاء</div>
     <div class="sb-item" data-page="members" data-action="showPage">
-      <span class="sb-ic">👥</span>الأعضاء
+      <span class="sb-ic">👥</span><span data-i18n="ap.sb.tab_members">الأعضاء</span>
       <span class="sb-badge" id="b-members">0</span>
     </div>
     <div class="sb-item" data-page="applications" data-action="showPage">
-      <span class="sb-ic">📥</span>طلبات العضوية
+      <span class="sb-ic">📥</span><span data-i18n="ap.sb.tab_applications">طلبات العضوية</span>
       <span class="sb-badge" id="b-applications">0</span>
     </div>
     <div class="sb-item" data-page="accounts" data-action="showPage">
-      <span class="sb-ic">🔑</span>حسابات المستخدمين
+      <span class="sb-ic">🔑</span><span data-i18n="ap.sb.tab_accounts">حسابات المستخدمين</span>
       <span class="sb-badge" id="b-accounts">0</span>
     </div>
     <div class="sb-item" data-page="advisors" data-action="showPage">
-      <span class="sb-ic">🎓</span>المستشارون
+      <span class="sb-ic">🎓</span><span data-i18n="ap.sb.tab_advisors">المستشارون</span>
     </div>
     <div class="sb-item" data-page="committees" data-action="showPage">
-      <span class="sb-ic">🏛️</span>اللجان
+      <span class="sb-ic">🏛️</span><span data-i18n="ap.sb.tab_committees">اللجان</span>
     </div>
 
-    <div class="sb-section">المشاريع والفعاليات</div>
+    <div class="sb-section" data-i18n="ap.sb.section_projects">المشاريع والفعاليات</div>
     <div class="sb-item" data-page="projects" data-action="showPage">
-      <span class="sb-ic">🗓️</span>المشاريع والفعاليات
+      <span class="sb-ic">🗓️</span><span data-i18n="ap.sb.tab_projects">المشاريع والفعاليات</span>
       <span class="sb-badge" id="b-projects">0</span>
     </div>
     <div class="sb-item" data-page="participants" data-action="showPage">
-      <span class="sb-ic">🙋</span>المشاركون
+      <span class="sb-ic">🙋</span><span data-i18n="ap.sb.tab_participants">المشاركون</span>
     </div>
     <div class="sb-item" data-page="opportunities" data-action="showPage">
-      <span class="sb-ic">🎯</span>الفرص التطوعية
+      <span class="sb-ic">🎯</span><span data-i18n="ap.sb.tab_opportunities">الفرص التطوعية</span>
       <span class="sb-badge" id="b-opportunities">0</span>
     </div>
 
-    <div class="sb-section">المتابعة</div>
+    <div class="sb-section" data-i18n="ap.sb.section_tracking">المتابعة</div>
     <div class="sb-item" data-page="attendance" data-action="showPage">
-      <span class="sb-ic">✅</span>الحضور
+      <span class="sb-ic">✅</span><span data-i18n="ap.sb.tab_attendance">الحضور</span>
     </div>
     <div class="sb-item" data-page="hours" data-action="showPage">
-      <span class="sb-ic">⏱️</span>الساعات التطوعية
+      <span class="sb-ic">⏱️</span><span data-i18n="ap.sb.tab_hours">الساعات التطوعية</span>
     </div>
 
-    <div class="sb-section">التواصل</div>
+    <div class="sb-section" data-i18n="ap.sb.section_communication">التواصل</div>
     <div class="sb-item" data-page="emails" data-action="showPage">
-      <span class="sb-ic">💌</span>الإيميلات والشكر
+      <span class="sb-ic">💌</span><span data-i18n="ap.sb.tab_emails">الإيميلات والشكر</span>
     </div>
     <div class="sb-item" data-page="certificates" data-action="showPage">
-      <span class="sb-ic">🏅</span>الشهادات
+      <span class="sb-ic">🏅</span><span data-i18n="ap.sb.tab_certificates">الشهادات</span>
     </div>
     <div class="sb-item" data-page="interest" data-action="showPage">
-      <span class="sb-ic">🙋</span>طلبات المشاركة
+      <span class="sb-ic">🙋</span><span data-i18n="ap.sb.tab_interest">طلبات المشاركة</span>
     </div>
 
-    <div class="sb-section">الملفات</div>
+    <div class="sb-section" data-i18n="ap.sb.section_files">الملفات</div>
     <div class="sb-item" data-page="profile" data-action="showPage">
-      <span class="sb-ic">👤</span>ملف العضو
+      <span class="sb-ic">👤</span><span data-i18n="ap.sb.tab_profile">ملف العضو</span>
     </div>
 
-    <div class="sb-section">حسابي</div>
+    <div class="sb-section" data-i18n="ap.sb.section_account">حسابي</div>
     <div class="sb-item" data-page="my-profile" data-action="showPage">
-      <span class="sb-ic">🪪</span>ملفي الشخصي
+      <span class="sb-ic">🪪</span><span data-i18n="ap.sb.tab_my_profile">ملفي الشخصي</span>
     </div>
   </nav>
+
+  <!-- Language toggle. Same pattern as member/head portals: pills above
+       the theme row, wired by admin/main.js. -->
+  <div class="lang-toggle" role="radiogroup" data-i18n-aria-label="lang.label" aria-label="اللغة">
+    <button type="button" class="lang-btn" data-action="setLang" data-value="ar" data-i18n="lang.arabic">العربية</button>
+    <button type="button" class="lang-btn" data-action="setLang" data-value="en" data-i18n="lang.english">English</button>
+  </div>
 
   <!-- Theme toggle. Sits at the bottom of the sidebar so it's
        reachable from every tab without taking nav space. The
        three-way switch (Auto / Light / Dark) maps to data-theme
        on the <html> element + ssam_theme key in localStorage. -->
   <div class="sb-theme">
-    <div class="sb-theme-label">المظهر</div>
-    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
-      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
-      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
-      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    <div class="sb-theme-label" data-i18n="mp.sb.theme_label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" data-i18n-aria-label="mp.sb.theme_label" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" data-i18n="mp.sb.theme_auto" data-i18n-title="mp.sb.theme_auto_title" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" data-i18n-title="mp.sb.theme_light_title" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" data-i18n-title="mp.sb.theme_dark_title" title="داكن">🌙</button>
     </div>
   </div>
 </aside>
@@ -120,15 +127,15 @@
 
 <div class="main">
   <header class="topbar">
-    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
-    <span class="topbar-title" id="page-title">Dashboard</span>
+    <button class="sb-toggle" id="sb-toggle" type="button" data-i18n-aria-label="mp.topbar.menu_label" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <span class="topbar-title" id="page-title" data-i18n="ap.title.dashboard">لوحة المعلومات</span>
     <div class="topbar-right">
-      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <button class="btn btn-ol btn-sm" data-action="logout" data-i18n="mp.topbar.logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
       <div class="api-status pending" id="api-status">
         <div class="api-dot"></div>
-        <span id="api-status-text">غير متصل</span>
+        <span id="api-status-text" data-i18n="mp.topbar.api_disconnected">غير متصل</span>
       </div>
-      <button id="refresh-btn" class="btn btn-ol btn-sm" data-action="refreshData"><span class="refresh-icon">🔄</span> تحديث</button>
+      <button id="refresh-btn" class="btn btn-ol btn-sm" data-action="refreshData"><span class="refresh-icon">🔄</span> <span data-i18n="common.refresh">تحديث</span></button>
     </div>
   </header>
   <main class="content" id="main-content">
@@ -136,31 +143,31 @@
     <!-- ══════════ DASHBOARD ══════════ -->
     <div class="page active" id="page-dashboard">
       <div class="stats-grid" id="dash-stats">
-        <div class="stat-card"><div class="stat-icon ic-g">👥</div><div><div class="sc-n stat-n" id="s-members">—</div><div class="stat-l">أعضاء نشطون</div></div></div>
-        <div class="stat-card"><div class="stat-icon ic-o">🗓️</div><div><div class="sc-n stat-n" id="s-projects">—</div><div class="stat-l">مشاريع وفعاليات</div></div></div>
-        <div class="stat-card"><div class="stat-icon ic-b">⏱️</div><div><div class="sc-n stat-n" id="s-hours">—</div><div class="stat-l">ساعة تطوعية</div></div></div>
-        <div class="stat-card"><div class="stat-icon ic-p">🏛️</div><div><div class="sc-n stat-n" id="s-committees">—</div><div class="stat-l">لجنة تنفيذية</div></div></div>
+        <div class="stat-card"><div class="stat-icon ic-g">👥</div><div><div class="sc-n stat-n" id="s-members">—</div><div class="stat-l" data-i18n="ap.dash.kpi_active_members">أعضاء نشطون</div></div></div>
+        <div class="stat-card"><div class="stat-icon ic-o">🗓️</div><div><div class="sc-n stat-n" id="s-projects">—</div><div class="stat-l" data-i18n="ap.dash.kpi_projects">مشاريع وفعاليات</div></div></div>
+        <div class="stat-card"><div class="stat-icon ic-b">⏱️</div><div><div class="sc-n stat-n" id="s-hours">—</div><div class="stat-l" data-i18n="ap.dash.kpi_hours">ساعة تطوعية</div></div></div>
+        <div class="stat-card"><div class="stat-icon ic-p">🏛️</div><div><div class="sc-n stat-n" id="s-committees">—</div><div class="stat-l" data-i18n="ap.dash.kpi_committees">لجنة تنفيذية</div></div></div>
       </div>
       <div class="dash-grid">
         <div class="card">
-          <div class="card-head"><h3>🏆 أكثر المتطوعين ساعات</h3></div>
+          <div class="card-head"><h3 data-i18n="ap.dash.top_volunteers_title">🏆 أكثر المتطوعين ساعات</h3></div>
           <div class="card-body" id="dash-top-volunteers">
-            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+            <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><h3>📊 الساعات حسب اللجنة</h3></div>
+          <div class="card-head"><h3 data-i18n="ap.dash.committee_chart_title">📊 الساعات حسب اللجنة</h3></div>
           <div class="card-body" id="dash-committee-chart">
-            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+            <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
           </div>
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><h3>🗓️ آخر المشاريع والفعاليات</h3></div>
+        <div class="card-head"><h3 data-i18n="ap.dash.recent_projects_title">🗓️ آخر المشاريع والفعاليات</h3></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>النوع</th><th>التاريخ</th><th>الحالة</th></tr></thead>
-            <tbody id="dash-recent-projects"><tr class="empty-row"><td colspan="4">جاري التحميل...</td></tr></tbody>
+            <thead><tr><th data-i18n="ap.dash.col_name">الاسم</th><th data-i18n="ap.dash.col_type">النوع</th><th data-i18n="ap.dash.col_date">التاريخ</th><th data-i18n="ap.dash.col_status">الحالة</th></tr></thead>
+            <tbody id="dash-recent-projects"><tr class="empty-row"><td colspan="4" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -446,21 +453,21 @@
     <div class="page" id="page-my-profile">
       <div class="card">
         <div class="card-head">
-          <h3>🪪 ملفي الشخصي</h3>
+          <h3 data-i18n="ap.title.my_profile">🪪 ملفي الشخصي</h3>
           <div class="card-head-right">
-            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn" data-i18n="mp.profile.save_btn">💾 حفظ التعديلات</button>
           </div>
         </div>
         <div class="card-body" id="profile-form-wrap">
-          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+          <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
         </div>
       </div>
     </div>
 
     <!-- ══ PROJECT DETAIL ══ -->
     <div class="page" id="page-project-detail">
-      <button class="btn btn-ol btn-sm" data-action="showPage" data-page="projects" style="margin-bottom:1rem">← رجوع للمشاريع</button>
-      <div id="pdetail-content"><div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div></div>
+      <button class="btn btn-ol btn-sm" data-action="showPage" data-page="projects" data-i18n="ap.pdetail.back_btn" style="margin-bottom:1rem">← رجوع للمشاريع</button>
+      <div id="pdetail-content"><div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div></div>
     </div>
 
     <!-- ══ INTEREST ══ -->

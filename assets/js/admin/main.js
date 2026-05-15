@@ -21,6 +21,12 @@
 import { getSession, clearSession, isLoggedIn, signOut, landingPageForAccess } from '../lib/auth.js';
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n
+// across the sidebar + topbar on first load. We also re-fire the
+// active tab's loader on language change so JS-generated rows pick
+// up the new copy.
+import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
+
 import { DB } from '../lib/state.js';
 import { RBAC } from '../lib/rbac.js';
 import {
@@ -146,7 +152,7 @@ _requireAuthOrRedirect();
 window.addEventListener('pageshow', _requireAuthOrRedirect);
 
 async function logout() {
-  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  if (!confirm(t('common.confirm_logout'))) return;
   // signOut() handles both auth paths: Supabase users get their
   // refresh token revoked server-side; legacy users just have their
   // local state cleared (HS256 tokens can't be revoked). Either way
@@ -248,6 +254,32 @@ function _syncThemeButtons() {
 }
 window.addEventListener('ssam-theme-changed', _syncThemeButtons);
 _syncThemeButtons();
+
+// ── Language toggle wiring ──────────────────────────────────────────
+// Pills sit in the sidebar between the nav and the theme row. Active
+// state mirrors the theme-button pattern; flip the lang AND re-fire
+// the current tab's loader so JS-generated content re-renders.
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(() => {
+  _syncLangButtons();
+  // Re-fire the active tab's loader so dynamic rows (status badges,
+  // empty-state copy, action buttons) re-render in the new language.
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const page = active.id.replace('page-', '');
+  const loader = loaderMap[page];
+  if (loader) loader();
+});
+_syncLangButtons();
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSidebar();
 });
@@ -263,7 +295,7 @@ document.addEventListener('keydown', (e) => {
 // immediately when the DOM is ready, otherwise wait for it (`readyState`
 // covers the cold-cache vs. cached-execution race cleanly).
 function _initAdmin() {
-  setApiStatus('pending', 'جاري الاتصال...');
+  setApiStatus('pending', t('ap.topbar.api_connecting'));
   setTimeout(async () => {
     await loadCommittees();
     await loadMembers();
@@ -273,7 +305,7 @@ function _initAdmin() {
     // visited the advisors tab yet in this session.
     await loadAdvisors();
     await loadDashboard();
-    setApiStatus('ok', 'متصل');
+    setApiStatus('ok', t('common.connected'));
     RBAC.applyUIRestrictions();
     // Attach the table-label MutationObserver. Has to wait until
     // the loads above have run so the initial tbodies exist —
@@ -311,17 +343,32 @@ if (document.readyState === 'loading') {
 
 
 // ── INIT ─────────────────────────────────────────────────────
-// Set sidebar user from session
-if (window.CURRENT_USER) {
+// Set sidebar user from session. Role is displayed via t() so the
+// access enum ('superadmin' / 'admin' / 'head') gets a friendly
+// localized label; falls back to the raw role / access string if a
+// new access tier is introduced and the catalog hasn't caught up.
+const ACCESS_KEY = {
+  superadmin: 'ap.role.superadmin',
+  admin:      'ap.role.admin',
+  head:       'ap.role.head',
+};
+function _stampSidebarUser() {
+  if (!window.CURRENT_USER) return;
   const u = window.CURRENT_USER;
   const nm = document.getElementById('sb-name') || document.getElementById('sb-nm');
   const rl = document.getElementById('sb-role') || document.getElementById('sb-rl');
   const av = document.getElementById('sb-av');
   const displayName = u.name || u.username || '—';
   if (nm) nm.textContent = displayName;
-  if (rl) rl.textContent = u.role || u.access || '—';
+  if (rl) {
+    const key = ACCESS_KEY[u.access];
+    rl.textContent = key ? t(key) : (u.role || u.access || '—');
+  }
   if (av) av.textContent = (displayName.charAt(0) || '?');
 }
+_stampSidebarUser();
+// Refresh the role label on language change so it follows the toggle.
+onLangChange(_stampSidebarUser);
 
 // Apps-Script-era "Seed members → Google Sheets" banner removed in the
 // Netlify migration — the data lives in Postgres now and the import flow
