@@ -17,6 +17,33 @@ import {
 } from '../../lib/ui.js';
 import { showPage } from '../router.js';
 import { loadBulkAttGrid } from './attendance.js';
+import { t } from '../../lib/i18n.js';
+
+// Project type + status enum → translation key. Tag colors stay keyed
+// off the canonical English values so STATUS_COLORS keeps working.
+const TYPE_KEY = {
+  Event:   'ap.prj.type_event',
+  Project: 'ap.prj.type_project',
+};
+const STATUS_KEY = {
+  Planning:  'ap.prj.status_planning',
+  Active:    'ap.prj.status_active',
+  Completed: 'ap.prj.status_completed',
+  Cancelled: 'ap.prj.status_cancelled',
+};
+// Attendance enum used by the project-detail KPI grid.
+const PDETAIL_PARTICIPANT_STATUS_KEY = {
+  Confirmed: 'ap.par.status_confirmed',
+  Pending:   'ap.par.status_pending',
+  Cancelled: 'ap.par.status_cancelled',
+};
+const PDETAIL_ATTENDANCE_KEY = {
+  Pending:  'ap.att.pending',
+  Attended: 'ap.att.attended',
+  Absent:   'ap.att.absent',
+  Excused:  'ap.att.excused',
+  Late:     'ap.att.late',
+};
 
 // ══════════════════════════════════════════
 // PROJECTS
@@ -32,7 +59,7 @@ export async function loadProjects() {
 export function renderProjects(projects) {
   const tbody = document.getElementById('projects-tbody');
   if (!projects.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد مشاريع</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.prj.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = projects.map(p => {
@@ -40,13 +67,15 @@ export function renderProjects(projects) {
       m.member_id === p.assigned_project_manager_member_id ||
       m.member_id === p.assigned_event_manager_member_id
     );
+    const typeLabel   = TYPE_KEY[p.project_type]     ? t(TYPE_KEY[p.project_type])     : (p.project_type   || '—');
+    const statusLabel = STATUS_KEY[p.project_status] ? t(STATUS_KEY[p.project_status]) : (p.project_status || '—');
     return `<tr>
       <td><strong>${esc(p.project_name)}</strong></td>
-      <td>${tag(p.project_type, p.project_type === 'Project' ? 't-b' : 't-p')}</td>
+      <td>${tag(typeLabel, p.project_type === 'Project' ? 't-b' : 't-p')}</td>
       <td>${fmtDate(p.event_date) || '—'}</td>
       <td style="font-size:.78rem">${esc(p.location) || '—'}</td>
       <td>${mgr ? esc(mgr.preferred_name || mgr.full_name) : '<span style="color:var(--tm)">—</span>'}</td>
-      <td>${tag(p.project_status, STATUS_COLORS[p.project_status] || 't-gr')}</td>
+      <td>${tag(statusLabel, STATUS_COLORS[p.project_status] || 't-gr')}</td>
       <td>
         <button class="btn-icon edit" data-action="editProject" data-id="${p.project_id}">✏️</button>
         <button class="btn-icon del" data-action="confirmDelete" data-type="project" data-id="${p.project_id}" data-name=${attrJson(p.project_name)}>🗑️</button>
@@ -78,12 +107,12 @@ export async function saveProject() {
     notes:                                gv('prj-notes'),
   };
   if (!body.project_name || !body.created_by_member_id) {
-    toast('الاسم ومنشئ المشروع مطلوبان', 'twarn'); return;
+    toast(t('ap.prj.err_required'), 'twarn'); return;
   }
   let res;
   if (id) res = await api('updateProject', { id, data: body });
   else     res = await api('createProject', body);
-  if (res) { toast('✅ تم الحفظ'); closeModal('project'); clearForm('project'); loadProjects(); }
+  if (res) { toast(t('ap.prj.success_save')); closeModal('project'); clearForm('project'); loadProjects(); }
 }
 
 export function editProject(id) {
@@ -102,7 +131,7 @@ export function editProject(id) {
   sv('prj-manager', p.assigned_project_manager_member_id);
   sv('prj-event-mgr', p.assigned_event_manager_member_id);
   sv('prj-status', p.project_status); sv('prj-notes', p.notes);
-  document.getElementById('project-modal-title').textContent = '✏️ تعديل المشروع';
+  document.getElementById('project-modal-title').textContent = t('ap.prj.modal_edit');
 
   // Phase B — cover photo uploader. Show the section + current photo
   // preview, if any. Storage upload scopes to project_id, so we only
@@ -113,14 +142,14 @@ export function editProject(id) {
   if (currentEl) {
     currentEl.innerHTML = p.cover_photo_url
       ? `<img src="${esc(p.cover_photo_url)}" alt="" style="max-width:220px;height:auto;border-radius:8px;border:1px solid var(--bd)"/>`
-      : '<span style="font-size:.78rem;color:var(--tm);font-style:italic">لا توجد صورة بعد</span>';
+      : `<span style="font-size:.78rem;color:var(--tm);font-style:italic">${esc(t('ap.prj.photo_none_yet'))}</span>`;
   }
   // Reset the picker + button so a previous unsubmitted file doesn't
   // bleed across opens.
   const fileEl = document.getElementById('prj-photo-file');
   if (fileEl) fileEl.value = '';
   const btn = document.getElementById('prj-photo-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⬆ رفع'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('ap.prj.photo_upload_btn'); }
 
   openModal('project');
 }
@@ -139,14 +168,14 @@ export async function uploadProjectPhotoFromForm() {
   const projectId = gv('prj-edit-id');
   const fileEl    = document.getElementById('prj-photo-file');
   const file      = fileEl?.files?.[0];
-  if (!projectId) { toast('احفظ المشروع أولاً قبل رفع الصورة.', 'twarn'); return; }
-  if (!file)      { toast('اختر صورة أولاً.', 'twarn'); return; }
+  if (!projectId) { toast(t('ap.prj.err_save_first'), 'twarn'); return; }
+  if (!file)      { toast(t('ap.prj.err_pick_image'), 'twarn'); return; }
   if (file.size > 4 * 1024 * 1024) {
-    toast('الصورة أكبر من 4 ميجابايت.', 'twarn');
+    toast(t('ap.prj.err_image_too_large'), 'twarn');
     return;
   }
   const btn = document.getElementById('prj-photo-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الرفع...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('ap.prj.photo_uploading'); }
   try {
     const base64Data = await new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -158,15 +187,15 @@ export async function uploadProjectPhotoFromForm() {
       data: { project_id: projectId, filename: file.name, contentType: file.type, base64Data },
     });
     if (!res || !res.success) {
-      toast(res?.error || 'فشل الرفع.', 'twarn');
+      toast(res?.error || t('ap.prj.err_upload_failed'), 'twarn');
       return;
     }
-    toast('تم رفع صورة الغلاف.', 'tok');
+    toast(t('ap.prj.success_upload'), 'tok');
     // Refresh + re-open so the new image preview renders.
     await loadProjects();
     editProject(projectId);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⬆ رفع'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('ap.prj.photo_upload_btn'); }
   }
 }
 
@@ -174,11 +203,11 @@ export async function uploadProjectPhotoFromForm() {
 export async function viewProjectDetail(pid) {
   showPage('project-detail');
   const el = document.getElementById('pdetail-content');
-  if (el) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>';
+  if (el) el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>${esc(t('common.loading'))}</div>`;
 
   const d = await api('dashboard.projectDetail', { project_id: pid });
   if (!d || !d.success) {
-    if (el) el.innerHTML = '<p style="color:var(--dn);padding:2rem">خطأ في تحميل البيانات</p>';
+    if (el) el.innerHTML = `<p style="color:var(--dn);padding:2rem">${esc(t('ap.pdetail.err_load'))}</p>`;
     return;
   }
 
@@ -186,12 +215,14 @@ export async function viewProjectDetail(pid) {
   const creator = DB.members.find(m => m.member_id === p.created_by_member_id);
   const pm      = DB.members.find(m => m.member_id === p.assigned_project_manager_member_id);
   const em      = DB.members.find(m => m.member_id === p.assigned_event_manager_member_id);
+  const typeLabel   = TYPE_KEY[p.project_type]     ? t(TYPE_KEY[p.project_type])     : p.project_type;
+  const statusLabel = STATUS_KEY[p.project_status] ? t(STATUS_KEY[p.project_status]) : p.project_status;
 
   el.innerHTML = `
     <div class="proj-hero">
       <div style="flex:1">
         <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.45);margin-bottom:.28rem">
-          ${tag(p.project_type, p.project_type==='Project'?'t-b':'t-p')} · ${p.event_date||'—'} ${p.location?'· '+esc(p.location):''}
+          ${tag(typeLabel, p.project_type==='Project'?'t-b':'t-p')} · ${p.event_date||'—'} ${p.location?'· '+esc(p.location):''}
         </div>
         <div style="font-size:1.05rem;font-weight:800;margin-bottom:.22rem">${esc(p.project_name)}</div>
         <div style="font-size:.74rem;color:rgba(255,255,255,.55)">${p.start_time?p.start_time+' → '+p.end_time:''}</div>
@@ -202,52 +233,68 @@ export async function viewProjectDetail(pid) {
         </div>
       </div>
       <div style="display:flex;gap:.45rem;flex-wrap:wrap;align-items:flex-start">
-        ${tag(p.project_status, STATUS_COLORS[p.project_status]||'t-gr')}
-        ${p.proposal_file_url?`<a href="${p.proposal_file_url}" target="_blank" class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)">📄 المقترح</a>`:''}
+        ${tag(statusLabel, STATUS_COLORS[p.project_status]||'t-gr')}
+        ${p.proposal_file_url?`<a href="${p.proposal_file_url}" target="_blank" class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)">${esc(t('ap.pdetail.proposal_btn'))}</a>`:''}
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          data-action="openModalWithPrj" data-modal="bulk-att" data-selector="batt-prj" data-project-id="${p.project_id}">⚡ حضور جماعي</button>
+          data-action="openModalWithPrj" data-modal="bulk-att" data-selector="batt-prj" data-project-id="${p.project_id}">${esc(t('ap.pdetail.bulk_att_btn'))}</button>
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          data-action="openModalWithPrj" data-modal="bulk-thanks" data-selector="bthx-prj" data-project-id="${p.project_id}">💌 شكر</button>
+          data-action="openModalWithPrj" data-modal="bulk-thanks" data-selector="bthx-prj" data-project-id="${p.project_id}">${esc(t('ap.pdetail.bulk_thanks_btn'))}</button>
         <button class="btn btn-ol btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)"
-          data-action="openModalWithPrj" data-modal="bulk-certs" data-selector="bcert-prj" data-project-id="${p.project_id}">🏅 شهادات</button>
+          data-action="openModalWithPrj" data-modal="bulk-certs" data-selector="bcert-prj" data-project-id="${p.project_id}">${esc(t('ap.pdetail.bulk_certs_btn'))}</button>
       </div>
     </div>
     <div class="proj-kpis">
-      <div class="kpi"><div class="kpi-n">${participants.length}</div><div class="kpi-l">مشارك</div></div>
-      <div class="kpi"><div class="kpi-n">${is.interested||0}</div><div class="kpi-l">مهتم</div></div>
-      <div class="kpi"><div class="kpi-n" style="color:var(--sc)">${as.present||0}</div><div class="kpi-l">حضر</div></div>
-      <div class="kpi"><div class="kpi-n" style="color:var(--bl)">${hs.total_hours||0}</div><div class="kpi-l">ساعة</div></div>
+      <div class="kpi"><div class="kpi-n">${participants.length}</div><div class="kpi-l">${esc(t('ap.pdetail.kpi_participants'))}</div></div>
+      <div class="kpi"><div class="kpi-n">${is.interested||0}</div><div class="kpi-l">${esc(t('ap.pdetail.kpi_interested'))}</div></div>
+      <div class="kpi"><div class="kpi-n" style="color:var(--sc)">${as.present||0}</div><div class="kpi-l">${esc(t('ap.pdetail.kpi_attended'))}</div></div>
+      <div class="kpi"><div class="kpi-n" style="color:var(--bl)">${hs.total_hours||0}</div><div class="kpi-l">${esc(t('ap.pdetail.kpi_hours'))}</div></div>
     </div>
     <div class="card">
-      <div class="card-head"><h3>🙋 المشاركون (${participants.length})</h3></div>
+      <div class="card-head"><h3>${esc(t('ap.pdetail.participants_card'))} (${participants.length})</h3></div>
       <div class="table-wrap"><table>
-        <thead><tr><th>الاسم</th><th>النوع</th><th>المشاركة</th><th>الحضور</th><th>الساعات</th><th>مميّز</th></tr></thead>
-        <tbody>${participants.length ? participants.map(par => `<tr>
-          <td><strong>${esc(par.display_name)}</strong></td>
-          <td>${tag(par.participant_type, par.participant_type==='Member'?'t-b':'t-p')}</td>
-          <td>${tag(par.participation_status, STATUS_COLORS[par.participation_status]||'t-gr')}</td>
-          <td>${par.attendance_status!=='—'?tag(par.attendance_status,STATUS_COLORS[par.attendance_status]||'t-gr'):'<span style="color:var(--tm)">—</span>'}</td>
-          <td><strong style="color:var(--g)">${par.total_hours||0}</strong></td>
-          <td>${(par.outstanding_flag===true||par.outstanding_flag==='TRUE')? '⭐':'—'}</td>
-        </tr>`).join('') : '<tr class="empty-row"><td colspan="6">لا يوجد مشاركون</td></tr>'}</tbody>
+        <thead><tr>
+          <th>${esc(t('ap.pdetail.par_col_name'))}</th>
+          <th>${esc(t('ap.pdetail.par_col_type'))}</th>
+          <th>${esc(t('ap.pdetail.par_col_status'))}</th>
+          <th>${esc(t('ap.pdetail.par_col_attendance'))}</th>
+          <th>${esc(t('ap.pdetail.par_col_hours'))}</th>
+          <th>${esc(t('ap.pdetail.par_col_outstanding'))}</th>
+        </tr></thead>
+        <tbody>${participants.length ? participants.map(par => {
+          const parTypeLabel = par.participant_type === 'Member' ? t('ap.par.type_member') : (par.participant_type === 'Volunteer' ? t('ap.par.type_volunteer') : par.participant_type);
+          const parStatusLabel = PDETAIL_PARTICIPANT_STATUS_KEY[par.participation_status]
+            ? t(PDETAIL_PARTICIPANT_STATUS_KEY[par.participation_status])
+            : par.participation_status;
+          const attCellLabel = PDETAIL_ATTENDANCE_KEY[par.attendance_status]
+            ? t(PDETAIL_ATTENDANCE_KEY[par.attendance_status])
+            : par.attendance_status;
+          return `<tr>
+            <td><strong>${esc(par.display_name)}</strong></td>
+            <td>${tag(parTypeLabel, par.participant_type==='Member'?'t-b':'t-p')}</td>
+            <td>${tag(parStatusLabel, STATUS_COLORS[par.participation_status]||'t-gr')}</td>
+            <td>${par.attendance_status!=='—'?tag(attCellLabel, STATUS_COLORS[par.attendance_status]||'t-gr'):'<span style="color:var(--tm)">—</span>'}</td>
+            <td><strong style="color:var(--g)">${par.total_hours||0}</strong></td>
+            <td>${(par.outstanding_flag===true||par.outstanding_flag==='TRUE')? '⭐':'—'}</td>
+          </tr>`;
+        }).join('') : `<tr class="empty-row"><td colspan="6">${esc(t('ap.pdetail.no_participants'))}</td></tr>`}</tbody>
       </table></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem">
-      <div class="card"><div class="card-head"><h3>🙋 الاهتمام</h3></div><div class="card-body">
+      <div class="card"><div class="card-head"><h3>${esc(t('ap.pdetail.interest_card'))}</h3></div><div class="card-body">
         <div style="font-size:1.35rem;font-weight:800;color:var(--g)">${is.interested||0}<span style="font-size:.88rem;color:var(--tm)"> / ${is.total||0}</span></div>
-        <div style="font-size:.72rem;color:var(--tl);margin-top:.18rem">أبدوا اهتماماً</div>
+        <div style="font-size:.72rem;color:var(--tl);margin-top:.18rem">${esc(t('ap.pdetail.interest_label'))}</div>
       </div></div>
-      <div class="card"><div class="card-head"><h3>✅ الحضور</h3></div><div class="card-body">
+      <div class="card"><div class="card-head"><h3>${esc(t('ap.pdetail.attendance_card'))}</h3></div><div class="card-body">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;text-align:center">
-          <div><div style="font-size:1.15rem;font-weight:800;color:var(--sc)">${as.present||0}</div><div style="font-size:.65rem;color:var(--tl)">حضر</div></div>
-          <div><div style="font-size:1.15rem;font-weight:800;color:var(--dn)">${as.absent||0}</div><div style="font-size:.65rem;color:var(--tl)">غاب</div></div>
-          <div><div style="font-size:1.15rem;font-weight:800;color:var(--wn)">${as.late||0}</div><div style="font-size:.65rem;color:var(--tl)">تأخّر</div></div>
-          <div><div style="font-size:1.15rem;font-weight:800;color:var(--bl)">${as.excused||0}</div><div style="font-size:.65rem;color:var(--tl)">معذور</div></div>
+          <div><div style="font-size:1.15rem;font-weight:800;color:var(--sc)">${as.present||0}</div><div style="font-size:.65rem;color:var(--tl)">${esc(t('ap.pdetail.att_present'))}</div></div>
+          <div><div style="font-size:1.15rem;font-weight:800;color:var(--dn)">${as.absent||0}</div><div style="font-size:.65rem;color:var(--tl)">${esc(t('ap.pdetail.att_absent'))}</div></div>
+          <div><div style="font-size:1.15rem;font-weight:800;color:var(--wn)">${as.late||0}</div><div style="font-size:.65rem;color:var(--tl)">${esc(t('ap.pdetail.att_late'))}</div></div>
+          <div><div style="font-size:1.15rem;font-weight:800;color:var(--bl)">${as.excused||0}</div><div style="font-size:.65rem;color:var(--tl)">${esc(t('ap.pdetail.att_excused'))}</div></div>
         </div>
       </div></div>
-      <div class="card"><div class="card-head"><h3>⏱️ الساعات</h3></div><div class="card-body">
+      <div class="card"><div class="card-head"><h3>${esc(t('ap.pdetail.hours_card'))}</h3></div><div class="card-body">
         <div style="font-size:1.7rem;font-weight:800;color:var(--g)">${hs.total_hours||0}</div>
-        <div style="font-size:.72rem;color:var(--tl)">إجمالي ساعات المشاركين</div>
+        <div style="font-size:.72rem;color:var(--tl)">${esc(t('ap.pdetail.hours_label'))}</div>
       </div></div>
     </div>`;
 }

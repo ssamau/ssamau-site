@@ -16,17 +16,26 @@
 import { DB, STANDARD_ROLES, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag, fmtDate } from '../../lib/format.js';
 import { api, toast, openModal, closeModal, clearForm } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
 
 // ══════════════════════════════════════════
 // OPPORTUNITIES (§4, §12) + ASSIGNMENTS
 // ══════════════════════════════════════════
+// Attendance + status enums use translation keys; the canonical English
+// value stays in ATTENDANCE_OPTIONS for the assignment dropdown's value=.
 export const ATTENDANCE_OPTIONS = ['Pending', 'Attended', 'Absent', 'Excused'];
-export const ATTENDANCE_LABEL_AR = {
-  Pending: 'قيد الانتظار', Attended: 'حضر', Absent: 'غاب', Excused: 'معذور',
+export const ATTENDANCE_KEY = {
+  Pending:  'ap.att.pending',
+  Attended: 'ap.att.attended',
+  Absent:   'ap.att.absent',
+  Excused:  'ap.att.excused',
 };
-export const OPP_STATUS_AR = {
-  Open: 'مفتوحة', Filled: 'مكتملة', NeedsHelp: 'تحتاج مساعدة',
-  Cancelled: 'ملغاة', Done: 'منتهية',
+export const OPP_STATUS_KEY = {
+  Open:      'ap.opp.status_open',
+  Filled:    'ap.opp.status_filled',
+  NeedsHelp: 'ap.opp.status_needs_help',
+  Cancelled: 'ap.opp.status_cancelled',
+  Done:      'ap.opp.status_done',
 };
 
 let _activeOpportunity = null; // currently-open opportunity in the assignments modal
@@ -46,9 +55,12 @@ export async function loadOpportunities() {
 export function renderOpportunities(items) {
   const tbody = document.getElementById('opportunities-tbody');
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد فرص بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('ap.opp.empty'))}</td></tr>`;
     return;
   }
+  const hoursShort = t('ap.opp.hours_short');
+  const assignTitle = t('ap.opp.row_assign_title');
+  const notifyTitle = t('ap.opp.row_notify_title');
   tbody.innerHTML = items.map(o => {
     const project = DB.projects.find(p => p.project_id === o.project_id);
     const com = DB.committees.find(c => c.committee_id === o.owning_committee_id);
@@ -59,19 +71,19 @@ export function renderOpportunities(items) {
     const filled = (o.assigned_count || 0);
     const need   = o.headcount_needed || 1;
     const fillBar = `${filled} / ${need}` + (filled >= need ? ' ✅' : '');
-    const att = `${o.attended_count || 0} حضر`;
-    const statusLabel = OPP_STATUS_AR[o.status] || o.status;
+    const att = t('ap.opp.attended_count', { n: o.attended_count || 0 });
+    const statusLabel = OPP_STATUS_KEY[o.status] ? t(OPP_STATUS_KEY[o.status]) : o.status;
     return `<tr>
       <td>${projectCell}</td>
       <td><strong>${esc(o.role_name)}</strong></td>
       <td>${com ? esc(com.committee_name) : '<span style="color:var(--tm)">—</span>'}</td>
-      <td>${o.estimated_hours} س</td>
+      <td>${o.estimated_hours} ${esc(hoursShort)}</td>
       <td>${fillBar}</td>
-      <td style="font-size:.8rem">${att}</td>
+      <td style="font-size:.8rem">${esc(att)}</td>
       <td>${tag(statusLabel, STATUS_COLORS[o.status] || 't-gr')}</td>
       <td>
-        <button class="btn-icon" title="إدارة المسندين" data-action="openOpportunityAssignments" data-id="${o.opportunity_id}">👥</button>
-        <button class="btn-icon" title="إشعار للأعضاء" data-action="openOpportunityNotify" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">📧</button>
+        <button class="btn-icon" title="${esc(assignTitle)}" data-action="openOpportunityAssignments" data-id="${o.opportunity_id}">👥</button>
+        <button class="btn-icon" title="${esc(notifyTitle)}" data-action="openOpportunityNotify" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">📧</button>
         <button class="btn-icon edit" data-action="editOpportunity" data-id="${o.opportunity_id}">✏️</button>
         <button class="btn-icon del" data-action="confirmDeleteOpportunity" data-id="${o.opportunity_id}" data-role="${esc(o.role_name)}">🗑️</button>
       </td>
@@ -85,7 +97,9 @@ export function populateRolePresets() {
   for (const r of STANDARD_ROLES) {
     const opt = document.createElement('option');
     opt.value = r.key;
-    opt.textContent = `${r.name} (${r.hours || '—'} س)`;
+    opt.textContent = r.hours
+      ? t('ap.opp.role_preset_label',      { name: r.name, hours: r.hours })
+      : t('ap.opp.role_preset_label_dash', { name: r.name });
     sel.appendChild(opt);
   }
 }
@@ -114,13 +128,13 @@ export async function saveOpportunity() {
     notes:               gv('opp-notes'),
   };
   if (!body.project_id || !body.role_name) {
-    toast('المشروع واسم الدور مطلوبان', 'twarn'); return;
+    toast(t('ap.opp.err_required'), 'twarn'); return;
   }
   const res = id
     ? await api('opportunities.update', { id, data: body })
     : await api('opportunities.create', body);
   if (res && res.success) {
-    toast('✅ تم الحفظ');
+    toast(t('ap.opp.success_save'));
     closeModal('opportunity');
     clearForm('opportunity');
     await loadOpportunities();
@@ -137,7 +151,7 @@ export async function saveOpportunity() {
         fakeEl.dataset.role = opp.role_name || '';
         openOpportunityNotify(fakeEl);
       } else {
-        toast('انتهى الحفظ، اضغط 📧 في صف الفرصة لإرسال الإعلان', 'twarn');
+        toast(t('ap.opp.notify_after_hint'), 'twarn');
       }
     }
   }
@@ -164,11 +178,11 @@ export function editOpportunity(id) {
 }
 
 export function confirmDeleteOpportunity(id, name) {
-  document.getElementById('confirm-msg').textContent = `هل تريد حذف الفرصة "${name}"؟ سيتم حذف جميع المسندين عليها.`;
+  document.getElementById('confirm-msg').textContent = t('ap.opp.delete_confirm', { name });
   document.getElementById('confirm-btn').onclick = async () => {
     const res = await api('opportunities.delete', { id });
     if (res && res.success) {
-      toast('🗑️ تم الحذف');
+      toast(t('ap.delete.success'));
       closeModal('confirm');
       loadOpportunities();
     }
@@ -186,13 +200,13 @@ export async function openOpportunityAssignments(opportunityId) {
   document.getElementById('opp-assign-header').innerHTML = `
     <div style="font-weight:700">${esc(o.role_name)}</div>
     <div style="font-size:.78rem;color:var(--tm);margin-top:.25rem">
-      ${project ? esc(project.project_name) : ''} · ${o.estimated_hours} س ·
+      ${project ? esc(project.project_name) : ''} · ${o.estimated_hours} ${esc(t('ap.opp.hours_short'))} ·
       ${com ? esc(com.committee_name) : '—'}
     </div>`;
 
   // Fill member-picker with members not yet assigned to this opportunity
   const memberSel = document.getElementById('opp-assign-member');
-  memberSel.innerHTML = '<option value="">— اختر —</option>';
+  memberSel.innerHTML = `<option value="">${esc(t('ap.prj.choose'))}</option>`;
   const r = await api('assignments.list', { opportunity_id: opportunityId });
   const assigned = (r && r.success ? r.data : []) || [];
   const assignedMemberIds = new Set(assigned.map(a => a.member_id).filter(Boolean));
@@ -210,7 +224,7 @@ export async function openOpportunityAssignments(opportunityId) {
 export function renderAssignments(items) {
   const tbody = document.getElementById('opp-assign-tbody');
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="3">لا يوجد مسندون بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="3">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(a => {
@@ -219,7 +233,7 @@ export function renderAssignments(items) {
       ? (member ? esc(member.preferred_name || member.full_name) : a.member_id)
       : `${esc(a.volunteer_name)}${a.volunteer_email ? ` <span style="color:var(--tm);font-size:.72rem;direction:ltr">(${esc(a.volunteer_email)})</span>` : ''}`;
     const opts = ATTENDANCE_OPTIONS.map(s =>
-      `<option value="${s}" ${a.attendance_status === s ? 'selected' : ''}>${ATTENDANCE_LABEL_AR[s]}</option>`
+      `<option value="${s}" ${a.attendance_status === s ? 'selected' : ''}>${esc(t(ATTENDANCE_KEY[s]))}</option>`
     ).join('');
     return `<tr>
       <td>${name}</td>
@@ -237,7 +251,7 @@ export async function addAssignmentMember() {
     member_id:      memberId,
   });
   if (res && res.success) {
-    toast('✅ تم الإسناد');
+    toast(t('ap.opp.assign.success_add'));
     openOpportunityAssignments(_activeOpportunity.opportunity_id);
     loadOpportunities();
   }
@@ -246,14 +260,14 @@ export async function addAssignmentMember() {
 export async function addAssignmentVolunteer() {
   const name  = gv('opp-assign-vol-name');
   const email = gv('opp-assign-vol-email');
-  if (!name || !_activeOpportunity) { toast('اسم المتطوع مطلوب', 'twarn'); return; }
+  if (!name || !_activeOpportunity) { toast(t('ap.opp.assign.err_vol_name'), 'twarn'); return; }
   const res = await api('assignments.add', {
     opportunity_id:  _activeOpportunity.opportunity_id,
     volunteer_name:  name,
     volunteer_email: email || null,
   });
   if (res && res.success) {
-    toast('✅ تم الإسناد');
+    toast(t('ap.opp.assign.success_add'));
     sv('opp-assign-vol-name', '');
     sv('opp-assign-vol-email', '');
     openOpportunityAssignments(_activeOpportunity.opportunity_id);
@@ -266,16 +280,16 @@ export async function markAttendance(assignmentId, status) {
     assignment_id: assignmentId, attendance_status: status,
   });
   if (res && res.success) {
-    toast('✅ تم التحديث');
+    toast(t('ap.opp.assign.success_update'));
     if (_activeOpportunity) loadOpportunities();
   }
 }
 
 export async function removeAssignment(assignmentId) {
-  if (!confirm('إزالة هذا الشخص من الفرصة؟')) return;
+  if (!confirm(t('ap.opp.assign.remove_confirm'))) return;
   const res = await api('assignments.remove', { id: assignmentId });
   if (res && res.success) {
-    toast('🗑️ تمت الإزالة');
+    toast(t('ap.opp.assign.success_remove'));
     if (_activeOpportunity) openOpportunityAssignments(_activeOpportunity.opportunity_id);
     loadOpportunities();
   }
@@ -343,26 +357,26 @@ export async function sendOpportunityNotify() {
   if (mode === 'members') {
     const checked = Array.from(document.querySelectorAll('#oppn-members-list input:checked'))
                          .map(cb => cb.value);
-    if (!checked.length) { toast('اختر عضواً واحداً على الأقل', 'twarn'); return; }
+    if (!checked.length) { toast(t('ap.opp.notify.err_pick_member'), 'twarn'); return; }
     body.recipients = checked;
   } else if (mode === 'emails') {
     const raw = (document.getElementById('oppn-emails')?.value || '').trim();
     const emails = raw.split(/[\s,;\n]+/).map(s => s.trim()).filter(Boolean);
-    if (!emails.length) { toast('أدخل بريداً واحداً على الأقل', 'twarn'); return; }
+    if (!emails.length) { toast(t('ap.opp.notify.err_pick_email'), 'twarn'); return; }
     body.recipients = emails;
   }
 
   const btn = document.getElementById('oppn-send-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('ap.opp.notify.sending_btn'); }
   try {
     const r = await api('opportunities.notify', body);
     if (r && r.success && r.data) {
       const { sent = 0, failed = 0, count = 0 } = r.data;
-      toast(`✅ أُرسل: ${sent} / ${count} | فشل: ${failed}`, failed === 0 ? 'tok' : 'twarn');
+      toast(t('ap.opp.notify.result', { sent, count, failed }), failed === 0 ? 'tok' : 'twarn');
       closeModal('opp-notify');
       _notifyContext = null;
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📧 إرسال الإشعار'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('ap.opp.notify.send_btn'); }
   }
 }

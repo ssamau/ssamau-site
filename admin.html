@@ -342,20 +342,31 @@
     <div class="page" id="page-projects">
       <div class="card">
         <div class="card-head">
-          <h3>🗓️ المشاريع والفعاليات</h3>
+          <h3>🗓️ <span data-i18n="ap.sb.tab_projects">المشاريع والفعاليات</span></h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث..." data-action="filterTable" data-target="projects-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="ap.prj.search_placeholder" placeholder="بحث..." data-action="filterTable" data-target="projects-tbody" data-event="input"/>
             <select class="filter-select" data-action="filterProjectsByStatus">
-              <option value="">كل الحالات</option>
-              <option>Planning</option><option>Active</option><option>Completed</option><option>Cancelled</option>
+              <option value="" data-i18n="ap.prj.filter_all_statuses">كل الحالات</option>
+              <option value="Planning"  data-i18n="ap.prj.status_planning">Planning</option>
+              <option value="Active"    data-i18n="ap.prj.status_active">Active</option>
+              <option value="Completed" data-i18n="ap.prj.status_completed">Completed</option>
+              <option value="Cancelled" data-i18n="ap.prj.status_cancelled">Cancelled</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="project">+ إضافة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="project" data-i18n="ap.prj.add_btn">+ إضافة</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم</th><th>النوع</th><th>التاريخ</th><th>المكان</th><th>مدير المشروع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="projects-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.prj.col_name">الاسم</th>
+              <th data-i18n="ap.prj.col_type">النوع</th>
+              <th data-i18n="ap.prj.col_date">التاريخ</th>
+              <th data-i18n="ap.prj.col_location">المكان</th>
+              <th data-i18n="ap.prj.col_manager">مدير المشروع</th>
+              <th data-i18n="ap.prj.col_status">الحالة</th>
+              <th data-i18n="ap.prj.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="projects-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -365,18 +376,26 @@
     <div class="page" id="page-participants">
       <div class="card">
         <div class="card-head">
-          <h3>🙋 المشاركون في المشاريع</h3>
+          <h3>🙋 <span data-i18n="ap.sb.tab_participants">المشاركون في المشاريع</span></h3>
           <div class="card-head-right">
             <select class="filter-select" id="participants-project-filter" data-action="loadParticipants">
-              <option value="">كل المشاريع</option>
+              <option value="" data-i18n="ap.par.filter_all_projects">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="participant">+ إضافة مشارك</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="participant" data-i18n="ap.par.add_btn">+ إضافة مشارك</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الاسم / البريد</th><th>المشروع / الفعالية</th><th>النوع</th><th>حالة المشاركة</th><th>التوفر</th><th>مميز</th><th>إجراءات</th></tr></thead>
-            <tbody id="participants-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.par.col_name">الاسم / البريد</th>
+              <th data-i18n="ap.par.col_project">المشروع / الفعالية</th>
+              <th data-i18n="ap.par.col_type">النوع</th>
+              <th data-i18n="ap.par.col_status">حالة المشاركة</th>
+              <th data-i18n="ap.par.col_availability">التوفر</th>
+              <th data-i18n="ap.par.col_outstanding">مميز</th>
+              <th data-i18n="ap.par.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="participants-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -386,35 +405,35 @@
     <div class="page" id="page-opportunities">
       <div class="card">
         <div class="card-head">
-          <h3>🎯 الفرص التطوعية</h3>
+          <h3 data-i18n="ap.title.opportunities">🎯 الفرص التطوعية</h3>
           <div class="card-head-right">
             <select class="filter-select" id="opportunities-project-filter" data-action="loadOpportunities">
-              <option value="">كل المشاريع</option>
+              <option value="" data-i18n="ap.opp.filter_all_projects">كل المشاريع</option>
             </select>
             <select class="filter-select" id="opportunities-status-filter" data-action="loadOpportunities">
-              <option value="">كل الحالات</option>
-              <option value="Open">مفتوحة</option>
-              <option value="Filled">مكتملة</option>
-              <option value="NeedsHelp">تحتاج مساعدة</option>
-              <option value="Cancelled">ملغاة</option>
-              <option value="Done">منتهية</option>
+              <option value=""           data-i18n="ap.opp.filter_all_statuses">كل الحالات</option>
+              <option value="Open"       data-i18n="ap.opp.status_open">مفتوحة</option>
+              <option value="Filled"     data-i18n="ap.opp.status_filled">مكتملة</option>
+              <option value="NeedsHelp"  data-i18n="ap.opp.status_needs_help">تحتاج مساعدة</option>
+              <option value="Cancelled"  data-i18n="ap.opp.status_cancelled">ملغاة</option>
+              <option value="Done"       data-i18n="ap.opp.status_done">منتهية</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="opportunity">+ إضافة فرصة</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="opportunity" data-i18n="ap.opp.add_btn">+ إضافة فرصة</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>المشروع / الفعالية</th>
-              <th>الدور</th>
-              <th>اللجنة المستفيدة</th>
-              <th>الساعات المقدّرة</th>
-              <th>المسندون / المطلوب</th>
-              <th>الحضور</th>
-              <th>الحالة</th>
-              <th>إجراءات</th>
+              <th data-i18n="ap.opp.col_project">المشروع / الفعالية</th>
+              <th data-i18n="ap.opp.col_role">الدور</th>
+              <th data-i18n="ap.opp.col_committee">اللجنة المستفيدة</th>
+              <th data-i18n="ap.opp.col_estimated">الساعات المقدّرة</th>
+              <th data-i18n="ap.opp.col_filled">المسندون / المطلوب</th>
+              <th data-i18n="ap.opp.col_attended">الحضور</th>
+              <th data-i18n="ap.opp.col_status">الحالة</th>
+              <th data-i18n="ap.opp.col_actions">إجراءات</th>
             </tr></thead>
-            <tbody id="opportunities-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل…</td></tr></tbody>
+            <tbody id="opportunities-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -725,57 +744,65 @@
 <!-- PROJECT MODAL -->
 <div class="overlay" id="ov-project">
   <div class="modal modal-lg">
-    <div class="modal-head"><h3 id="project-modal-title">➕ إضافة مشروع / فعالية</h3><button class="modal-close" data-action="closeModal" data-modal="project">✕</button></div>
+    <div class="modal-head"><h3 id="project-modal-title" data-i18n="ap.prj.modal_add">➕ إضافة مشروع / فعالية</h3><button class="modal-close" data-action="closeModal" data-modal="project">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="prj-edit-id"/>
-      <div class="form-section">معلومات أساسية</div>
+      <div class="form-section" data-i18n="ap.prj.section_basics">معلومات أساسية</div>
       <div class="fg-row">
-        <div class="fg"><label>الاسم <span class="required">*</span></label><input id="prj-name" placeholder="احتفالية اليوم الوطني"/></div>
-        <div class="fg"><label>النوع <span class="required">*</span></label>
-          <select id="prj-type"><option>Event</option><option>Project</option></select>
+        <div class="fg"><label><span data-i18n="ap.prj.lbl_name">الاسم</span> <span class="required">*</span></label><input id="prj-name" data-i18n-placeholder="ap.prj.ph_name" placeholder="احتفالية اليوم الوطني"/></div>
+        <div class="fg"><label><span data-i18n="ap.prj.lbl_type">النوع</span> <span class="required">*</span></label>
+          <select id="prj-type">
+            <option value="Event"   data-i18n="ap.prj.type_event">Event</option>
+            <option value="Project" data-i18n="ap.prj.type_project">Project</option>
+          </select>
         </div>
       </div>
-      <div class="fg"><label>الوصف</label><textarea id="prj-desc"></textarea></div>
-      <div class="form-section">التفاصيل اللوجستية</div>
+      <div class="fg"><label data-i18n="ap.prj.lbl_desc">الوصف</label><textarea id="prj-desc"></textarea></div>
+      <div class="form-section" data-i18n="ap.prj.section_logistics">التفاصيل اللوجستية</div>
       <div class="fg-row3">
-        <div class="fg"><label>تاريخ الفعالية</label><input id="prj-date" type="date"/></div>
-        <div class="fg"><label>وقت البداية</label><input id="prj-start" type="time"/></div>
-        <div class="fg"><label>وقت النهاية</label><input id="prj-end" type="time"/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_event_date">تاريخ الفعالية</label><input id="prj-date" type="date"/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_start_time">وقت البداية</label><input id="prj-start" type="time"/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_end_time">وقت النهاية</label><input id="prj-end" type="time"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>الموقع</label><input id="prj-location" placeholder="Docklands Community Hub"/></div>
-        <div class="fg"><label>رابط ملف المقترح</label><input id="prj-proposal" dir="ltr" placeholder="https://drive.google.com/..."/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_location">الموقع</label><input id="prj-location" data-i18n-placeholder="ap.prj.ph_location" placeholder="Docklands Community Hub"/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_proposal">رابط ملف المقترح</label><input id="prj-proposal" dir="ltr" data-i18n-placeholder="ap.prj.ph_proposal" placeholder="https://drive.google.com/..."/></div>
       </div>
-      <div class="form-section">الإدارة والحالة</div>
+      <div class="form-section" data-i18n="ap.prj.section_management">الإدارة والحالة</div>
       <div class="fg-row3">
-        <div class="fg"><label>منشئ المشروع <span class="required">*</span></label><select id="prj-created-by"><option value="">— اختر —</option></select></div>
-        <div class="fg"><label>مدير المشروع</label><select id="prj-manager"><option value="">— اختياري —</option></select></div>
-        <div class="fg"><label>مدير الفعالية</label><select id="prj-event-mgr"><option value="">— اختياري —</option></select></div>
+        <div class="fg"><label><span data-i18n="ap.prj.lbl_created_by">منشئ المشروع</span> <span class="required">*</span></label><select id="prj-created-by"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_pm">مدير المشروع</label><select id="prj-manager"><option value="" data-i18n="ap.prj.choose_optional">— اختياري —</option></select></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_em">مدير الفعالية</label><select id="prj-event-mgr"><option value="" data-i18n="ap.prj.choose_optional">— اختياري —</option></select></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>الحالة</label>
-          <select id="prj-status"><option>Planning</option><option>Active</option><option>Completed</option><option>Cancelled</option></select>
+        <div class="fg"><label data-i18n="ap.prj.lbl_status">الحالة</label>
+          <select id="prj-status">
+            <option value="Planning"  data-i18n="ap.prj.status_planning">Planning</option>
+            <option value="Active"    data-i18n="ap.prj.status_active">Active</option>
+            <option value="Completed" data-i18n="ap.prj.status_completed">Completed</option>
+            <option value="Cancelled" data-i18n="ap.prj.status_cancelled">Cancelled</option>
+          </select>
         </div>
-        <div class="fg"><label>ملاحظات</label><input id="prj-notes"/></div>
+        <div class="fg"><label data-i18n="ap.prj.lbl_notes">ملاحظات</label><input id="prj-notes"/></div>
       </div>
       <!-- Cover photo uploader (Phase B). Visible only after the
            project has been saved at least once — we need a project_id
            to scope the storage path. Edit flow surfaces it; create
            flow hides it (visible after the first save reopens the
            modal in edit mode). -->
-      <div class="form-section" id="prj-photo-section" style="display:none">صورة الغلاف</div>
+      <div class="form-section" id="prj-photo-section" data-i18n="ap.prj.section_cover" style="display:none">صورة الغلاف</div>
       <div class="fg" id="prj-photo-wrap" style="display:none">
         <div id="prj-photo-current" style="margin-bottom:.5rem"></div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
           <input type="file" id="prj-photo-file" accept="image/jpeg,image/png,image/webp" data-action="onProjectPhotoChange" data-event="change"/>
-          <button class="btn btn-g btn-sm" type="button" data-action="uploadProjectPhoto" id="prj-photo-btn" disabled>⬆ رفع</button>
+          <button class="btn btn-g btn-sm" type="button" data-action="uploadProjectPhoto" id="prj-photo-btn" data-i18n="ap.prj.photo_upload_btn" disabled>⬆ رفع</button>
         </div>
-        <div class="fg-note">JPG / PNG / WebP، 4 ميجابايت كحد أقصى. تظهر في بطاقة الفعالية بالصفحة الرئيسية.</div>
+        <div class="fg-note" data-i18n="ap.prj.photo_hint">JPG / PNG / WebP، 4 ميجابايت كحد أقصى. تظهر في بطاقة الفعالية بالصفحة الرئيسية.</div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="project">إلغاء</button>
-      <button class="btn btn-g" data-action="saveProject">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="project" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveProject" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -965,36 +992,36 @@
 <!-- OPPORTUNITY MODAL -->
 <div class="overlay" id="ov-opportunity">
   <div class="modal">
-    <div class="modal-head"><h3>🎯 فرصة تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="opportunity">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.opp.modal_title">🎯 فرصة تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="opportunity">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="opp-edit-id"/>
-      <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="opp-project"><option value="">— اختر —</option></select></div>
+      <div class="fg"><label><span data-i18n="ap.opp.lbl_project">المشروع / الفعالية</span> <span class="required">*</span></label><select id="opp-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       <div class="fg-row">
-        <div class="fg"><label>الدور <span class="required">*</span></label>
+        <div class="fg"><label><span data-i18n="ap.opp.lbl_role_preset">الدور</span> <span class="required">*</span></label>
           <select id="opp-role-key" data-action="onOppRolePreset">
-            <option value="">— اختر دور قياسي —</option>
+            <option value="" data-i18n="ap.opp.role_preset_choose">— اختر دور قياسي —</option>
           </select>
         </div>
-        <div class="fg"><label>اسم الدور <span class="required">*</span></label><input id="opp-role-name" placeholder="مثل: منسق استقبال"/></div>
+        <div class="fg"><label><span data-i18n="ap.opp.lbl_role_name">اسم الدور</span> <span class="required">*</span></label><input id="opp-role-name" data-i18n-placeholder="ap.opp.ph_role_name" placeholder="مثل: منسق استقبال"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>الساعات المقدّرة</label><input id="opp-est-hours" type="number" step="0.5" min="0" value="2"/></div>
-        <div class="fg"><label>عدد المتطوعين المطلوب</label><input id="opp-headcount" type="number" min="1" value="1"/></div>
+        <div class="fg"><label data-i18n="ap.opp.lbl_est_hours">الساعات المقدّرة</label><input id="opp-est-hours" type="number" step="0.5" min="0" value="2"/></div>
+        <div class="fg"><label data-i18n="ap.opp.lbl_headcount">عدد المتطوعين المطلوب</label><input id="opp-headcount" type="number" min="1" value="1"/></div>
       </div>
       <div class="fg-row">
         <div class="fg">
-          <label>اللجنة المستفيدة</label>
-          <select id="opp-committee"><option value="">🌍 كل اللجان (للجميع)</option></select>
-          <div class="hint" style="font-size:.72rem;color:var(--tm);margin-top:.25rem">اختر "كل اللجان" لإطلاق الفرصة لكل الأعضاء.</div>
+          <label data-i18n="ap.opp.lbl_committee">اللجنة المستفيدة</label>
+          <select id="opp-committee"><option value="" data-i18n="ap.opp.committee_all">🌍 كل اللجان (للجميع)</option></select>
+          <div class="hint" data-i18n="ap.opp.committee_hint" style="font-size:.72rem;color:var(--tm);margin-top:.25rem">اختر "كل اللجان" لإطلاق الفرصة لكل الأعضاء.</div>
         </div>
         <div class="fg">
-          <label>الحالة <span style="font-weight:400;color:var(--tm);font-size:.72rem">(للتصفية فقط)</span></label>
+          <label><span data-i18n="ap.opp.col_status">الحالة</span> <span data-i18n="ap.opp.lbl_status_filter_note" style="font-weight:400;color:var(--tm);font-size:.72rem">(للتصفية فقط)</span></label>
           <select id="opp-status">
-            <option value="Open">مفتوحة — يمكن التسجيل</option>
-            <option value="NeedsHelp">تحتاج مساعدة — أولوية للنشر</option>
-            <option value="Filled">مكتملة — اكتمل العدد</option>
-            <option value="Done">منتهية — انتهت الفعالية</option>
-            <option value="Cancelled">ملغاة</option>
+            <option value="Open"      data-i18n="ap.opp.status_open_long">مفتوحة — يمكن التسجيل</option>
+            <option value="NeedsHelp" data-i18n="ap.opp.status_needs_help_long">تحتاج مساعدة — أولوية للنشر</option>
+            <option value="Filled"    data-i18n="ap.opp.status_filled_long">مكتملة — اكتمل العدد</option>
+            <option value="Done"      data-i18n="ap.opp.status_done_long">منتهية — انتهت الفعالية</option>
+            <option value="Cancelled" data-i18n="ap.opp.status_cancelled_long">ملغاة</option>
           </select>
         </div>
       </div>
@@ -1005,14 +1032,14 @@
       <div class="fg">
         <label class="fg-check" style="cursor:pointer">
           <input type="checkbox" id="opp-notify-after-save"/>
-          <span>📧 إرسال إعلان للأعضاء فور الحفظ</span>
+          <span data-i18n="ap.opp.lbl_notify_after_save">📧 إرسال إعلان للأعضاء فور الحفظ</span>
         </label>
       </div>
-      <div class="fg"><label>ملاحظات</label><textarea id="opp-notes"></textarea></div>
+      <div class="fg"><label data-i18n="ap.opp.lbl_notes">ملاحظات</label><textarea id="opp-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="opportunity">إلغاء</button>
-      <button class="btn btn-g" data-action="saveOpportunity">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opportunity" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveOpportunity" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -1021,34 +1048,38 @@
 <div class="overlay" id="ov-opp-assign">
   <div class="modal" style="max-width:760px">
     <div class="modal-head">
-      <h3>👥 المسندون على الفرصة</h3>
+      <h3 data-i18n="ap.opp.assign.title">👥 المسندون على الفرصة</h3>
       <button class="modal-close" data-action="closeModal" data-modal="opp-assign">✕</button>
     </div>
     <div class="modal-body">
       <div id="opp-assign-header" style="background:var(--c-soft);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem"></div>
       <div class="fg-row" style="align-items:end">
-        <div class="fg" style="flex:1"><label>إضافة عضو</label>
-          <select id="opp-assign-member"><option value="">— اختر —</option></select>
+        <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.add_member">إضافة عضو</label>
+          <select id="opp-assign-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select>
         </div>
-        <button class="btn btn-g" data-action="addAssignmentMember">+ إسناد عضو</button>
+        <button class="btn btn-g" data-action="addAssignmentMember" data-i18n="ap.opp.assign.btn_add_member">+ إسناد عضو</button>
       </div>
       <details style="margin:.5rem 0 1rem">
-        <summary style="cursor:pointer;font-size:.85rem;color:var(--tm)">إسناد متطوع غير عضو</summary>
+        <summary data-i18n="ap.opp.assign.disclose_vol" style="cursor:pointer;font-size:.85rem;color:var(--tm)">إسناد متطوع غير عضو</summary>
         <div class="fg-row" style="margin-top:.5rem;align-items:end">
-          <div class="fg" style="flex:1"><label>اسم المتطوع</label><input id="opp-assign-vol-name"/></div>
-          <div class="fg" style="flex:1"><label>البريد</label><input id="opp-assign-vol-email" dir="ltr"/></div>
-          <button class="btn btn-g" data-action="addAssignmentVolunteer">+ إسناد</button>
+          <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.lbl_vol_name">اسم المتطوع</label><input id="opp-assign-vol-name"/></div>
+          <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.lbl_vol_email">البريد</label><input id="opp-assign-vol-email" dir="ltr"/></div>
+          <button class="btn btn-g" data-action="addAssignmentVolunteer" data-i18n="ap.opp.assign.btn_add_vol">+ إسناد</button>
         </div>
       </details>
       <div class="table-wrap" style="max-height:380px;overflow:auto">
         <table>
-          <thead><tr><th>الاسم</th><th>الحضور</th><th>إجراءات</th></tr></thead>
-          <tbody id="opp-assign-tbody"><tr class="empty-row"><td colspan="3">لا يوجد مسندون بعد</td></tr></tbody>
+          <thead><tr>
+            <th data-i18n="ap.opp.assign.col_name">الاسم</th>
+            <th data-i18n="ap.opp.assign.col_attendance">الحضور</th>
+            <th data-i18n="ap.opp.assign.col_actions">إجراءات</th>
+          </tr></thead>
+          <tbody id="opp-assign-tbody"><tr class="empty-row"><td colspan="3" data-i18n="ap.opp.assign.empty">لا يوجد مسندون بعد</td></tr></tbody>
         </table>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-assign">إغلاق</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-assign" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1065,50 +1096,50 @@
 <div class="overlay" id="ov-opp-notify">
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
-      <h3>📧 إشعار بفرصة تطوعية</h3>
+      <h3 data-i18n="ap.opp.notify.title">📧 إشعار بفرصة تطوعية</h3>
       <button class="modal-close" data-action="closeModal" data-modal="opp-notify">✕</button>
     </div>
     <div class="modal-body">
       <div style="background:var(--gl);border-radius:10px;padding:.75rem .95rem;margin-bottom:1rem;font-size:.82rem">
-        <div style="margin-bottom:.25rem"><strong>الفرصة:</strong> <span id="oppn-role">—</span></div>
-        <div><strong>المشروع:</strong> <span id="oppn-project" style="color:var(--tl)">—</span></div>
+        <div style="margin-bottom:.25rem"><strong data-i18n="ap.opp.notify.opportunity_label">الفرصة:</strong> <span id="oppn-role">—</span></div>
+        <div><strong data-i18n="ap.opp.notify.project_label">المشروع:</strong> <span id="oppn-project" style="color:var(--tl)">—</span></div>
       </div>
 
       <div class="fg">
-        <label style="font-weight:700;margin-bottom:.4rem">طريقة الإرسال</label>
-        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="all" data-action="toggleNotifyMode" checked/>إلى كل الأعضاء النشطين</label>
-        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="members" data-action="toggleNotifyMode"/>إلى أعضاء محددين</label>
-        <label class="fg-check"><input type="radio" name="oppn-mode" value="emails" data-action="toggleNotifyMode"/>إلى بريد إلكتروني مخصص (BCC)</label>
+        <label data-i18n="ap.opp.notify.mode_label" style="font-weight:700;margin-bottom:.4rem">طريقة الإرسال</label>
+        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="all" data-action="toggleNotifyMode" checked/><span data-i18n="ap.opp.notify.mode_all">إلى كل الأعضاء النشطين</span></label>
+        <label class="fg-check" style="margin-bottom:.3rem"><input type="radio" name="oppn-mode" value="members" data-action="toggleNotifyMode"/><span data-i18n="ap.opp.notify.mode_members">إلى أعضاء محددين</span></label>
+        <label class="fg-check"><input type="radio" name="oppn-mode" value="emails" data-action="toggleNotifyMode"/><span data-i18n="ap.opp.notify.mode_emails">إلى بريد إلكتروني مخصص (BCC)</span></label>
       </div>
 
       <!-- Mode: all → just a hint, no extra input -->
-      <div id="oppn-mode-all" class="fg-note" style="background:var(--gl);padding:.6rem .85rem;border-radius:6px">
+      <div id="oppn-mode-all" class="fg-note" data-i18n="ap.opp.notify.mode_all_hint" style="background:var(--gl);padding:.6rem .85rem;border-radius:6px">
         سيُرسل الإشعار لكل عضو نشط لديه بريد مسجّل.
       </div>
 
       <!-- Mode: members → scrollable checkbox list -->
       <div id="oppn-mode-members" style="display:none">
-        <div class="fg-note" style="margin-bottom:.4rem">اختر الأعضاء الذين تريد إشعارهم:</div>
+        <div class="fg-note" data-i18n="ap.opp.notify.members_pick" style="margin-bottom:.4rem">اختر الأعضاء الذين تريد إشعارهم:</div>
         <div id="oppn-members-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:.5rem .65rem;background:var(--bg)"></div>
       </div>
 
       <!-- Mode: emails → textarea for ad-hoc list -->
       <div id="oppn-mode-emails" style="display:none">
         <div class="fg">
-          <label>عناوين البريد الإلكتروني</label>
-          <textarea id="oppn-emails" rows="4" dir="ltr" placeholder="email1@example.com, email2@example.com" style="font-family:inherit"></textarea>
-          <div class="fg-note">افصل بين العناوين بفاصلة أو سطر جديد. سيُرسل الإشعار كرسالة واحدة بـ BCC.</div>
+          <label data-i18n="ap.opp.notify.emails_label">عناوين البريد الإلكتروني</label>
+          <textarea id="oppn-emails" rows="4" dir="ltr" data-i18n-placeholder="ap.opp.notify.emails_placeholder" placeholder="email1@example.com, email2@example.com" style="font-family:inherit"></textarea>
+          <div class="fg-note" data-i18n="ap.opp.notify.emails_hint">افصل بين العناوين بفاصلة أو سطر جديد. سيُرسل الإشعار كرسالة واحدة بـ BCC.</div>
         </div>
       </div>
 
       <div class="fg" style="margin-top:1rem">
-        <label>رسالة إضافية (اختياري)</label>
-        <textarea id="oppn-message" rows="3" placeholder="أضف ملاحظة شخصية تظهر في أعلى الرسالة..."></textarea>
+        <label data-i18n="ap.opp.notify.message_label">رسالة إضافية (اختياري)</label>
+        <textarea id="oppn-message" rows="3" data-i18n-placeholder="ap.opp.notify.message_placeholder" placeholder="أضف ملاحظة شخصية تظهر في أعلى الرسالة..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-notify">إلغاء</button>
-      <button class="btn btn-g" data-action="sendOpportunityNotify" id="oppn-send-btn">📧 إرسال الإشعار</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="opp-notify" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="sendOpportunityNotify" id="oppn-send-btn" data-i18n="ap.opp.notify.send_btn">📧 إرسال الإشعار</button>
     </div>
   </div>
 </div>
@@ -1116,40 +1147,47 @@
 <!-- PARTICIPANT MODAL -->
 <div class="overlay" id="ov-participant">
   <div class="modal">
-    <div class="modal-head"><h3>➕ إضافة مشارك</h3><button class="modal-close" data-action="closeModal" data-modal="participant">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.par.modal_add">➕ إضافة مشارك</h3><button class="modal-close" data-action="closeModal" data-modal="participant">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="par-edit-id"/>
-      <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="par-project"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>نوع المشارك <span class="required">*</span></label>
+      <div class="fg"><label><span data-i18n="ap.par.lbl_project">المشروع / الفعالية</span> <span class="required">*</span></label><select id="par-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label><span data-i18n="ap.par.lbl_type">نوع المشارك</span> <span class="required">*</span></label>
         <select id="par-type" data-action="toggleParticipantFields">
-          <option value="Member">عضو (Member)</option>
-          <option value="Volunteer">متطوع مؤقت (Volunteer)</option>
+          <option value="Member"    data-i18n="ap.par.type_member">عضو (Member)</option>
+          <option value="Volunteer" data-i18n="ap.par.type_volunteer">متطوع مؤقت (Volunteer)</option>
         </select>
       </div>
       <div id="par-member-section">
-        <div class="fg"><label>العضو <span class="required">*</span></label><select id="par-member"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label><span data-i18n="ap.par.lbl_member">العضو</span> <span class="required">*</span></label><select id="par-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       </div>
       <div id="par-volunteer-section" style="display:none">
         <div class="fg-row">
-          <div class="fg"><label>اسم المتطوع <span class="required">*</span></label><input id="par-vol-name"/></div>
-          <div class="fg"><label>بريد المتطوع</label><input id="par-vol-email" type="email" dir="ltr"/></div>
+          <div class="fg"><label><span data-i18n="ap.par.lbl_volunteer_name">اسم المتطوع</span> <span class="required">*</span></label><input id="par-vol-name"/></div>
+          <div class="fg"><label data-i18n="ap.par.lbl_volunteer_email">بريد المتطوع</label><input id="par-vol-email" type="email" dir="ltr"/></div>
         </div>
-        <div class="fg"><label>هاتف المتطوع</label><input id="par-vol-phone" dir="ltr"/></div>
+        <div class="fg"><label data-i18n="ap.par.lbl_volunteer_phone">هاتف المتطوع</label><input id="par-vol-phone" dir="ltr"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>حالة المشاركة</label>
-          <select id="par-status"><option>Confirmed</option><option>Pending</option><option>Cancelled</option></select>
+        <div class="fg"><label data-i18n="ap.par.lbl_status">حالة المشاركة</label>
+          <select id="par-status">
+            <option value="Confirmed" data-i18n="ap.par.status_confirmed">Confirmed</option>
+            <option value="Pending"   data-i18n="ap.par.status_pending">Pending</option>
+            <option value="Cancelled" data-i18n="ap.par.status_cancelled">Cancelled</option>
+          </select>
         </div>
-        <div class="fg"><label>التوفر</label>
-          <select id="par-avail"><option>Full</option><option>Partial</option></select>
+        <div class="fg"><label data-i18n="ap.par.lbl_availability">التوفر</label>
+          <select id="par-avail">
+            <option value="Full"    data-i18n="ap.par.avail_full">Full</option>
+            <option value="Partial" data-i18n="ap.par.avail_partial">Partial</option>
+          </select>
         </div>
       </div>
-      <div class="fg"><label>ملاحظات المدير</label><textarea id="par-notes"></textarea></div>
-      <label class="fg-check"><input type="checkbox" id="par-outstanding"/> 🌟 مميّز (Outstanding)</label>
+      <div class="fg"><label data-i18n="ap.par.lbl_notes">ملاحظات المدير</label><textarea id="par-notes"></textarea></div>
+      <label class="fg-check"><input type="checkbox" id="par-outstanding"/> <span data-i18n="ap.par.lbl_outstanding">🌟 مميّز (Outstanding)</span></label>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="participant">إلغاء</button>
-      <button class="btn btn-g" data-action="saveParticipant">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="participant" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveParticipant" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
