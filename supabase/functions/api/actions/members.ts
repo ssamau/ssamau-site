@@ -116,7 +116,7 @@ const deleteMember: Handler = async (body) => {
 
 const membersGetOwn: Handler = async (_body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('هذا الحساب غير مرتبط بملف عضو.', 404);
   const rows = await sql`
     SELECT m.*, c.committee_name
     FROM members m
@@ -134,7 +134,7 @@ const membersGetOwn: Handler = async (_body, user) => {
 //   created_at, updated_at (timestamps)
 const membersUpdateOwn: Handler = async (body, user) => {
   requireAuth(user);
-  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  if (!user.member_id) throw httpErr('هذا الحساب غير مرتبط بملف عضو.', 404);
   const data = (body.data ?? body) as Record<string, unknown>;
   await sql`
     UPDATE members SET

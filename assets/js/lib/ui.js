@@ -27,6 +27,12 @@ export async function api(action, body = {}) {
   try {
     const data = await callApi(action, body);
     if (data && !data.success && data.error) throw new Error(data.error);
+    // Clear stale "err" pill — every successful call resets the
+    // connection status so a single past failure doesn't stay
+    // displayed forever (the symptom: switching tabs after a failed
+    // members.getOwn call left "هذا الحساب غير مرتبط بملف عضو" stuck
+    // at the top right even after every subsequent call succeeded).
+    setApiStatus('ok', 'متصل');
     return data;
   } catch (err) {
     toast('خطأ في الاتصال: ' + err.message, 'terr');
