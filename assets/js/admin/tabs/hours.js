@@ -61,14 +61,18 @@ export function renderHoursRow(h) {
   const ownsCommittee = isAdmin
     || (isHead && h.opportunity_committee_id === window.CURRENT_USER.committee_id);
 
+  // Per the 2026-05-16 permission revision, heads now own the full
+  // approval chain for their own committee (primary + final + rollback).
+  // The `ownsCommittee` check above already widens to "admin OR head
+  // whose committee matches", so the same predicate gates every stage.
   const actions = [];
   if (status === 'Draft' && ownsCommittee) {
     actions.push(`<button class="btn-icon" title="اعتماد أولي" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
     actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
-  } else if (status === 'PrimaryApproved' && isAdmin) {
+  } else if (status === 'PrimaryApproved' && ownsCommittee) {
     actions.push(`<button class="btn-icon" title="اعتماد نهائي" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
     actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
-  } else if (status === 'FinalApproved' && isAdmin) {
+  } else if (status === 'FinalApproved' && ownsCommittee) {
     actions.push(`<button class="btn-icon" title="رفض / استرجاع" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
   }
   actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="هذا السجل">🗑️</button>`);

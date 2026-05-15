@@ -49,10 +49,19 @@ function _renderRow(h) {
     : `<span style="color:var(--tm)">${esc(h.project_id || '—')}</span>`;
   const status = h.approval_status || 'Draft';
   const statusTag = tag(STATUS_AR[status] || status, STATUS_CLS[status] || 't-gr');
+  const rowId = h.hours_id || h.id;
+  // Heads now own all three approval stages (primary, final, rollback)
+  // for their committee — per 2026-05-16 permission revision. Different
+  // buttons per status, all gated server-side via requireAdminScope.
   const actions = [];
   if (status === 'Draft') {
-    actions.push(`<button class="btn-icon" title="اعتماد أولي" data-action="hd.hours.primaryApprove" data-id="${h.hours_id || h.id}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="رفض" data-action="hd.hours.reject" data-id="${h.hours_id || h.id}">❌</button>`);
+    actions.push(`<button class="btn-icon" title="اعتماد أولي" data-action="hd.hours.primaryApprove" data-id="${rowId}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
+  } else if (status === 'PrimaryApproved') {
+    actions.push(`<button class="btn-icon" title="اعتماد نهائي" data-action="hd.hours.finalApprove" data-id="${rowId}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="رفض" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
+  } else if (status === 'FinalApproved') {
+    actions.push(`<button class="btn-icon" title="رفض / استرجاع" data-action="hd.hours.reject" data-id="${rowId}">↩️</button>`);
   }
   return `<tr>
     <td><strong>${name}</strong></td>
@@ -68,6 +77,15 @@ export async function primaryApproveHours(id) {
   const res = await api('hours.primaryApprove', { id: Number(id) });
   if (res && res.success) {
     toast('✅ تم الاعتماد الأولي');
+    loadHeadHours();
+  }
+}
+
+export async function finalApproveHours(id) {
+  if (!confirm('اعتماد نهائي لهذه الساعات؟ ستُحتسب لرصيد العضو.')) return;
+  const res = await api('hours.finalApprove', { id: Number(id) });
+  if (res && res.success) {
+    toast('✅ تم الاعتماد النهائي');
     loadHeadHours();
   }
 }

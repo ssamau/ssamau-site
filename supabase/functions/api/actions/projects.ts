@@ -26,8 +26,12 @@ const getProjects: Handler = async () => sql`
   ORDER BY p.event_date DESC NULLS LAST, p.created_at DESC
 `;
 
-const createProject: Handler = async (body) => {
+const createProject: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
+  // Self-scope: heads can only create projects for their own committee.
+  // Presidency / superadmin are unscoped. (Moved out of ADMIN_ACTIONS on
+  // 2026-05-16 per president's clarification — heads can create projects.)
+  requireAdminScope(user, data.owning_committee_id as string | null | undefined);
   const id = (data.project_id as string | undefined) || shortId('PRJ');
   await sql`
     INSERT INTO projects (project_id, project_name, project_type, project_description,

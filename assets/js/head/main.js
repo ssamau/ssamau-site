@@ -21,7 +21,7 @@ import {
   toggleOpportunityCreateForm, createOpportunity,
 } from './tabs/opportunities.js';
 import {
-  loadHeadHours, primaryApproveHours, rejectHours,
+  loadHeadHours, primaryApproveHours, finalApproveHours, rejectHours,
 } from './tabs/hours.js';
 import {
   loadHeadApplications, acceptApplication, rejectApplication,
@@ -121,6 +121,7 @@ document.addEventListener('click', (e) => {
     case 'setTheme':                 setTheme(el.dataset.value); break;
     case 'showPage':                 showPage(el.dataset.page); break;
     case 'hd.hours.primaryApprove':  primaryApproveHours(el.dataset.id); break;
+    case 'hd.hours.finalApprove':    finalApproveHours(el.dataset.id); break;
     case 'hd.hours.reject':          rejectHours(el.dataset.id); break;
     case 'hd.apps.accept':           acceptApplication(el.dataset.id); break;
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;

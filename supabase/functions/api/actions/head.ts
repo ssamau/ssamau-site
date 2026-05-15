@@ -63,10 +63,13 @@ const headDashboardSummary: Handler = async (body, user) => {
       (SELECT COUNT(*) FROM public.membership_applications
         WHERE assigned_committee_id = ${committee_id}
           AND status NOT IN ('Accepted', 'Rejected')) AS pending_applications_count,
+      -- Both Draft AND PrimaryApproved count as "pending head action"
+      -- now that heads own both approval stages (2026-05-16 policy
+      -- change — see hours.ts header comment).
       (SELECT COUNT(*) FROM public.hours h
         JOIN public.members m ON m.member_id = h.member_id
         WHERE m.committee_id = ${committee_id}
-          AND h.approval_status = 'Draft') AS hours_pending_count,
+          AND h.approval_status IN ('Draft', 'PrimaryApproved')) AS hours_pending_count,
       (SELECT COUNT(*) FROM public.opportunities o
         JOIN public.projects p ON p.project_id = o.project_id
         WHERE o.owning_committee_id = ${committee_id}
@@ -90,7 +93,7 @@ const headDashboardSummary: Handler = async (body, user) => {
   // event context. Includes total_hours so the head sees the magnitude
   // before clicking through.
   const hoursPending = await sql`
-    SELECT h.id AS hours_id, h.total_hours, h.recorded_at,
+    SELECT h.id AS hours_id, h.total_hours, h.recorded_at, h.approval_status,
            m.full_name      AS member_full_name,
            m.preferred_name AS member_preferred_name,
            p.project_name,
@@ -99,8 +102,10 @@ const headDashboardSummary: Handler = async (body, user) => {
     JOIN public.members  m ON m.member_id  = h.member_id
     JOIN public.projects p ON p.project_id = h.project_id
     WHERE m.committee_id = ${committee_id}
-      AND h.approval_status = 'Draft'
-    ORDER BY h.recorded_at ASC
+      AND h.approval_status IN ('Draft', 'PrimaryApproved')
+    ORDER BY
+      CASE h.approval_status WHEN 'Draft' THEN 0 ELSE 1 END,
+      h.recorded_at ASC
     LIMIT 5
   `;
 

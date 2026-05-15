@@ -305,12 +305,11 @@ export const PUBLIC_ACTIONS = new Set<string>([
 // 2026-05-15 role split — the surface didn't shrink, just the
 // allowed audience widened.
 export const ADMIN_ACTIONS = new Set<string>([
-  'createProject', 'deleteProject',
+  'deleteProject',
   'createAdvisor', 'updateAdvisor', 'deleteAdvisor',
   'createCommittee', 'updateCommittee', 'deleteCommittee',
   'deleteMember',
   'setup.seedMembers',
-  'hours.finalApprove',
   'users.create', 'users.update', 'users.delete',
   'interest.markReviewed',
   // Opportunity announcement notifier (admin/head). Server-side scope
@@ -318,6 +317,13 @@ export const ADMIN_ACTIONS = new Set<string>([
   // for opportunities in their own committee.
   'opportunities.notify',
 ]);
+
+// Actions previously here but moved to head-scoped (per the 2026-05-16
+// permission revision — president clarified that heads + vice-heads +
+// deputy-vice-heads share head-tier access, and that final hour approval
+// should belong to heads in their own committee, not presidency):
+//   - createProject       → projects.ts:createProject self-scopes
+//   - hours.finalApprove  → hours.ts:hoursFinalApprove self-scopes
 
 // Dev-tier actions: callable ONLY by `superadmin`. Reserved for
 // truly dev-shaped ops the presidency shouldn't be able to invoke.

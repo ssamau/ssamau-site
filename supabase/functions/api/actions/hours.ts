@@ -12,7 +12,7 @@
 import { sql } from '../_sql.ts';
 import {
   httpErr,
-  requireAuth, requireAdminScope, requireAdmin,
+  requireAuth, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
 
@@ -97,27 +97,37 @@ const updateHours: Handler = async (body) => {
 };
 
 // ─── HOURS APPROVAL (§7) ─────────────────────────────────────────────
-// Two-stage approval: committee head primary-approves Draft rows for
-// opportunities owned by their committee; presidency final-approves
-// PrimaryApproved rows. `members.total_hours` rollups count only
-// FinalApproved rows.
+// Two-stage approval, both stages now belonging to the head tier
+// (Committee Head / Committee Vice Head / Deputy Vice President — all
+// scoped to their own committee). Per the 2026-05-16 president
+// clarification: final approval also lives with heads, not presidency,
+// "so the role of head means something". Presidency keeps unscoped
+// override access via requireAdminScope's admin/superadmin bypass.
+// `members.total_hours` rollups count only FinalApproved rows.
+//
+// Committee resolution: prefer the opportunity's owning_committee_id;
+// fall back to the member's committee_id when the row was self-recorded
+// without an assignment (rare — Principle 2 normally blocks this, but
+// defensive coverage avoids a null-committee escape hatch).
 const hoursPrimaryApprove: Handler = async (body, user) => {
   const id = body.id as number | undefined;
   const [row] = await sql`
-    SELECT h.id, h.member_id, h.advisor_id, h.approval_status, o.owning_committee_id
+    SELECT h.id, h.member_id, h.advisor_id, h.approval_status,
+           COALESCE(o.owning_committee_id, m.committee_id) AS committee_id
     FROM hours h
     LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
     LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN members      m ON m.member_id      = h.member_id
     WHERE h.id = ${id}
   ` as Array<{
     id: number; member_id: string | null; advisor_id: number | null;
-    approval_status: string; owning_committee_id: string | null;
+    approval_status: string; committee_id: string | null;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
   if (row.approval_status !== 'Draft') {
     throw httpErr(`Cannot primary-approve a row in status ${row.approval_status}`, 409);
   }
-  requireAdminScope(user, row.owning_committee_id);
+  requireAdminScope(user, row.committee_id);
   await sql`
     UPDATE hours SET
       approval_status     = 'PrimaryApproved',
@@ -131,19 +141,28 @@ const hoursPrimaryApprove: Handler = async (body, user) => {
 };
 
 const hoursFinalApprove: Handler = async (body, user) => {
-  requireAdmin(user);
   const id = body.id as number | undefined;
-  const [row] = await sql`SELECT id, member_id, advisor_id, approval_status FROM hours WHERE id = ${id}` as Array<{
-    id: number; member_id: string | null; advisor_id: number | null; approval_status: string;
+  const [row] = await sql`
+    SELECT h.id, h.member_id, h.advisor_id, h.approval_status,
+           COALESCE(o.owning_committee_id, m.committee_id) AS committee_id
+    FROM hours h
+    LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
+    LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN members      m ON m.member_id      = h.member_id
+    WHERE h.id = ${id}
+  ` as Array<{
+    id: number; member_id: string | null; advisor_id: number | null;
+    approval_status: string; committee_id: string | null;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
   if (row.approval_status !== 'PrimaryApproved') {
     throw httpErr(`Final approval requires PrimaryApproved (currently ${row.approval_status})`, 409);
   }
+  requireAdminScope(user, row.committee_id);
   await sql`
     UPDATE hours SET
       approval_status   = 'FinalApproved',
-      final_approver_id = ${user.id},
+      final_approver_id = ${user!.id},
       final_approved_at = NOW()
     WHERE id = ${id}
   `;
@@ -156,28 +175,23 @@ const hoursReject: Handler = async (body, user) => {
   const id = body.id as number | undefined;
   const reason = body.reason as string | undefined;
   const [row] = await sql`
-    SELECT h.id, h.member_id, h.advisor_id, h.approval_status, o.owning_committee_id
+    SELECT h.id, h.member_id, h.advisor_id, h.approval_status,
+           COALESCE(o.owning_committee_id, m.committee_id) AS committee_id
     FROM hours h
     LEFT JOIN assignments  a ON a.assignment_id = h.assignment_id
     LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN members      m ON m.member_id      = h.member_id
     WHERE h.id = ${id}
   ` as Array<{
     id: number; member_id: string | null; advisor_id: number | null;
-    approval_status: string; owning_committee_id: string | null;
+    approval_status: string; committee_id: string | null;
   }>;
   if (!row) throw httpErr('Hours row not found', 404);
-  // Anyone in the approval chain can reject:
-  //   - committee head can reject Draft rows in their committee
-  //   - presidency can reject anything pre-FinalApproved
-  //   - presidency can also reject FinalApproved (rolls it back)
-  if (user!.access === 'head') {
-    if (row.approval_status !== 'Draft') {
-      throw httpErr('Committee heads can only reject Draft rows', 403);
-    }
-    requireAdminScope(user, row.owning_committee_id);
-  } else if (user!.access !== 'superadmin') {
-    throw httpErr('Forbidden', 403);
-  }
+  // Anyone with admin scope over the row's committee can reject at any
+  // stage — including rolling back a FinalApproved row. Heads now own
+  // the full approval chain for their committee so they also own the
+  // ability to retract.
+  requireAdminScope(user, row.committee_id);
   await sql`
     UPDATE hours SET
       approval_status = 'Rejected',
