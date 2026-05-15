@@ -21,14 +21,21 @@ export async function loadCerts(pid) {
   const tb = document.getElementById('tb-certs');
   if (!tb) return;
   if (!list.length) { tb.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد شهادات</td></tr>'; return; }
+  // The Edge Function backend returns the raw `certificates` table columns
+  // via `c.*` (cert_code / recipient_name / role / hours / issued_at) plus
+  // joined `member_full_name`, `member_preferred_name`, `project_name`.
+  // The old Apps-Script payload used `participant_name` / `participation_role`
+  // / `verify_code` — those names linger in some call sites; map carefully.
   tb.innerHTML = list.map(c => {
     const p = DB.projects.find(pr => pr.project_id === c.project_id);
+    const recipient = c.recipient_name || c.member_preferred_name || c.member_full_name || '—';
+    const projectName = c.project_name || (p ? p.project_name : c.project_id);
     return `<tr>
-      <td><strong>${esc(c.participant_name || '—')}</strong></td>
-      <td style="font-size:.76rem">${esc(p ? p.project_name : c.project_id)}</td>
-      <td>${tag(c.participation_role || '—', 't-gr')}</td>
+      <td><strong>${esc(recipient)}</strong></td>
+      <td style="font-size:.76rem">${esc(projectName)}</td>
+      <td>${tag(c.role || '—', 't-gr')}</td>
       <td><strong style="color:var(--g)">${c.hours || 0}</strong></td>
-      <td><code style="font-size:.7rem;background:#f3f4f6;padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block">${esc(c.verify_code)}</code></td>
+      <td><code style="font-size:.7rem;background:#f3f4f6;padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block">${esc(c.cert_code || '—')}</code></td>
       <td style="font-size:.71rem;color:var(--tm)">${String(c.issued_at || '').split('T')[0] || '—'}</td>
       <td><button class="btn-icon" data-action="previewCertCard" data-card="${JSON.stringify(c).replace(/"/g,'&quot;')}" title="معاينة">👁️</button></td>
     </tr>`;
@@ -83,8 +90,11 @@ export async function saveBulkCerts() {
   const pid = gv('bcert-prj');
   if (!pid) { toast('اختر مشروعاً', 'twarn'); return; }
   const r = await api('certs.bulkIssue', { project_id: pid, options: {} });
-  if (r) {
-    toast(`🏅 صدر: ${r.issued} | تخطي: ${r.skipped}`);
+  // Backend returns { count, emailed }. count = certs created (the SQL
+  // filter excludes participants who already have a cert for this project,
+  // so we don't need a separate "skipped" tally to surface here).
+  if (r && r.success) {
+    toast(`🏅 صدر: ${r.count || 0} | تم الإرسال: ${r.emailed || 0}`);
     closeModal('bulk-certs');
     loadCerts('');
     switchCertTab('list');
@@ -92,17 +102,23 @@ export async function saveBulkCerts() {
 }
 
 export function buildCertHTML(c) {
+  // Map both old and new field names so this same builder works for
+  // certs.list rows AND certs.verify rows. New backend uses
+  // recipient_name / role / cert_code; old payload used
+  // participant_name / participation_role / verify_code.
+  const recipient = c.recipient_name || c.participant_name || c.member_preferred_name || c.member_full_name || c.volunteer_email || '—';
+  const code      = c.cert_code      || c.verify_code      || '—';
   return `<div class="cert-card">
     <div style="font-size:2rem;margin-bottom:.7rem">🌿</div>
     <div style="font-size:.7rem;color:rgba(255,255,255,.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">شهادة تطوع</div>
     <div style="font-size:1rem;font-weight:800">Saudi Students Association in Melbourne</div>
     <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin:.2rem 0 .75rem">نادي الطلبة السعوديين في ملبورن</div>
     <div style="font-size:.8rem;color:rgba(255,255,255,.6)">يُشهد بأن</div>
-    <div class="cert-name">${esc(c.participant_name || c.volunteer_email || '—')}</div>
+    <div class="cert-name">${esc(recipient)}</div>
     <div style="font-size:.85rem;color:rgba(255,255,255,.7);margin-top:.2rem">شارك في: ${esc(c.project_name || c.project_id || '—')}</div>
     ${c.event_date ? `<div style="font-size:.78rem;color:rgba(255,255,255,.55)">بتاريخ: ${esc(c.event_date)}</div>` : ''}
     ${c.hours ? `<div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-top:.3rem">⏱️ ${c.hours} ساعة تطوعية</div>` : ''}
-    <div class="cert-code-box">رمز التحقق: ${esc(c.verify_code)}</div>
+    <div class="cert-code-box">رمز التحقق: ${esc(code)}</div>
     <div style="font-size:.67rem;color:rgba(255,255,255,.35);margin-top:.5rem">للتحقق: ssamau.com/verify</div>
   </div>`;
 }
@@ -123,14 +139,17 @@ export function previewCertCard(c) {
 export async function verifyCert() {
   const code = (document.getElementById('verify-code-input')?.value || '').toUpperCase().trim();
   if (!code) { toast('أدخل رمز الشهادة', 'twarn'); return; }
-  const r = await api('certs.verify', { code });
+  // Backend param is `cert_code` (not `code`); response shape is
+  // { valid, certificate }. The certificate row already includes
+  // `project_name` from the LEFT JOIN, so no extra mapping needed.
+  const r = await api('certs.verify', { cert_code: code });
   const area = document.getElementById('verify-result');
   if (!area) return;
-  if (r && r.valid) {
-    area.innerHTML = buildCertHTML({ ...r.data, project_name: r.data.project });
+  if (r && r.valid && r.certificate) {
+    area.innerHTML = buildCertHTML(r.certificate);
   } else {
     area.innerHTML = `<div style="background:var(--dnb);border:1.5px solid rgba(220,38,38,.25);border-radius:var(--rs);padding:1rem;font-size:.84rem;color:var(--dn);text-align:center">
-      ❌ ${r?.message || 'الشهادة غير موجودة أو ملغاة'}
+      ❌ ${r?.error || 'الشهادة غير موجودة أو ملغاة'}
     </div>`;
   }
 }

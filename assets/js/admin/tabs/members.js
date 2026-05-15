@@ -137,7 +137,13 @@ export function filterMembersByStatus(status) {
 export async function openMemberFile(memberId, kind) {
   const res = await api('storage.getMemberFile', { data: { member_id: memberId, kind } });
   if (!res || !res.success || !res.data?.url) {
-    toast(res?.error || 'تعذّر فتح الملف.', 'twarn');
+    // `missing:true` means the object was deleted out-of-band — say so
+    // explicitly instead of the generic "couldn't open" so the admin
+    // knows to ask the member to re-upload rather than retry.
+    const friendly = res?.data?.missing
+      ? 'الملف غير متوفر في التخزين — يبدو أنه حُذف.'
+      : (res?.error || 'تعذّر فتح الملف.');
+    toast(friendly, 'twarn');
     return;
   }
   window.open(res.data.url, '_blank', 'noopener');

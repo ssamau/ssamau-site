@@ -167,6 +167,16 @@ const getMemberFile: Handler = async (body, user) => {
   const { data: signed, error } = await sb.storage.from(cfg.id).createSignedUrl(row.path, 3600);
   if (error) {
     console.error('[storage.signedUrl]', error);
+    // Storage object missing (deleted out of band, mis-migrated path, etc.):
+    // surface `{ url: null }` instead of a 500 so the admin UI shows the
+    // friendly "تعذّر فتح الملف" toast rather than leaking the raw
+    // Supabase error message ("Could not generate signed URL: Object not
+    // found"). The president flagged the raw message in admin UI on
+    // 2026-05-15. Real 5xx-style storage outages still bubble up.
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('not found') || msg.includes('object_not_found')) {
+      return { url: null, missing: true };
+    }
     throw httpErr(`Could not generate signed URL: ${error.message}`, 500);
   }
   return { url: signed.signedUrl, expires_in: 3600 };
