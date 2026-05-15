@@ -1,0 +1,221 @@
+  /* ── Designed certificate (verified-cert view) ───────────────────────
+   * When the verification succeeds, verify-cert.js swaps the body into a
+   * full-bleed certificate layout. Print-friendly: @media print hides
+   * everything except .cert-sheet so "Save as PDF" produces a one-page,
+   * ornament-clean output the recipient can hand over to a verifier. */
+
+  /* On-screen wrapper around the cert. Centers + pads the sheet. */
+  .cert-stage {
+    background: linear-gradient(135deg, rgba(26,92,46,.04) 0%, rgba(184,147,42,.06) 100%);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* The certificate itself. Two gold borders + a green inner border —
+   * gives it a "diploma" feel without being gauche. On-screen we let
+   * the height grow naturally to fit the Arabic text (which often
+   * runs taller than English equivalents); the print stylesheet
+   * pins it to A4 landscape for a clean PDF output. */
+  .cert-sheet {
+    width: 100%;
+    max-width: 900px;
+    background: #fffdf5;
+    border: 2px solid #b8932a;
+    box-shadow: 0 14px 38px rgba(0,0,0,.12);
+    padding: 3rem 2.5rem;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .cert-sheet::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 1px solid rgba(26,92,46,.35);
+    pointer-events: none;
+  }
+  .cert-sheet::after {
+    /* Corner flourishes — four small gold filigree arcs */
+    content: "";
+    position: absolute;
+    inset: 22px;
+    border: 1px dashed rgba(184,147,42,.55);
+    pointer-events: none;
+    border-radius: 4px;
+  }
+
+  /* Header — logo + Arabic + English title */
+  .cert-logo {
+    width: 72px; height: 72px;
+    margin-bottom: .6rem;
+    z-index: 1;
+  }
+  .cert-title-ar {
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    font-weight: 800;
+    color: #1A5C2E;
+    letter-spacing: .03em;
+    margin: .25rem 0 .1rem;
+    z-index: 1;
+  }
+  .cert-title-en {
+    font-size: clamp(.7rem, 1.4vw, 1rem);
+    font-weight: 700;
+    color: #b8932a;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    margin: 0 0 .35rem;
+    z-index: 1;
+  }
+  .cert-divider {
+    width: 70%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #b8932a 50%, transparent 100%);
+    margin: .85rem auto 1.1rem;
+    z-index: 1;
+  }
+  .cert-intro {
+    font-size: clamp(.85rem, 1.6vw, 1.05rem);
+    color: #4b5563;
+    margin-bottom: .65rem;
+    z-index: 1;
+  }
+  .cert-recipient {
+    font-size: clamp(1.8rem, 5vw, 3.1rem);
+    font-weight: 800;
+    color: #0e3a1c;
+    margin: .35rem 0 .55rem;
+    line-height: 1.2;
+    border-bottom: 2px solid #b8932a;
+    padding: 0 1rem .35rem;
+    z-index: 1;
+  }
+  .cert-body-text {
+    font-size: clamp(.85rem, 1.6vw, 1.05rem);
+    color: #1f2937;
+    line-height: 1.85;
+    margin: .85rem 0;
+    max-width: 85%;
+    z-index: 1;
+  }
+  .cert-project {
+    font-weight: 800;
+    color: #1A5C2E;
+    font-size: 1.15em;
+  }
+  .cert-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1rem 0 .5rem;
+    z-index: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cert-stat {
+    background: rgba(184,147,42,.1);
+    border: 1px solid rgba(184,147,42,.35);
+    border-radius: 999px;
+    padding: .35rem 1rem;
+    font-size: .9rem;
+    color: #1A5C2E;
+    font-weight: 700;
+  }
+  .cert-stat strong { color: #b8932a; }
+
+  .cert-footer {
+    margin-top: auto;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 1.2rem;
+    font-size: .76rem;
+    color: #6b7280;
+    z-index: 1;
+  }
+  .cert-footer .seal {
+    text-align: center;
+    color: #1A5C2E;
+    font-weight: 800;
+  }
+  .cert-footer .seal-mark {
+    width: 56px; height: 56px;
+    border: 2px solid #b8932a;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto .25rem;
+    background: #fff;
+  }
+  .cert-code {
+    font-family: ui-monospace, monospace;
+    font-size: .78rem;
+    color: #b8932a;
+    letter-spacing: .12em;
+    direction: ltr;
+  }
+  .cert-date {
+    font-weight: 600;
+    color: #4b5563;
+    direction: ltr;
+  }
+
+  /* Print button below the sheet (hidden in print) */
+  .cert-actions {
+    display: flex;
+    gap: .6rem;
+    margin-bottom: 1rem;
+  }
+  .cert-actions button {
+    background: #1A5C2E;
+    color: #fff;
+    border: none;
+    padding: .55rem 1.25rem;
+    font-family: inherit;
+    font-size: .85rem;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+  .cert-actions button:hover { background: #0e3a1c; }
+  /* Anchor variant of the back-link — same shape as the print button
+   * but preserves anchor semantics so right-click "Open in new tab"
+   * works for navigating back home. */
+  .cert-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .55rem 1.25rem;
+    border: 1px solid #1A5C2E;
+    border-radius: 50px;
+    color: #1A5C2E;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: .85rem;
+  }
+  .cert-back-link:hover { background: #1A5C2E; color: #fff; }
+
+  /* Print styles — produce a clean one-page A4 landscape PDF when
+   * the user hits Cmd+P / "Save as PDF" */
+  @media print {
+    @page { size: A4 landscape; margin: 6mm; }
+    body { background: #fff; margin: 0; }
+    .cert-stage { padding: 0; min-height: auto; background: #fff; }
+    .cert-actions, .login-card { display: none !important; }
+    .cert-sheet {
+      max-width: 100%;
+      aspect-ratio: auto;
+      height: calc(210mm - 12mm);          /* A4 landscape height minus margins */
+      box-shadow: none;
+      page-break-after: avoid;
+    }
+    /* Force the gold accents to print in colour. */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }

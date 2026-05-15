@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<title>SSAM — Demo Certificate</title>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  /* Same styles as assets/css/cert.css, copied here so the demo file
+   * is self-contained and renders identically when Chrome headless
+   * loads it from a local path with no other dependencies. */
+
+  @page { size: A4 landscape; margin: 6mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Almarai', sans-serif;
+    background: linear-gradient(135deg, rgba(26,92,46,.04) 0%, rgba(184,147,42,.06) 100%);
+  }
+
+  .cert-stage {
+    min-height: 100vh;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cert-sheet {
+    width: 100%;
+    max-width: 1100px;
+    background: #fffdf5;
+    border: 2px solid #b8932a;
+    box-shadow: 0 14px 38px rgba(0,0,0,.12);
+    padding: 2.5rem 2.5rem;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .cert-sheet::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 1px solid rgba(26,92,46,.35);
+    pointer-events: none;
+  }
+  .cert-sheet::after {
+    content: "";
+    position: absolute;
+    inset: 22px;
+    border: 1px dashed rgba(184,147,42,.55);
+    pointer-events: none;
+    border-radius: 4px;
+  }
+
+  .cert-logo {
+    width: 72px; height: 72px;
+    margin-bottom: .4rem;
+    z-index: 1;
+  }
+  .cert-title-ar {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #1A5C2E;
+    letter-spacing: .03em;
+    margin: .15rem 0 .1rem;
+    z-index: 1;
+  }
+  .cert-title-en {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #b8932a;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    margin: 0 0 .35rem;
+    z-index: 1;
+  }
+  .cert-divider {
+    width: 70%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #b8932a 50%, transparent 100%);
+    margin: .65rem auto .85rem;
+    z-index: 1;
+  }
+  .cert-intro {
+    font-size: 1rem;
+    color: #4b5563;
+    margin-bottom: .45rem;
+    z-index: 1;
+  }
+  .cert-recipient {
+    font-size: 2.9rem;
+    font-weight: 800;
+    color: #0e3a1c;
+    margin: .25rem 0 .35rem;
+    line-height: 1.2;
+    border-bottom: 2px solid #b8932a;
+    padding: 0 1rem .35rem;
+    z-index: 1;
+  }
+  .cert-body-text {
+    font-size: 1.05rem;
+    color: #1f2937;
+    line-height: 1.85;
+    margin: .65rem 0;
+    max-width: 85%;
+    z-index: 1;
+  }
+  .cert-project {
+    font-weight: 800;
+    color: #1A5C2E;
+    font-size: 1.12em;
+  }
+  .cert-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin: .85rem 0 .35rem;
+    z-index: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cert-stat {
+    background: rgba(184,147,42,.1);
+    border: 1px solid rgba(184,147,42,.35);
+    border-radius: 999px;
+    padding: .35rem 1rem;
+    font-size: .92rem;
+    color: #1A5C2E;
+    font-weight: 700;
+  }
+  .cert-stat strong { color: #b8932a; }
+
+  .cert-footer {
+    margin-top: auto;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 1.1rem;
+    font-size: .8rem;
+    color: #6b7280;
+    z-index: 1;
+  }
+  .cert-footer .seal {
+    text-align: center;
+    color: #1A5C2E;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+  .cert-footer .seal-mark {
+    width: 56px; height: 56px;
+    border: 2px solid #b8932a;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto .25rem;
+    background: #fff;
+  }
+  .cert-code {
+    font-family: ui-monospace, monospace;
+    font-size: .82rem;
+    color: #b8932a;
+    letter-spacing: .12em;
+    direction: ltr;
+    font-weight: 700;
+  }
+  .cert-date {
+    font-weight: 600;
+    color: #4b5563;
+    direction: ltr;
+  }
+</style>
+</head>
+<body>
+
+<!--
+  Static demo of the recipient-facing certificate. Mirrors the dynamic
+  layout produced by verify-cert.js after a successful certs.verify call,
+  but rendered with seed data so a Chrome-headless print-to-pdf can
+  produce the file without any network/JS dependency.
+
+  Sample data:
+   - Recipient: عبدالمحسن محمد صالح سادس  (matches the president's test
+     recipient from the WhatsApp screenshot)
+   - Project:   مبادرة مرفأ — لقاءات قادمة
+   - Role:      منسق لوجستي
+   - Hours:     12
+   - Date:      2026-05-15
+   - Code:      CRT_DEMO_001  (placeholder — not a real verifiable code)
+-->
+
+<div class="cert-stage">
+  <div class="cert-sheet">
+    <!-- Inline SVG placeholder — Chrome headless doesn't always resolve
+         relative <img src=> when loaded via file:// URLs. Inline SVG
+         keeps the asset embedded so the PDF is self-contained. -->
+    <svg class="cert-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#1A5C2E"/>
+      <path d="M50 18 L62 42 L86 46 L68 64 L72 88 L50 76 L28 88 L32 64 L14 46 L38 42 Z"
+            fill="#b8932a" stroke="#fff" stroke-width="1"/>
+      <text x="50" y="56" font-family="Almarai, sans-serif" font-size="13"
+            font-weight="800" fill="#fff" text-anchor="middle">SSAM</text>
+    </svg>
+
+    <div class="cert-title-ar">شهادة تقدير</div>
+    <div class="cert-title-en">Certificate of Appreciation</div>
+    <div class="cert-divider"></div>
+
+    <div class="cert-intro">تُمنح هذه الشهادة إلى</div>
+    <div class="cert-recipient">عبدالمحسن محمد صالح سادس</div>
+
+    <div class="cert-body-text">
+      تقديراً لجهوده الكريمة ومشاركته الفاعلة في
+      <span class="cert-project">مبادرة مرفأ — لقاءات قادمة</span>
+    </div>
+
+    <div class="cert-stats">
+      <div class="cert-stat">الدور: <strong>منسق لوجستي</strong></div>
+      <div class="cert-stat">عدد الساعات: <strong>12</strong></div>
+    </div>
+
+    <div class="cert-footer">
+      <div class="cert-date">2026-05-15</div>
+      <div class="seal">
+        <div class="seal-mark">🌿</div>
+        نادي الطلبة السعوديين<br/>في ملبورن
+      </div>
+      <div class="cert-code">CRT_DEMO_001</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
