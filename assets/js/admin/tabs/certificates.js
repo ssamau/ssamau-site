@@ -49,15 +49,31 @@ export async function issueCert() {
   const mid = gv('cert-mbr-sel');
   if (!pid || !mid) { toast('المشروع والعضو مطلوبان', 'twarn'); return; }
   const m = DB.members.find(mb => mb.member_id === mid);
+  // Edge Function `certs.issue` expects: recipient_name / recipient_email
+  // / role / hours. The form was sending `participant_name` /
+  // `participation_role` (older Apps-Script-era names) and never
+  // supplied `recipient_email` — both columns landed NULL in the
+  // certificates table and tryDeliverCert silently skipped the
+  // delivery email. Fixed by aligning names + adding the email lookup
+  // + pulling the member's FinalApproved hours sum so the cert shows
+  // a real number, not always 0.
+  const recipient_email = m ? (m.email || '') : '';
+  const recipient_name  = m ? (m.preferred_name || m.full_name) : '';
+  if (!recipient_email) {
+    toast('⚠️ العضو المختار ليس له بريد مسجّل — لن يستلم الشهادة بالإيميل', 'twarn');
+    // Still proceed — the cert row + verification page work without
+    // the email. Admin can hand over the cert code manually.
+  }
   const r = await api('certs.issue', {
-    project_id:        pid,
-    member_id:         mid,
-    participant_name:  m ? (m.preferred_name || m.full_name) : mid,
-    participation_role:'متطوع',
-    hours:             0,
+    project_id:      pid,
+    member_id:       mid,
+    recipient_name,
+    recipient_email,
+    role:            'متطوع',
+    hours:           m ? (m.total_hours || 0) : 0,
   });
-  if (r) {
-    toast(r.already_exists ? '⚠️ الشهادة موجودة بالفعل' : '🏅 تم إصدار الشهادة');
+  if (r && r.success) {
+    toast('🏅 تم إصدار الشهادة' + (recipient_email ? ' وإرسالها بالبريد' : ''));
     loadCerts('');
     switchCertTab('list');
   }
