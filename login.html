@@ -73,7 +73,11 @@
     </div>
 
     <!-- ─── Reset-request pane (toggled in by #forgot-link) ──────────── -->
-    <div class="reset-pane">
+    <!-- Inline display:none is the fail-closed default. The pane should
+         be hidden until the user explicitly clicks "نسيت كلمة المرور؟",
+         even if the CSS file fails to load (CSP block, cache hiccup).
+         login.js toggles this inline style directly on click. -->
+    <div class="reset-pane" style="display:none">
       <p class="lc-welcome">إعادة تعيين كلمة المرور</p>
       <p class="reset-intro">
         أدخل بريدك الإلكتروني أو هويتك الوطنية، وسنرسل لك رابط استعادة

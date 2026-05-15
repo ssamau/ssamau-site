@@ -163,12 +163,22 @@ function togglePw() {
 }
 
 // ── Forgot-password flow ────────────────────────────────────────────
-// Pane toggle is a single data-attribute on .lc-body — CSS handles the
-// visual swap. We also pre-fill the reset identifier with whatever's
-// in the login form so the user doesn't retype.
+// Pane toggle directly manipulates inline `display` styles on both
+// panes. The CSS-only `data-mode` cascade is kept as a backup (still
+// works), but inline styles win regardless of whether the stylesheet
+// loaded — important because login.html is the user's first touchpoint
+// and a missing CSS file used to leave both forms visible at once.
+function _setPaneDisplay(login, reset) {
+  const loginEl = document.querySelector('.login-pane');
+  const resetEl = document.querySelector('.reset-pane');
+  if (loginEl) loginEl.style.display = login;
+  if (resetEl) resetEl.style.display = reset;
+}
+
 function showResetPane(e) {
   e?.preventDefault?.();
   $('#lc-body').dataset.mode = 'reset';
+  _setPaneDisplay('none', '');
   const idVal = $('#identifier')?.value?.trim();
   if (idVal && !$('#reset-identifier').value) $('#reset-identifier').value = idVal;
   $('#reset-error')?.classList.remove('show');
@@ -179,6 +189,7 @@ function showResetPane(e) {
 function showLoginPane(e) {
   e?.preventDefault?.();
   delete $('#lc-body').dataset.mode;
+  _setPaneDisplay('', 'none');
 }
 
 async function doRequestReset() {
