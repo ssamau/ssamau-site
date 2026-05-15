@@ -38,9 +38,13 @@ export async function loadHours(projectId) {
 export function renderHoursRow(h) {
   const member  = DB.members.find(m => m.member_id === h.member_id);
   const project = DB.projects.find(p => p.project_id === h.project_id);
-  const name = h.participant_type === 'Member'
-    ? (member ? esc(member.preferred_name || member.full_name) : h.member_id)
-    : esc(h.volunteer_email);
+  // Don't rely on participant_type string casing — older rows store
+  // 'member' / 'volunteer' (lowercase) but the form sends 'Member' /
+  // 'Volunteer' (capital). Check member_id presence directly: if there's
+  // a member_id, treat as Member; otherwise it's a volunteer/external row.
+  const name = h.member_id
+    ? (member ? esc(member.preferred_name || member.full_name) : esc(h.member_id))
+    : esc(h.volunteer_email || h.volunteer_name || '—');
   const projectCell = project
     ? `<div style="font-weight:600">${esc(project.project_name)}</div>
        ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`

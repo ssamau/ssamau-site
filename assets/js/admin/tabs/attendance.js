@@ -25,9 +25,14 @@ export async function loadAttendance(projectId) {
   tbody.innerHTML = items.map(a => {
     const member  = DB.members.find(m  => m.member_id  === a.member_id);
     const project = DB.projects.find(x => x.project_id === a.project_id);
-    const name = a.participant_type === 'Member'
-      ? (member ? esc(member.preferred_name || member.full_name) : a.member_id)
-      : esc(a.volunteer_email);
+    // The `attendance` table has no participant_type column — derive it
+    // from member_id presence. Same robustness fix as hours.js (where
+    // older rows store the type in lowercase and the form sends capital).
+    const isMember = !!a.member_id;
+    const name = isMember
+      ? (member ? esc(member.preferred_name || member.full_name) : esc(a.member_id))
+      : esc(a.volunteer_email || '—');
+    const typeLabel = isMember ? 'Member' : 'Volunteer';
     const checker = DB.members.find(m => m.member_id === a.checked_by_member_id);
     const projectCell = project
       ? `<div style="font-weight:600">${esc(project.project_name)}</div>
@@ -36,7 +41,7 @@ export async function loadAttendance(projectId) {
     return `<tr>
       <td><strong>${name}</strong></td>
       <td>${projectCell}</td>
-      <td>${tag(a.participant_type, a.participant_type === 'Member' ? 't-b' : 't-p')}</td>
+      <td>${tag(typeLabel, isMember ? 't-b' : 't-p')}</td>
       <td>${tag(a.attendance_status, STATUS_COLORS[a.attendance_status] || 't-gr')}</td>
       <td>${fmtDate(a.attendance_date) || '—'}</td>
       <td>${checker ? esc(checker.preferred_name || checker.full_name) : '—'}</td>
