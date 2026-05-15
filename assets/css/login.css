@@ -285,3 +285,45 @@ body::before {
   color: #fff;
   border-color: var(--g);
 }
+
+/* ── signup.html mode-toggle link ────────────────────────────────────
+   The "have a PIN instead of a link?" / "have an email link instead?"
+   toggle below the submit button. Was previously defined in an inline
+   <style> block on signup.html, which the project's CSP
+   (style-src 'self') strips — so it rendered as plain unstyled text.
+   Lives here now so the rules survive. */
+.mode-toggle {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: .78rem;
+}
+.mode-toggle a {
+  color: var(--g);
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mode-toggle a:hover { text-decoration: underline; }
+/* In dark mode var(--g) is the same as the panel background. Swap to
+   brand gold for visibility, same accent we use on the homepage dark
+   pass + activate-link / forgot-link / reset-back above. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mode-toggle a { color: #c9a032; }
+}
+:root[data-theme="dark"] .mode-toggle a { color: #c9a032; }
+
+/* PIN box gets monospace + tight letter-spacing so 6 digits look
+   unambiguous. National ID also monospace, LTR + left-aligned because
+   a 10-digit Saudi NID reads naturally that way. */
+#pin {
+  font-family: Menlo, Consolas, monospace;
+  letter-spacing: .25em;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+#national-id {
+  font-family: Menlo, Consolas, monospace;
+  direction: ltr;
+  text-align: left;
+}
