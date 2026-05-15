@@ -12,30 +12,6 @@
 <link rel="manifest" href="manifest.json"/>
 <meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
 <meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
-<style>
-  /* "First time? Activate your account here" link below the login button.
-     Light mode: brand dark-green on near-white (good contrast).
-     Dark  mode: brand gold on dark-green panel — var(--g) becomes invisible
-     in dark mode (only 3% lightness difference from the panel) so we
-     swap to gold, matching the kpi-n / ev-tag accent on the homepage
-     dark pass. Same fix as in signup.html's .mode-toggle a. */
-  .activate-link {
-    margin-top: 1.25rem;
-    text-align: center;
-    font-size: .78rem;
-    color: var(--tm, #9ca3af);
-  }
-  .activate-link a {
-    color: var(--g, #1A5C2E);
-    font-weight: 700;
-    text-decoration: none;
-  }
-  .activate-link a:hover { text-decoration: underline; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]):not([data-theme="dark"]) .activate-link a { color: #c9a032; }
-  }
-  :root[data-theme="dark"] .activate-link a { color: #c9a032; }
-</style>
 </head>
 <body>
 
@@ -46,50 +22,82 @@
     <div class="lc-sub">Saudi Students Association in Melbourne</div>
   </div>
 
-  <div class="lc-body">
-    <p class="lc-welcome">مرحباً — يرجى تسجيل الدخول للوصول إلى لوحة الإدارة</p>
+  <div class="lc-body" id="lc-body">
+    <!-- ─── Login pane (default) ─────────────────────────────────────── -->
+    <div class="login-pane">
+      <p class="lc-welcome">مرحباً — يرجى تسجيل الدخول للوصول إلى لوحة الإدارة</p>
 
-    <div class="fg">
-      <label>البريد الإلكتروني، الهوية الوطنية، أو اسم المستخدم</label>
-      <div class="fg-icon-wrap">
-        <span class="fg-icon">👤</span>
-        <input type="text" id="identifier" placeholder="أدخل أحد المعرّفات" autocomplete="username" autocapitalize="off" inputmode="email"/>
+      <div class="fg">
+        <label>البريد الإلكتروني، الهوية الوطنية، أو اسم المستخدم</label>
+        <div class="fg-icon-wrap">
+          <span class="fg-icon">👤</span>
+          <input type="text" id="identifier" placeholder="أدخل أحد المعرّفات" autocomplete="username" autocapitalize="off" inputmode="email"/>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>كلمة المرور</label>
+        <div class="fg-icon-wrap">
+          <span class="fg-icon">🔒</span>
+          <input type="password" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password"/>
+          <button class="pw-toggle" type="button" id="pw-eye">👁️</button>
+        </div>
+      </div>
+
+      <button class="login-btn" id="login-btn" type="button">
+        <span id="login-btn-txt">تسجيل الدخول</span>
+      </button>
+
+      <div class="error-msg" id="error-msg">❌ المعرّف أو كلمة المرور غير صحيحة</div>
+
+      <!-- Forgot-password entry point. Click swaps lc-body into reset
+           mode (no page navigation). Identifier carries over so the
+           user doesn't have to retype it. -->
+      <div class="forgot-link">
+        <a id="forgot-link" role="button" tabindex="0">نسيت كلمة المرور؟</a>
+      </div>
+
+      <!--
+        First-time activation entry point — for newly-invited members who
+        have either an email link (handled by signup.html?token=…) or a
+        PIN from the committee head. Visible on EVERY login load so a
+        member who doesn't know to look in their inbox first can still
+        get to the activation form. The link is intentionally low-emphasis
+        relative to the primary login button — most visitors to /login.html
+        already have an account.
+      -->
+      <div class="activate-link">
+        <span>عضو جديد ولديك دعوة من المسؤول؟ </span>
+        <a href="signup.html">فعّل حسابك هنا ←</a>
       </div>
     </div>
 
-    <div class="fg">
-      <label>كلمة المرور</label>
-      <div class="fg-icon-wrap">
-        <span class="fg-icon">🔒</span>
-        <input type="password" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password"/>
-        <button class="pw-toggle" type="button" id="pw-eye">👁️</button>
+    <!-- ─── Reset-request pane (toggled in by #forgot-link) ──────────── -->
+    <div class="reset-pane">
+      <p class="lc-welcome">إعادة تعيين كلمة المرور</p>
+      <p class="reset-intro">
+        أدخل بريدك الإلكتروني أو هويتك الوطنية، وسنرسل لك رابط استعادة
+        إلى البريد المسجّل في حسابك.
+      </p>
+
+      <div class="fg">
+        <label>البريد الإلكتروني أو الهوية الوطنية</label>
+        <div class="fg-icon-wrap">
+          <span class="fg-icon">📧</span>
+          <input type="text" id="reset-identifier" placeholder="أدخل المعرّف" autocomplete="username" autocapitalize="off"/>
+        </div>
       </div>
-    </div>
 
-    <button class="login-btn" id="login-btn" type="button">
-      <span id="login-btn-txt">تسجيل الدخول</span>
-    </button>
+      <button class="login-btn" id="reset-btn" type="button">
+        <span id="reset-btn-txt">إرسال رابط الاستعادة</span>
+      </button>
 
-    <div class="error-msg" id="error-msg">❌ المعرّف أو كلمة المرور غير صحيحة</div>
+      <div class="error-msg" id="reset-error">❌</div>
+      <div class="error-msg" id="reset-success" style="background:#0f5132;color:#d1e7dd;border-color:#0f5132">✅</div>
 
-    <!--
-      First-time activation entry point — for newly-invited members who
-      have either an email link (handled by signup.html?token=…) or a
-      PIN from the committee head. Visible on EVERY login load so a
-      member who doesn't know to look in their inbox first can still
-      get to the activation form. The link is intentionally low-emphasis
-      relative to the primary login button — most visitors to /login.html
-      already have an account.
-
-      Styling lives in the <style> block below (not inline) so the
-      dark-mode color override can win the cascade — inline styles
-      override CSS rules at any specificity, so the bug from PR #18
-      was that var(--g) (dark green) became invisible on dark mode
-      because we couldn't override it.
-    -->
-    <div class="activate-link">
-      <span>عضو جديد ولديك دعوة من المسؤول؟ </span>
-      <a href="signup.html">فعّل حسابك هنا ←</a>
+      <div class="reset-back">
+        <a id="reset-back-link" role="button" tabindex="0">← العودة إلى تسجيل الدخول</a>
+      </div>
     </div>
   </div>
 

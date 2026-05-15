@@ -283,6 +283,7 @@ export function requireAdminScope(user: UserContext | null, committeeId: string 
 export const PUBLIC_ACTIONS = new Set<string>([
   'auth',
   'auth.resolveIdentifier',
+  'auth.requestPasswordReset',
   // Phase 3 of Branch 4 — member completes the signup flow from
   // signup.html using either the email-link token or the NID+PIN combo.
   // These are intentionally public: at the moment the member calls

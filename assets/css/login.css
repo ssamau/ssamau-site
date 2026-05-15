@@ -200,3 +200,58 @@ body::before {
   40%, 80% { transform: translateX(6px); }
 }
 .shake { animation: shake .4s ease; }
+
+/* ────────────────────────────────────────────────────────────────────
+   Secondary links below the login button
+   ────────────────────────────────────────────────────────────────────
+   Was inline in login.html; moved out so the strict CSP (style-src 'self')
+   doesn't drop the rule. */
+.activate-link,
+.forgot-link {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: .78rem;
+  color: var(--tm);
+}
+.forgot-link { margin-top: .85rem; }
+.activate-link a,
+.forgot-link a {
+  color: var(--g);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.activate-link a:hover,
+.forgot-link a:hover { text-decoration: underline; }
+/* Gold accent in dark mode — var(--g) goes invisible on the dark panel. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .activate-link a,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .forgot-link a,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .reset-back a { color: #c9a032; }
+}
+:root[data-theme="dark"] .activate-link a,
+:root[data-theme="dark"] .forgot-link a,
+:root[data-theme="dark"] .reset-back a { color: #c9a032; }
+
+/* ── Reset-request pane toggle ────────────────────────────────────── */
+.lc-body[data-mode="reset"] .login-pane     { display: none; }
+.lc-body:not([data-mode="reset"]) .reset-pane { display: none; }
+.reset-intro {
+  text-align: center;
+  color: var(--tm);
+  font-size: .85rem;
+  margin: 0 0 1rem;
+  line-height: 1.7;
+}
+.reset-back {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: .8rem;
+}
+.reset-back a {
+  color: var(--g);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.reset-back a:hover { text-decoration: underline; }

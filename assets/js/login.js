@@ -50,8 +50,17 @@ if (idInput && lastUser) idInput.value = lastUser;
 // ── Wire handlers ───────────────────────────────────────────────────
 $('#login-btn')?.addEventListener('click', doLogin);
 $('#pw-eye')   ?.addEventListener('click', togglePw);
+$('#forgot-link')      ?.addEventListener('click', showResetPane);
+$('#forgot-link')      ?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') showResetPane(e); });
+$('#reset-back-link')  ?.addEventListener('click', showLoginPane);
+$('#reset-back-link')  ?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') showLoginPane(e); });
+$('#reset-btn')        ?.addEventListener('click', doRequestReset);
+// Enter-to-submit: which form depends on which pane is showing.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') doLogin();
+  if (e.key !== 'Enter') return;
+  const mode = $('#lc-body')?.dataset.mode;
+  if (mode === 'reset') doRequestReset();
+  else                  doLogin();
 });
 
 // ── Logic ───────────────────────────────────────────────────────────
@@ -151,4 +160,72 @@ function togglePw() {
     inp.type = 'password';
     eye.textContent = '👁️';
   }
+}
+
+// ── Forgot-password flow ────────────────────────────────────────────
+// Pane toggle is a single data-attribute on .lc-body — CSS handles the
+// visual swap. We also pre-fill the reset identifier with whatever's
+// in the login form so the user doesn't retype.
+function showResetPane(e) {
+  e?.preventDefault?.();
+  $('#lc-body').dataset.mode = 'reset';
+  const idVal = $('#identifier')?.value?.trim();
+  if (idVal && !$('#reset-identifier').value) $('#reset-identifier').value = idVal;
+  $('#reset-error')?.classList.remove('show');
+  $('#reset-success')?.classList.remove('show');
+  $('#reset-identifier')?.focus();
+}
+
+function showLoginPane(e) {
+  e?.preventDefault?.();
+  delete $('#lc-body').dataset.mode;
+}
+
+async function doRequestReset() {
+  const identifier = $('#reset-identifier').value.trim();
+  if (!identifier) {
+    showResetError('يرجى إدخال البريد أو الهوية الوطنية');
+    return;
+  }
+
+  const btn = $('#reset-btn');
+  btn.disabled  = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+  $('#reset-error')?.classList.remove('show');
+  $('#reset-success')?.classList.remove('show');
+
+  try {
+    // The action always returns { sent: true } — anti-enumeration.
+    // We don't surface the email address back to the user either:
+    // the success message just promises "if there's a match, you'll
+    // get an email", same as every well-behaved reset endpoint.
+    await callApi('auth.requestPasswordReset', {
+      identifier,
+      redirectTo: window.location.origin + '/reset-password.html',
+    });
+    showResetSuccess(
+      'إذا كان هناك حساب مرتبط بهذا المعرّف، فستصلك رسالة بالرابط خلال دقائق. تحقق من بريدك (وصندوق الـ Spam).'
+    );
+    // Disable resubmit for a beat so the user doesn't spam.
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<span id="reset-btn-txt">إرسال رابط الاستعادة</span>';
+    }, 4000);
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<span id="reset-btn-txt">إرسال رابط الاستعادة</span>';
+    showResetError('تعذّر الاتصال بالخادم، حاول مجدداً');
+  }
+}
+
+function showResetError(msg) {
+  const el = $('#reset-error');
+  el.textContent = '❌ ' + msg;
+  el.classList.add('show');
+}
+
+function showResetSuccess(msg) {
+  const el = $('#reset-success');
+  el.textContent = '✅ ' + msg;
+  el.classList.add('show');
 }

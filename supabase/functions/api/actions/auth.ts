@@ -501,6 +501,78 @@ const usersSendPasswordReset: Handler = async (body, user) => {
   };
 };
 
+// ─── `auth.requestPasswordReset` — PUBLIC self-service reset email ────
+// Logged-out endpoint for "نسيت كلمة المرور؟". Takes the same free-text
+// identifier the login form takes (email / NID / username) and, if it
+// resolves to a Supabase-Auth-backed account, fires `resetPasswordForEmail`
+// to the account's canonical auth.users.email.
+//
+// Anti-enumeration: ALWAYS returns `{ sent: true }`. We don't tell the
+// caller whether the identifier matched, whether the account is legacy,
+// or anything else — that's the standard pattern for self-service reset
+// endpoints and matches how the rest of our public surface handles
+// "unknown identifier" (the login form already shows a generic invalid-
+// credentials message). Note that `auth.resolveIdentifier` does leak
+// existence — but that exists for the login flow, and is already
+// timing-equivalent to brute-forcing `auth`. Adding a second leak path
+// here would be a step backwards.
+//
+// Legacy holdouts (auth_user_id IS NULL) get no email — they need the
+// admin-triggered temp-password flow. There are only 4 of them and
+// they're all leadership accounts; documented in STATUS.md.
+//
+// Rate limiting: Supabase Auth applies its own per-email limits
+// (typically 1 recovery email per minute per address). We don't add
+// our own — at SSAM's scale (~100 users) that's overkill.
+const authRequestPasswordReset: Handler = async (body) => {
+  const raw = String(body.identifier ?? '').trim();
+  const redirectTo = (body.redirectTo as string | undefined)?.trim()
+    || 'https://ssamau.com/reset-password.html';
+
+  // Empty input → still return success (no enumeration about input shape).
+  if (!raw) return { sent: true };
+
+  const lower = raw.toLowerCase();
+
+  // Same lookup as authResolveIdentifier, plus we need auth_email to
+  // pass to Supabase. Legacy users come back with auth_user_id NULL
+  // and we just no-op them.
+  const rows = await sql`
+    SELECT u.auth_user_id, au.email AS auth_email
+    FROM public.users u
+    LEFT JOIN public.members m  ON m.member_id = u.member_id
+    LEFT JOIN auth.users    au  ON au.id = u.auth_user_id
+    WHERE
+      LOWER(u.username)  = ${lower}
+      OR (m.national_id IS NOT NULL AND m.national_id = ${raw})
+      OR (m.email       IS NOT NULL AND LOWER(m.email)  = ${lower})
+      OR (au.email      IS NOT NULL AND LOWER(au.email) = ${lower})
+    LIMIT 1
+  ` as Array<{ auth_user_id: string | null; auth_email: string | null }>;
+
+  const row = rows[0];
+  if (!row || !row.auth_user_id || !row.auth_email) {
+    // Either no match, or matched a legacy holdout. Silent success.
+    return { sent: true };
+  }
+
+  // Migrated account — fire the Supabase recovery email. Same client
+  // pattern as usersSendPasswordReset.
+  const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  // Errors logged server-side but never surfaced to caller — we don't
+  // want a malformed redirectTo or a transient Supabase blip to leak
+  // anything about the input.
+  const { error } = await admin.auth.resetPasswordForEmail(row.auth_email, { redirectTo });
+  if (error) console.error('[auth.requestPasswordReset] supabase error:', error.message);
+
+  return { sent: true };
+};
+
 // ─── `auth.whoami` — current user's app-level profile ──────────────────
 // Authed action. After a Supabase sign-in the frontend has the access
 // token but not the app-level fields (access_level, member_id,
@@ -1110,6 +1182,7 @@ export function composeInviteEmail(opts: {
 export const authActions: Record<string, Handler> = {
   'auth':                    auth,
   'auth.resolveIdentifier':  authResolveIdentifier,
+  'auth.requestPasswordReset': authRequestPasswordReset,
   'auth.whoami':             authWhoami,
   'auth.invite.byEmail':         authInviteByEmail,
   'auth.invite.byPin':           authInviteByPin,
