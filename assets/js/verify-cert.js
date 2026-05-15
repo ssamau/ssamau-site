@@ -88,6 +88,22 @@ function showCertificate(cert) {
   const issuedAt  = String(cert.issued_at || '').split('T')[0] || '—';
   const code      = cert.cert_code || '';
 
+  // Arabic 3rd-person possessive needs the right gender suffix:
+  //   male   → "جهوده الكريمة ومشاركته الفاعلة"  (his)
+  //   female → "جهودها الكريمة ومشاركتها الفاعلة"  (her)
+  // DB stores 'ذكر' / 'أنثى' / NULL. NULL (volunteer cert with no
+  // linked member row, or member row with empty gender) falls back to
+  // the masculine form — that's the conventional Arabic default when
+  // the speaker doesn't know the recipient's gender (and matches how
+  // the cert read before this fix).
+  // Note: the preposition `ل` is part of the efforts phrase ("لجهوده" =
+  // "for his efforts"); keeping it in the variable avoids losing it
+  // in the template, which earlier dropped the ل and produced the
+  // ungrammatical "تقديراً جهوده" without the preposition.
+  const isFemale  = cert.member_gender === 'أنثى';
+  const efforts   = isFemale ? 'لجهودها الكريمة'     : 'لجهوده الكريمة';
+  const partake   = isFemale ? 'ومشاركتها الفاعلة'  : 'ومشاركته الفاعلة';
+
   document.body.innerHTML = `
     <div class="cert-stage">
       <div class="cert-sheet">
@@ -100,7 +116,7 @@ function showCertificate(cert) {
         <div class="cert-recipient">${escapeHtml(name)}</div>
 
         <div class="cert-body-text">
-          تقديراً لجهوده الكريمة ومشاركته الفاعلة في
+          تقديراً ${efforts} ${partake} في
           <span class="cert-project">${escapeHtml(project)}</span>
         </div>
 

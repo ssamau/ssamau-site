@@ -199,9 +199,15 @@ const certsList: Handler = async (body) => {
 const certsVerify: Handler = async (body) => {
   const cert_code = body.cert_code as string | undefined;
   if (!cert_code) throw httpErr('Missing cert_code', 400);
+  // member_gender is now joined so the verify-cert page can pick the
+  // right Arabic 3rd-person possessive ("جهوده" for male / "جهودها"
+  // for female). DB values are 'ذكر' / 'أنثى'; the frontend maps to
+  // the correct pronoun via a lookup. NULL = no member row (e.g.
+  // volunteer cert) → frontend falls back to the masculine form
+  // (Arabic's default neutral when speaker is uncertain).
   const [c] = await sql`
     SELECT c.cert_code, c.recipient_name, c.role, c.hours, c.issued_at,
-           m.full_name AS member_full_name, m.preferred_name,
+           m.full_name AS member_full_name, m.preferred_name, m.gender AS member_gender,
            p.project_name, p.event_date
     FROM certificates c
     LEFT JOIN members  m ON m.member_id  = c.member_id

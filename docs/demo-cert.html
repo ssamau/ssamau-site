@@ -18,13 +18,19 @@
     background: linear-gradient(135deg, rgba(26,92,46,.04) 0%, rgba(184,147,42,.06) 100%);
   }
 
+  /* min-height was 100vh which, in Chrome's print pipeline, made each
+   * stage consume an entire A4 page even though the cert-sheet inside
+   * is shorter — the second stage then got pushed onto a third
+   * (clipped) page and the visible page 2 was empty. Letting the stage
+   * size to its content + an explicit page-break between sheets keeps
+   * each cert on exactly one A4 landscape sheet. */
   .cert-stage {
-    min-height: 100vh;
     padding: 1.5rem 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
+  .cert-stage + .cert-stage { break-before: page; page-break-before: always; }
 
   .cert-sheet {
     width: 100%;
@@ -182,21 +188,13 @@
   but rendered with seed data so a Chrome-headless print-to-pdf can
   produce the file without any network/JS dependency.
 
-  Sample data:
-   - Recipient: عبدالمحسن محمد صالح سادس  (matches the president's test
-     recipient from the WhatsApp screenshot)
-   - Project:   مبادرة مرفأ — لقاءات قادمة
-   - Role:      منسق لوجستي
-   - Hours:     12
-   - Date:      2026-05-15
-   - Code:      CRT_DEMO_001  (placeholder — not a real verifiable code)
+  Two pages: one with masculine pronouns, one with feminine — so the
+  president can see the gender-aware grammar is wired correctly.
 -->
 
+<!-- Page 1 — male recipient (masculine pronouns: لجهوده / مشاركته) -->
 <div class="cert-stage">
   <div class="cert-sheet">
-    <!-- Inline SVG placeholder — Chrome headless doesn't always resolve
-         relative <img src=> when loaded via file:// URLs. Inline SVG
-         keeps the asset embedded so the PDF is self-contained. -->
     <svg class="cert-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="48" fill="#1A5C2E"/>
       <path d="M50 18 L62 42 L86 46 L68 64 L72 88 L50 76 L28 88 L32 64 L14 46 L38 42 Z"
@@ -229,6 +227,46 @@
         نادي الطلبة السعوديين<br/>في ملبورن
       </div>
       <div class="cert-code">CRT_DEMO_001</div>
+    </div>
+  </div>
+</div>
+
+<!-- Page 2 — female recipient (feminine pronouns: لجهودها / مشاركتها).
+     Page break enforced by the `.cert-stage + .cert-stage` rule above. -->
+<div class="cert-stage">
+  <div class="cert-sheet">
+    <svg class="cert-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#1A5C2E"/>
+      <path d="M50 18 L62 42 L86 46 L68 64 L72 88 L50 76 L28 88 L32 64 L14 46 L38 42 Z"
+            fill="#b8932a" stroke="#fff" stroke-width="1"/>
+      <text x="50" y="56" font-family="Almarai, sans-serif" font-size="13"
+            font-weight="800" fill="#fff" text-anchor="middle">SSAM</text>
+    </svg>
+
+    <div class="cert-title-ar">شهادة تقدير</div>
+    <div class="cert-title-en">Certificate of Appreciation</div>
+    <div class="cert-divider"></div>
+
+    <div class="cert-intro">تُمنح هذه الشهادة إلى</div>
+    <div class="cert-recipient">هدى حمدان أحمد البكيري</div>
+
+    <div class="cert-body-text">
+      تقديراً لجهودها الكريمة ومشاركتها الفاعلة في
+      <span class="cert-project">استقبال الطلاب الجدد</span>
+    </div>
+
+    <div class="cert-stats">
+      <div class="cert-stat">الدور: <strong>مصوّرة</strong></div>
+      <div class="cert-stat">عدد الساعات: <strong>8</strong></div>
+    </div>
+
+    <div class="cert-footer">
+      <div class="cert-date">2026-05-15</div>
+      <div class="seal">
+        <div class="seal-mark">🌿</div>
+        نادي الطلبة السعوديين<br/>في ملبورن
+      </div>
+      <div class="cert-code">CRT_DEMO_002</div>
     </div>
   </div>
 </div>
