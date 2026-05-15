@@ -75,27 +75,58 @@ function show(kind, msg) {
 }
 
 function showCertificate(cert) {
+  // On a successful verification, swap the entire body to a designed
+  // certificate sheet. The recipient (or any verifier they shared the
+  // link with) sees a proper-looking certificate they can print/save
+  // as PDF via Cmd+P. The login-card form fades out because we replace
+  // the whole `<body>` content — keeps the URL clean and the layout
+  // unambiguous about whether the code was valid.
   const name      = cert.recipient_name || cert.preferred_name || cert.member_full_name || '—';
   const project   = cert.project_name || '—';
   const role      = cert.role || '—';
-  const hours     = cert.hours != null ? `${cert.hours} ساعة` : '—';
+  const hours     = cert.hours != null ? `${cert.hours}` : '—';
   const issuedAt  = String(cert.issued_at || '').split('T')[0] || '—';
+  const code      = cert.cert_code || '';
 
-  resultEl.innerHTML = `
-    <div style="background:rgba(22,163,74,.08);border:1px solid #16a34a;border-radius:14px;padding:1.2rem;text-align:start">
-      <div style="text-align:center;font-size:.85rem;font-weight:700;color:#166534;margin-bottom:1rem">
-        ✅ شهادة موثّقة ومعتمدة من نادي الطلبة السعوديين في ملبورن
+  document.body.innerHTML = `
+    <div class="cert-stage">
+      <div class="cert-sheet">
+        <img class="cert-logo" src="assets/img/logo-200.png" alt="SSAM"/>
+        <div class="cert-title-ar">شهادة تقدير</div>
+        <div class="cert-title-en">Certificate of Appreciation</div>
+        <div class="cert-divider"></div>
+
+        <div class="cert-intro">تُمنح هذه الشهادة إلى</div>
+        <div class="cert-recipient">${escapeHtml(name)}</div>
+
+        <div class="cert-body-text">
+          تقديراً لجهوده الكريمة ومشاركته الفاعلة في
+          <span class="cert-project">${escapeHtml(project)}</span>
+        </div>
+
+        <div class="cert-stats">
+          <div class="cert-stat">الدور: <strong>${escapeHtml(role)}</strong></div>
+          <div class="cert-stat">عدد الساعات: <strong>${escapeHtml(hours)}</strong></div>
+        </div>
+
+        <div class="cert-footer">
+          <div class="cert-date">${escapeHtml(issuedAt)}</div>
+          <div class="seal">
+            <div class="seal-mark">🌿</div>
+            نادي الطلبة السعوديين<br/>في ملبورن
+          </div>
+          <div class="cert-code">${escapeHtml(code)}</div>
+        </div>
       </div>
-      <div style="display:grid;gap:.55rem;font-size:.82rem">
-        <div><span style="color:#6b7280">الاسم:</span> <strong>${escapeHtml(name)}</strong></div>
-        <div><span style="color:#6b7280">الفعالية / المشروع:</span> <strong>${escapeHtml(project)}</strong></div>
-        <div><span style="color:#6b7280">الدور:</span> <strong>${escapeHtml(role)}</strong></div>
-        <div><span style="color:#6b7280">عدد الساعات:</span> <strong>${escapeHtml(hours)}</strong></div>
-        <div><span style="color:#6b7280">تاريخ الإصدار:</span> <strong style="direction:ltr;display:inline-block">${escapeHtml(issuedAt)}</strong></div>
-        <div style="font-family:monospace;font-size:.72rem;color:#9ca3af;text-align:center;letter-spacing:.05em;margin-top:.4rem">${escapeHtml(cert.cert_code || '')}</div>
+
+      <div class="cert-actions">
+        <button type="button" id="cert-print-btn">🖨️ طباعة / حفظ PDF</button>
+        <a href="index.html" class="cert-back-link">← العودة للصفحة الرئيسية</a>
       </div>
     </div>`;
-  resultEl.style.display = '';
+  // CSP blocks inline event handlers (script-src-attr 'self' without
+  // 'unsafe-inline'). Bind via JS instead of an inline onclick=.
+  document.getElementById('cert-print-btn')?.addEventListener('click', () => window.print());
 }
 
 function escapeHtml(s) {
