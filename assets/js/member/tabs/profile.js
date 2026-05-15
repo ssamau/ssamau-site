@@ -22,6 +22,14 @@ import { api, callApi, toast } from '../../lib/ui.js';
 import { esc, gv, sv, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
 
+// Phase-A storage uploaders (CV + profile photo). Both files go to
+// private Supabase Storage buckets via `storage.uploadMemberFile`;
+// the column stores a relative path (e.g. "MBR_X/123-cv.pdf"), and
+// reading requires a 1h signed URL fetched via `storage.getMemberFile`.
+// We render the URL into <a href> for CV and <img src> for photo
+// after each form load, so a freshly-rendered profile shows the
+// latest file without a follow-up refresh.
+
 // In-memory cache of the most recently loaded own-profile row so save
 // doesn't need to refetch — we diff form values against this object
 // and only send the changed fields. Avoids clobbering a field with its
@@ -96,6 +104,13 @@ function renderProfileForm(m) {
   // All fields use `unicode-bidi: plaintext` (inherited from base.css /
   // login.css conventions) so the cursor sits where the user expects
   // when typing LTR data (phones, emails) into RTL layout.
+  //
+  // cv_url and profile_photo_url are NO LONGER editable as text — they
+  // store Storage paths now (Phase A), populated by the upload widgets
+  // rendered at the bottom of the form. The whitelist in saveProfile()
+  // still includes them so an admin import path that hands us a URL
+  // would survive, but the user can't accidentally clobber the upload
+  // path with junk text.
   const formFields = `
     <div class="profile-edit-form">
       <div class="fg-grid">
@@ -107,7 +122,6 @@ function renderProfileForm(m) {
         ${field('date_of_birth',           'تاريخ الميلاد',         m.date_of_birth, 'date')}
         ${field('address_melbourne',       'العنوان في ملبورن',     m.address_melbourne)}
         ${field('linkedin_url',            'رابط LinkedIn',         m.linkedin_url, 'url')}
-        ${field('cv_url',                  'رابط السيرة الذاتية',   m.cv_url, 'url')}
       </div>
       <h4 class="pf-section">الدراسة والابتعاث</h4>
       <div class="fg-grid">
@@ -121,10 +135,135 @@ function renderProfileForm(m) {
       <h4 class="pf-section">عن نفسك</h4>
       ${textarea('skills_hobbies', 'المهارات والاهتمامات', m.skills_hobbies)}
       ${textarea('about_self',     'نبذة عنك',             m.about_self)}
+      <h4 class="pf-section">الملفات</h4>
+      <div class="fg-grid">
+        ${uploaderBlock('photo', 'الصورة الشخصية', m.profile_photo_url)}
+        ${uploaderBlock('cv',    'السيرة الذاتية (PDF)', m.cv_url)}
+      </div>
     </div>
   `;
 
   wrap.innerHTML = headerStrip + formFields;
+
+  // Resolve current file paths to signed URLs (renders previews).
+  // Fail-soft: a missing signed URL just leaves the preview slot empty,
+  // doesn't block the rest of the form.
+  refreshUploaderPreview('photo', m.profile_photo_url).catch(err => console.warn('[photo preview]', err));
+  refreshUploaderPreview('cv',    m.cv_url).catch(err           => console.warn('[cv preview]', err));
+}
+
+// Per-uploader markup. Three slots: a current-file preview (img for
+// photo, link for cv), a file picker, a "rفع" button. Hidden until
+// the file picker has a value, then enabled.
+function uploaderBlock(kind, label, currentPath) {
+  const accept = kind === 'cv' ? 'application/pdf' : 'image/jpeg,image/png,image/webp';
+  const placeholder = kind === 'cv'
+    ? '<span class="upl-empty">لا يوجد ملف بعد</span>'
+    : '<span class="upl-empty">لا توجد صورة بعد</span>';
+  return `
+    <div class="fg upl-fg" id="upl-${kind}-wrap">
+      <label>${esc(label)}</label>
+      <div class="upl-current" id="upl-${kind}-current">${currentPath ? '<span class="upl-empty">جاري التحميل...</span>' : placeholder}</div>
+      <div class="upl-controls">
+        <input type="file" id="upl-${kind}-file" accept="${accept}" data-action="onUploaderChange" data-kind="${kind}" data-event="change"/>
+        <button class="btn btn-g btn-sm" type="button" data-action="submitUploader" data-kind="${kind}" id="upl-${kind}-btn" disabled>⬆ رفع</button>
+        ${currentPath ? `<button class="btn btn-ol btn-sm" type="button" data-action="deleteUploader" data-kind="${kind}">🗑 حذف</button>` : ''}
+      </div>
+      <div class="fg-note">${kind === 'cv' ? 'PDF فقط، 5 ميجابايت كحد أقصى' : 'JPG / PNG / WebP، 3 ميجابايت كحد أقصى'}</div>
+    </div>
+  `;
+}
+
+// Resolve a stored Storage path → signed URL, then render the preview
+// (img for photo, link for cv). Called on form load and after each
+// upload/delete.
+async function refreshUploaderPreview(kind, path) {
+  const slot = document.getElementById(`upl-${kind}-current`);
+  if (!slot) return;
+  if (!path) {
+    slot.innerHTML = kind === 'cv'
+      ? '<span class="upl-empty">لا يوجد ملف بعد</span>'
+      : '<span class="upl-empty">لا توجد صورة بعد</span>';
+    return;
+  }
+  const res = await api('storage.getMemberFile', { data: { kind } });
+  if (!res || !res.success || !res.data?.url) {
+    slot.innerHTML = '<span class="upl-empty" style="color:var(--dn)">تعذّر تحميل المعاينة</span>';
+    return;
+  }
+  if (kind === 'photo') {
+    slot.innerHTML = `<img src="${esc(res.data.url)}" alt="" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid var(--bd)"/>`;
+  } else {
+    slot.innerHTML = `<a href="${esc(res.data.url)}" target="_blank" rel="noopener" style="color:var(--g);font-weight:700;text-decoration:none">📄 عرض الملف الحالي</a>`;
+  }
+}
+
+// Enables the "رفع" button once the file picker has a file selected.
+// data-action handler.
+export function onUploaderChange(el) {
+  const kind = el.dataset.kind;
+  const btn  = document.getElementById(`upl-${kind}-btn`);
+  if (btn) btn.disabled = !el.files || !el.files[0];
+}
+
+// Reads the selected file as base64, posts to storage.uploadMemberFile.
+// On success refreshes the form to pick up the new cv_url/photo path.
+export async function submitUploader(el) {
+  const kind = el.dataset.kind;
+  const input = document.getElementById(`upl-${kind}-file`);
+  const file  = input?.files?.[0];
+  if (!file) {
+    toast('اختر ملفاً أولاً.', 'twarn');
+    return;
+  }
+  // Pre-validate size on the client too — saves an upload round-trip
+  // for an obviously-oversized file. Server cap is the source of truth.
+  const sizeCaps = { cv: 5 * 1024 * 1024, photo: 3 * 1024 * 1024 };
+  if (file.size > sizeCaps[kind]) {
+    toast(`الملف أكبر من الحد المسموح (${sizeCaps[kind] / 1024 / 1024} ميجا).`, 'twarn');
+    return;
+  }
+  const btn = document.getElementById(`upl-${kind}-btn`);
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الرفع...'; }
+  try {
+    const base64Data = await fileToBase64(file);
+    const res = await api('storage.uploadMemberFile', {
+      data: { kind, filename: file.name, contentType: file.type, base64Data },
+    });
+    if (!res || !res.success) {
+      toast(res?.error || 'فشل الرفع.', 'twarn');
+      return;
+    }
+    toast('تم الرفع.', 'tok');
+    // Re-load profile so the column update + signed URL are fresh.
+    await loadProfile();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬆ رفع'; }
+  }
+}
+
+export async function deleteUploader(el) {
+  const kind = el.dataset.kind;
+  if (!confirm(kind === 'cv' ? 'حذف السيرة الذاتية الحالية؟' : 'حذف الصورة الحالية؟')) return;
+  const res = await api('storage.deleteMemberFile', { data: { kind } });
+  if (!res || !res.success) {
+    toast(res?.error || 'فشل الحذف.', 'twarn');
+    return;
+  }
+  toast('تم الحذف.', 'tok');
+  await loadProfile();
+}
+
+// Wrap FileReader in a Promise. result is "data:<mime>;base64,<...>",
+// and the Edge Function strips the prefix server-side, so we pass it
+// through as-is (cheaper than splitting on the client).
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(String(r.result || ''));
+    r.onerror = () => reject(r.error || new Error('read failed'));
+    r.readAsDataURL(file);
+  });
 }
 
 // Small input helper that produces a labeled .fg block reusing admin.css
@@ -156,9 +295,13 @@ export async function saveProfile() {
   // the UPDATE payload small + leaves untouched fields literally
   // untouched (server-side COALESCE handles it either way, but
   // explicit is cheaper to reason about during audits).
+  // cv_url + profile_photo_url are managed by the uploader widgets,
+  // not the text-field diff path — they're absent from this list on
+  // purpose. Including them would null the column on every save
+  // (the inputs don't exist so gv() returns '').
   const allFields = [
     'preferred_name', 'email', 'phone', 'whatsapp', 'gender',
-    'date_of_birth', 'address_melbourne', 'linkedin_url', 'cv_url',
+    'date_of_birth', 'address_melbourne', 'linkedin_url',
     'skills_hobbies', 'about_self',
     'scholarship_entity', 'study_level', 'degree_field', 'university',
     'study_started_window', 'expected_graduation_window',

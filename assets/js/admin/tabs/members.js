@@ -86,9 +86,23 @@ export function renderMembers(members) {
     //       deliberately render nothing in the invite column; managing
     //       these is the Accounts tab's job, not Members.
 
+    // Per-row file indicators (Phase A — storage uploads). Show a
+    // small clickable icon only when the member has uploaded the
+    // file; clicking fetches a 1h signed URL on demand and opens
+    // it in a new tab. Rendering the actual image inline would be
+    // N+1 signed URLs per page load — too slow. Indicators are
+    // enough at the listing level.
+    const fileIcons = [
+      m.profile_photo_url ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="photo" title="عرض الصورة">🖼</button>` : '',
+      m.cv_url            ? `<button class="btn-icon" data-action="openMemberFile" data-id="${esc(m.member_id)}" data-kind="cv"    title="عرض السيرة الذاتية">📄</button>` : '',
+    ].filter(Boolean).join('');
+
     return `<tr>
       <td>
-        <div style="font-weight:700">${esc(m.preferred_name || m.full_name)}</div>
+        <div style="font-weight:700;display:flex;align-items:center;gap:.3rem;flex-wrap:wrap">
+          ${esc(m.preferred_name || m.full_name)}
+          ${fileIcons}
+        </div>
         <div style="font-size:.72rem;color:var(--tm)">${esc(m.full_name)}</div>
       </td>
       <td>${nid}</td>
@@ -114,6 +128,19 @@ export function filterMembersByRole(role) {
 export function filterMembersByStatus(status) {
   const filtered = status ? DB.members.filter(m => m.status === status) : DB.members;
   renderMembers(filtered);
+}
+
+// Phase-A file viewer — fetches a 1h signed URL for the target member's
+// uploaded file (CV or photo) and opens it in a new tab. Admin scope is
+// enforced server-side by storage.getMemberFile, so the click can
+// happen on any row in the table.
+export async function openMemberFile(memberId, kind) {
+  const res = await api('storage.getMemberFile', { data: { member_id: memberId, kind } });
+  if (!res || !res.success || !res.data?.url) {
+    toast(res?.error || 'تعذّر فتح الملف.', 'twarn');
+    return;
+  }
+  window.open(res.data.url, '_blank', 'noopener');
 }
 
 export async function saveMember() {
