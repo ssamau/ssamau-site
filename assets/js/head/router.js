@@ -1,13 +1,18 @@
 // Head portal router. Mirrors member/router.js — separate module so the
 // page set and hash prefix can diverge as the head portal grows.
 
+import { t } from '../lib/i18n.js';
+
+// PAGE_TITLES holds i18n keys (not literal strings) so showPage()
+// resolves the current language at navigation time. Member/router uses
+// the same pattern.
 export const PAGE_TITLES = {
-  dashboard:     'لوحتي',
-  members:       'أعضاء اللجنة',
-  opportunities: 'الفرص التطوعية',
-  hours:         'الساعات',
-  applications:  'طلبات الانضمام',
-  'my-profile':  'ملفي الشخصي',
+  dashboard:     'hp.title.dashboard',
+  members:       'hp.title.members',
+  opportunities: 'hp.title.opportunities',
+  hours:         'hp.title.hours',
+  applications:  'hp.title.applications',
+  'my-profile':  'hp.title.my_profile',
 };
 
 let _loaders = {};
@@ -40,7 +45,7 @@ export function showPage(page) {
   const si = document.querySelector(`.sb-item[data-page="${page}"]`);
   if (si) si.classList.add('active');
   const titleEl = document.getElementById('page-title');
-  if (titleEl) titleEl.textContent = PAGE_TITLES[page] || page;
+  if (titleEl) titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
 
   if (_loaders[page]) _loaders[page]();
 

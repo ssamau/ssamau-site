@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
 </head>
 <body>
-<a class="skip-link" href="#main-content">تجاوز إلى المحتوى</a>
+<a class="skip-link" href="#main-content" data-i18n="common.skip_to_content">تجاوز إلى المحتوى</a>
 <div id="app">
 
 <!--
@@ -30,47 +30,54 @@
     <div class="sb-logo">🌿</div>
     <div class="sb-brand-text">
       <div class="t1">SSAM</div>
-      <div class="t2">لوحة رئيس اللجنة</div>
+      <div class="t2" data-i18n="hp.sb.brand_sub">لوحة رئيس اللجنة</div>
     </div>
   </div>
   <div class="sb-user">
     <div class="sb-avatar" id="sb-av">H</div>
     <div>
       <div class="sb-user-name" id="sb-name">Loading...</div>
-      <div class="sb-user-role" id="sb-role">رئيس لجنة</div>
+      <div class="sb-user-role" id="sb-role" data-i18n="hp.sb.role_label">رئيس لجنة</div>
     </div>
   </div>
   <nav class="sb-nav">
-    <div class="sb-section">لوحة الرئاسة</div>
+    <div class="sb-section" data-i18n="hp.sb.section_presidency">لوحة الرئاسة</div>
     <div class="sb-item active" data-page="dashboard" data-action="showPage">
-      <span class="sb-ic">📊</span>لوحتي
+      <span class="sb-ic">📊</span><span data-i18n="hp.sb.dashboard">لوحتي</span>
     </div>
-    <div class="sb-section">إدارة لجنتي</div>
+    <div class="sb-section" data-i18n="hp.sb.section_mycommittee">إدارة لجنتي</div>
     <div class="sb-item" data-page="members" data-action="showPage">
-      <span class="sb-ic">👥</span>أعضاء اللجنة
+      <span class="sb-ic">👥</span><span data-i18n="hp.sb.members">أعضاء اللجنة</span>
     </div>
     <div class="sb-item" data-page="opportunities" data-action="showPage">
-      <span class="sb-ic">🎯</span>الفرص التطوعية
+      <span class="sb-ic">🎯</span><span data-i18n="hp.sb.opportunities">الفرص التطوعية</span>
     </div>
     <div class="sb-item" data-page="hours" data-action="showPage">
-      <span class="sb-ic">⏱️</span>الساعات
+      <span class="sb-ic">⏱️</span><span data-i18n="hp.sb.hours">الساعات</span>
     </div>
     <div class="sb-item" data-page="applications" data-action="showPage">
-      <span class="sb-ic">📥</span>طلبات الانضمام
+      <span class="sb-ic">📥</span><span data-i18n="hp.sb.applications">طلبات الانضمام</span>
     </div>
 
-    <div class="sb-section">حسابي</div>
+    <div class="sb-section" data-i18n="hp.sb.section_account">حسابي</div>
     <div class="sb-item" data-page="my-profile" data-action="showPage">
-      <span class="sb-ic">👤</span>ملفي الشخصي
+      <span class="sb-ic">👤</span><span data-i18n="hp.sb.my_profile">ملفي الشخصي</span>
     </div>
   </nav>
 
+  <!-- Language toggle — same pattern as member portal. Pills above
+       the theme row, wired by head/main.js. -->
+  <div class="lang-toggle" role="radiogroup" data-i18n-aria-label="lang.label" aria-label="اللغة">
+    <button type="button" class="lang-btn" data-action="setLang" data-value="ar" data-i18n="lang.arabic">العربية</button>
+    <button type="button" class="lang-btn" data-action="setLang" data-value="en" data-i18n="lang.english">English</button>
+  </div>
+
   <div class="sb-theme">
-    <div class="sb-theme-label">المظهر</div>
-    <div class="sb-theme-row" role="radiogroup" aria-label="المظهر">
-      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
-      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" title="فاتح">☀️</button>
-      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" title="داكن">🌙</button>
+    <div class="sb-theme-label" data-i18n="mp.sb.theme_label">المظهر</div>
+    <div class="sb-theme-row" role="radiogroup" data-i18n-aria-label="mp.sb.theme_label" aria-label="المظهر">
+      <button type="button" data-action="setTheme" data-value="auto"  class="sb-theme-btn" data-i18n="mp.sb.theme_auto" data-i18n-title="mp.sb.theme_auto_title" title="تلقائي (حسب النظام)">🌓 تلقائي</button>
+      <button type="button" data-action="setTheme" data-value="light" class="sb-theme-btn" data-i18n-title="mp.sb.theme_light_title" title="فاتح">☀️</button>
+      <button type="button" data-action="setTheme" data-value="dark"  class="sb-theme-btn" data-i18n-title="mp.sb.theme_dark_title" title="داكن">🌙</button>
     </div>
   </div>
 </aside>
@@ -79,13 +86,13 @@
 
 <div class="main">
   <header class="topbar">
-    <button class="sb-toggle" id="sb-toggle" type="button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
-    <span class="topbar-title" id="page-title">لوحتي</span>
+    <button class="sb-toggle" id="sb-toggle" type="button" data-i18n-aria-label="mp.topbar.menu_label" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <span class="topbar-title" id="page-title" data-i18n="hp.title.dashboard">لوحتي</span>
     <div class="topbar-right">
-      <button class="btn btn-ol btn-sm" data-action="logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
+      <button class="btn btn-ol btn-sm" data-action="logout" data-i18n="mp.topbar.logout" style="font-size:.72rem;color:var(--dn);border-color:rgba(220,38,38,.25);padding:.3rem .65rem">🚪 خروج</button>
       <div class="api-status pending" id="api-status">
         <div class="api-dot"></div>
-        <span id="api-status-text">غير متصل</span>
+        <span id="api-status-text" data-i18n="mp.topbar.api_disconnected">غير متصل</span>
       </div>
     </div>
   </header>
@@ -96,7 +103,7 @@
 
       <div class="hd-welcome">
         <div class="hd-welcome-text">
-          <div class="hd-welcome-greeting" id="hd-greeting">مرحباً</div>
+          <div class="hd-welcome-greeting" id="hd-greeting" data-i18n="hp.dash.greeting">مرحباً</div>
           <div class="hd-welcome-committee" id="hd-committee">—</div>
         </div>
         <div class="hd-welcome-emoji">🌿</div>
@@ -105,22 +112,22 @@
       <div class="hd-kpi-grid" id="hd-kpi-grid">
         <div class="hd-kpi-card" data-kind="members">
           <div class="hd-kpi-icon">👥</div>
-          <div class="hd-kpi-label">أعضاء اللجنة</div>
+          <div class="hd-kpi-label" data-i18n="hp.dash.kpi_members">أعضاء اللجنة</div>
           <div class="hd-kpi-value" id="hd-kpi-members">—</div>
         </div>
         <div class="hd-kpi-card" data-kind="applications">
           <div class="hd-kpi-icon">📥</div>
-          <div class="hd-kpi-label">طلبات بانتظار قرارك</div>
+          <div class="hd-kpi-label" data-i18n="hp.dash.kpi_applications">طلبات بانتظار قرارك</div>
           <div class="hd-kpi-value" id="hd-kpi-applications">—</div>
         </div>
         <div class="hd-kpi-card" data-kind="hours">
           <div class="hd-kpi-icon">⏱️</div>
-          <div class="hd-kpi-label">ساعات بانتظار اعتمادك</div>
+          <div class="hd-kpi-label" data-i18n="hp.dash.kpi_hours">ساعات بانتظار اعتمادك</div>
           <div class="hd-kpi-value" id="hd-kpi-hours">—</div>
         </div>
         <div class="hd-kpi-card" data-kind="opportunities">
           <div class="hd-kpi-icon">🎯</div>
-          <div class="hd-kpi-label">فرص مفتوحة</div>
+          <div class="hd-kpi-label" data-i18n="hp.dash.kpi_opportunities">فرص مفتوحة</div>
           <div class="hd-kpi-value" id="hd-kpi-opportunities">—</div>
         </div>
       </div>
@@ -128,53 +135,53 @@
       <div class="hd-queue-grid">
         <div class="card">
           <div class="card-head">
-            <h3>📥 طلبات الانضمام للجنتك</h3>
+            <h3 data-i18n="hp.dash.queue_apps_title">📥 طلبات الانضمام للجنتك</h3>
             <div class="card-head-right">
-              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="applications">عرض الكل ←</button>
+              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="applications" data-i18n="hp.dash.view_all">عرض الكل ←</button>
             </div>
           </div>
           <div id="hd-applications-list" class="hd-queue-list">
-            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+            <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-head">
-            <h3>⏱️ ساعات بانتظار اعتمادك</h3>
+            <h3 data-i18n="hp.dash.queue_hours_title">⏱️ ساعات بانتظار اعتمادك</h3>
             <div class="card-head-right">
-              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="hours">عرض الكل ←</button>
+              <button class="btn btn-ol btn-sm" data-action="showPage" data-page="hours" data-i18n="hp.dash.view_all">عرض الكل ←</button>
             </div>
           </div>
           <div id="hd-hours-list" class="hd-queue-list">
-            <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+            <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
           </div>
         </div>
       </div>
 
       <div class="card hd-quickactions">
         <div class="card-head">
-          <h3>⚡ إجراءات سريعة</h3>
+          <h3 data-i18n="hp.dash.qa_card_title">⚡ إجراءات سريعة</h3>
         </div>
         <div class="hd-quickactions-row">
           <button class="hd-qa" data-action="showPage" data-page="opportunities">
             <div class="hd-qa-ic">🎯</div>
             <div>
-              <div class="hd-qa-t">الفرص التطوعية</div>
-              <div class="hd-qa-s">قائمة فرص لجنتك</div>
+              <div class="hd-qa-t" data-i18n="hp.dash.qa_opps_title">الفرص التطوعية</div>
+              <div class="hd-qa-s" data-i18n="hp.dash.qa_opps_sub">قائمة فرص لجنتك</div>
             </div>
           </button>
           <a class="hd-qa" href="admin.html#/admin/projects" style="text-decoration:none;color:inherit">
             <div class="hd-qa-ic">📅</div>
             <div>
-              <div class="hd-qa-t">إنشاء فعالية</div>
-              <div class="hd-qa-s">حدث جديد للجنتك (عبر الإدارة)</div>
+              <div class="hd-qa-t" data-i18n="hp.dash.qa_event_title">إنشاء فعالية</div>
+              <div class="hd-qa-s" data-i18n="hp.dash.qa_event_sub">حدث جديد للجنتك (عبر الإدارة)</div>
             </div>
           </a>
           <button class="hd-qa" data-action="showPage" data-page="members">
             <div class="hd-qa-ic">👥</div>
             <div>
-              <div class="hd-qa-t">أعضاء اللجنة</div>
-              <div class="hd-qa-s">قائمة أعضاء لجنتك</div>
+              <div class="hd-qa-t" data-i18n="hp.dash.qa_members_title">أعضاء اللجنة</div>
+              <div class="hd-qa-s" data-i18n="hp.dash.qa_members_sub">قائمة أعضاء لجنتك</div>
             </div>
           </button>
         </div>
@@ -186,23 +193,23 @@
     <div class="page" id="page-members">
       <div class="card">
         <div class="card-head">
-          <h3>👥 أعضاء اللجنة</h3>
+          <h3 data-i18n="hp.members.card_title">👥 أعضاء اللجنة</h3>
           <div class="card-head-right">
-            <input class="search-input" placeholder="بحث بالاسم..." data-action="filterTable" data-target="hd-members-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="hp.members.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="hd-members-tbody" data-event="input"/>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>الاسم</th>
-                <th>الدور</th>
-                <th>الجامعة / التخصص</th>
-                <th>الساعات</th>
-                <th>الحالة</th>
+                <th data-i18n="hp.members.col_name">الاسم</th>
+                <th data-i18n="hp.members.col_role">الدور</th>
+                <th data-i18n="hp.members.col_uni">الجامعة / التخصص</th>
+                <th data-i18n="hp.members.col_hours">الساعات</th>
+                <th data-i18n="hp.members.col_status">الحالة</th>
               </tr>
             </thead>
-            <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -212,12 +219,12 @@
     <div class="page" id="page-opportunities">
       <div class="card">
         <div class="card-head">
-          <h3>🎯 الفرص التطوعية</h3>
+          <h3 data-i18n="hp.opps.card_title">🎯 الفرص التطوعية</h3>
           <div class="card-head-right">
-            <button class="btn btn-g btn-sm" data-action="hd.opps.toggleCreate">➕ إنشاء فرصة جديدة</button>
+            <button class="btn btn-g btn-sm" data-action="hd.opps.toggleCreate" data-i18n="hp.opps.create_btn">➕ إنشاء فرصة جديدة</button>
           </div>
         </div>
-        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="hp.opps.lead">
           الفرص الخاصة بلجنتك. الفرصة الجديدة تخص لجنتك تلقائياً.
         </p>
 
@@ -226,33 +233,33 @@
         <div id="hd-opps-create-form" class="hd-create-form" style="display:none">
           <div class="hd-form-row">
             <label class="hd-form-field">
-              <span>المشروع/الفعالية</span>
+              <span data-i18n="hp.opps.form_project_label">المشروع/الفعالية</span>
               <select id="hd-opp-project">
-                <option value="">— اختر المشروع —</option>
+                <option value="" data-i18n="hp.opps.form_project_placeholder">— اختر المشروع —</option>
               </select>
             </label>
             <label class="hd-form-field">
-              <span>اسم الدور</span>
-              <input type="text" id="hd-opp-role" placeholder="مثال: منسق لوجستي"/>
+              <span data-i18n="hp.opps.form_role_label">اسم الدور</span>
+              <input type="text" id="hd-opp-role" data-i18n-placeholder="hp.opps.form_role_placeholder" placeholder="مثال: منسق لوجستي"/>
             </label>
           </div>
           <div class="hd-form-row">
             <label class="hd-form-field">
-              <span>الساعات التقديرية</span>
+              <span data-i18n="hp.opps.form_hours_label">الساعات التقديرية</span>
               <input type="number" id="hd-opp-hours" step="0.5" min="0" value="0"/>
             </label>
             <label class="hd-form-field">
-              <span>عدد المتطوعين المطلوبين</span>
+              <span data-i18n="hp.opps.form_headcount_label">عدد المتطوعين المطلوبين</span>
               <input type="number" id="hd-opp-headcount" min="1" value="1"/>
             </label>
           </div>
           <label class="hd-form-field">
-            <span>ملاحظات (اختياري)</span>
-            <textarea id="hd-opp-notes" rows="2" placeholder="تفاصيل إضافية..."></textarea>
+            <span data-i18n="hp.opps.form_notes_label">ملاحظات (اختياري)</span>
+            <textarea id="hd-opp-notes" rows="2" data-i18n-placeholder="hp.opps.form_notes_placeholder" placeholder="تفاصيل إضافية..."></textarea>
           </label>
           <div class="hd-form-actions">
-            <button class="btn btn-g btn-sm" data-action="hd.opps.create">💾 حفظ الفرصة</button>
-            <button class="btn btn-ol btn-sm" data-action="hd.opps.toggleCreate">إلغاء</button>
+            <button class="btn btn-g btn-sm" data-action="hd.opps.create" data-i18n="hp.opps.form_save">💾 حفظ الفرصة</button>
+            <button class="btn btn-ol btn-sm" data-action="hd.opps.toggleCreate" data-i18n="hp.opps.form_cancel">إلغاء</button>
           </div>
         </div>
 
@@ -260,14 +267,14 @@
           <table>
             <thead>
               <tr>
-                <th>الفرصة</th>
-                <th>المشروع</th>
-                <th>الساعات التقديرية</th>
-                <th>عدد المطلوبين</th>
-                <th>الحالة</th>
+                <th data-i18n="hp.opps.col_opportunity">الفرصة</th>
+                <th data-i18n="hp.opps.col_project">المشروع</th>
+                <th data-i18n="hp.opps.col_estimated">الساعات التقديرية</th>
+                <th data-i18n="hp.opps.col_headcount">عدد المطلوبين</th>
+                <th data-i18n="hp.opps.col_status">الحالة</th>
               </tr>
             </thead>
-            <tbody id="hd-opps-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-opps-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -277,9 +284,9 @@
     <div class="page" id="page-hours">
       <div class="card">
         <div class="card-head">
-          <h3>⏱️ ساعات أعضاء لجنتك</h3>
+          <h3 data-i18n="hp.hours.card_title">⏱️ ساعات أعضاء لجنتك</h3>
         </div>
-        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="hp.hours.lead">
           الساعات المسجلة لأعضاء لجنتك. الاعتماد الأولي والنهائي يتم من
           هنا — أنت تملك المسار الكامل لاعتماد ساعات لجنتك.
         </p>
@@ -287,14 +294,14 @@
           <table>
             <thead>
               <tr>
-                <th>العضو</th>
-                <th>المشروع / الدور</th>
-                <th>الساعات</th>
-                <th>الحالة</th>
-                <th>إجراءات</th>
+                <th data-i18n="hp.hours.col_member">العضو</th>
+                <th data-i18n="hp.hours.col_project_role">المشروع / الدور</th>
+                <th data-i18n="hp.hours.col_hours">الساعات</th>
+                <th data-i18n="hp.hours.col_status">الحالة</th>
+                <th data-i18n="hp.hours.col_actions">إجراءات</th>
               </tr>
             </thead>
-            <tbody id="hd-hours-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-hours-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -309,13 +316,13 @@
     <div class="page" id="page-my-profile">
       <div class="card">
         <div class="card-head">
-          <h3>👤 ملفي الشخصي</h3>
+          <h3 data-i18n="mp.profile.card_title">👤 ملفي الشخصي</h3>
           <div class="card-head-right">
-            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn">💾 حفظ التعديلات</button>
+            <button class="btn btn-g btn-sm" data-action="profile.save" id="profile-save-btn" data-i18n="mp.profile.save_btn">💾 حفظ التعديلات</button>
           </div>
         </div>
         <div class="card-body" id="profile-form-wrap">
-          <div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>
+          <div class="loading-spinner"><div class="spinner"></div><span data-i18n="common.loading">جاري التحميل...</span></div>
         </div>
       </div>
     </div>
@@ -324,23 +331,23 @@
     <div class="page" id="page-applications">
       <div class="card">
         <div class="card-head">
-          <h3>📥 طلبات الانضمام للجنتك</h3>
+          <h3 data-i18n="hp.apps.card_title">📥 طلبات الانضمام للجنتك</h3>
         </div>
-        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0">
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="hp.apps.lead">
           الطلبات الموجّهة إلى لجنتك. يمكنك القبول المباشر أو الرفض مع ذكر السبب.
         </p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>المتقدم</th>
-                <th>الجامعة / التخصص</th>
-                <th>تاريخ التقديم</th>
-                <th>الحالة</th>
-                <th>إجراءات</th>
+                <th data-i18n="hp.apps.col_applicant">المتقدم</th>
+                <th data-i18n="hp.apps.col_uni">الجامعة / التخصص</th>
+                <th data-i18n="hp.apps.col_date">تاريخ التقديم</th>
+                <th data-i18n="hp.apps.col_status">الحالة</th>
+                <th data-i18n="hp.apps.col_actions">إجراءات</th>
               </tr>
             </thead>
-            <tbody id="hd-apps-tbody"><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-apps-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>

@@ -6,13 +6,16 @@
 
 import { esc, fmtDate, gv, sv, tag } from '../../lib/format.js';
 import { api, toast } from '../../lib/ui.js';
+import { t, getLang } from '../../lib/i18n.js';
 
-const STATUS_AR = {
-  Open:      'مفتوحة',
-  Filled:    'مكتملة',
-  NeedsHelp: 'تحتاج مساعدة',
-  Cancelled: 'ملغاة',
-  Done:      'منتهية',
+// Status enum (canonical English) → translation key + chip-class. Stored
+// values stay English; the catalogs hold the localized display copy.
+const STATUS_KEY = {
+  Open:      'hp.opps.status_open',
+  Filled:    'hp.opps.status_filled',
+  NeedsHelp: 'hp.opps.status_needs_help',
+  Cancelled: 'hp.opps.status_cancelled',
+  Done:      'hp.opps.status_done',
 };
 const STATUS_CLS = {
   Open:      't-b',
@@ -30,12 +33,12 @@ export async function loadHeadOpportunities() {
   if (cid) params.committee_id = cid;
   const res = await api('opportunities.list', params);
   if (!res || !res.success) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">⚠️ تعذّر تحميل الفرص</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('hp.opps.err_load'))}</td></tr>`;
     return;
   }
   const opps = res.data || [];
   if (!opps.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">لا توجد فرص في لجنتك بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('hp.opps.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = opps.map(o => {
@@ -43,12 +46,13 @@ export async function loadHeadOpportunities() {
       ? `<div>${esc(o.project_name)}</div>
          ${o.event_date ? `<div style="font-size:.7rem;color:var(--tm)">${fmtDate(o.event_date)}</div>` : ''}`
       : `<span style="color:var(--tm)">${esc(o.project_id || '—')}</span>`;
-    const status = tag(STATUS_AR[o.status] || o.status || '—', STATUS_CLS[o.status] || 't-gr');
+    const label = STATUS_KEY[o.status] ? t(STATUS_KEY[o.status]) : (o.status || '—');
+    const status = tag(label, STATUS_CLS[o.status] || 't-gr');
     const filled = `${o.attended_count || 0}/${o.headcount_needed || 0}`;
     return `<tr>
       <td><strong>${esc(o.role_name || '—')}</strong></td>
       <td>${proj}</td>
-      <td>${esc((o.estimated_hours || 0) + ' ساعة')}</td>
+      <td>${esc((o.estimated_hours || 0) + ' ' + t('mp.hours.hours_unit'))}</td>
       <td>${esc(filled)}</td>
       <td>${status}</td>
     </tr>`;
@@ -77,14 +81,15 @@ async function _populateProjectsDropdown() {
   if (!res || !res.success) return;
   // Sort by event_date desc (recent + upcoming first), then by name.
   // Opportunities are typically created against current/future events.
+  const sortLang = getLang() === 'en' ? 'en' : 'ar';
   const projects = (res.data || []).slice().sort((a, b) => {
     const da = a.event_date || '0';
     const db = b.event_date || '0';
     if (da !== db) return db.localeCompare(da);
-    return (a.project_name || '').localeCompare(b.project_name || '', 'ar');
+    return (a.project_name || '').localeCompare(b.project_name || '', sortLang);
   });
   _projectsCached = projects;
-  sel.innerHTML = '<option value="">— اختر المشروع —</option>'
+  sel.innerHTML = `<option value="">${esc(t('hp.opps.form_project_placeholder'))}</option>`
     + projects.map(p => {
         const date = p.event_date ? ` (${fmtDate(p.event_date).replace(/<[^>]+>/g, '')})` : '';
         return `<option value="${esc(p.project_id)}">${esc(p.project_name)}${esc(date)}</option>`;
@@ -97,12 +102,12 @@ export async function createOpportunity() {
   const estimated_hours= Number(gv('hd-opp-hours') || 0);
   const headcount_needed = Number(gv('hd-opp-headcount') || 1);
   const notes          = gv('hd-opp-notes');
-  if (!project_id) { toast('اختر المشروع أولاً', 'terr'); return; }
-  if (!role_name)  { toast('اسم الدور مطلوب',  'terr'); return; }
-  if (headcount_needed < 1) { toast('عدد المطلوبين 1 على الأقل', 'terr'); return; }
+  if (!project_id) { toast(t('hp.opps.err_pick_project'), 'terr'); return; }
+  if (!role_name)  { toast(t('hp.opps.err_role_required'),  'terr'); return; }
+  if (headcount_needed < 1) { toast(t('hp.opps.err_headcount'), 'terr'); return; }
 
   const owning_committee_id = window.CURRENT_USER?.committee_id;
-  if (!owning_committee_id) { toast('لا يمكن تحديد لجنتك', 'terr'); return; }
+  if (!owning_committee_id) { toast(t('hp.opps.err_no_committee'), 'terr'); return; }
 
   const res = await api('opportunities.create', {
     data: {
@@ -113,7 +118,7 @@ export async function createOpportunity() {
     },
   });
   if (!res || !res.success) return;
-  toast('✅ تم إنشاء الفرصة');
+  toast(t('hp.opps.success_created'));
   // Reset + collapse form, refresh list.
   sv('hd-opp-role', '');
   sv('hd-opp-hours', '0');

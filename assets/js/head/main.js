@@ -8,6 +8,11 @@
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 applyStoredTheme();
 
+// i18n: side-effect import sets <html dir/lang> + applies data-i18n
+// to sidebar + topbar markup on first load. We also re-fire the active
+// tab's loader on language change so JS-generated rows pick up new copy.
+import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
+
 import {
   getSession, clearSession, isLoggedIn, signOut,
 } from '../lib/auth.js';
@@ -60,7 +65,7 @@ _requireHeadAuthOrRedirect();
 window.addEventListener('pageshow', _requireHeadAuthOrRedirect);
 
 async function logout() {
-  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  if (!confirm(t('common.confirm_logout'))) return;
   try { await signOut(); } catch (err) {
     console.warn('[head] signOut error (ignored):', err);
   }
@@ -100,6 +105,30 @@ function _syncThemeButtons() {
 }
 window.addEventListener('ssam-theme-changed', _syncThemeButtons);
 _syncThemeButtons();
+
+// ── Language toggle wiring ──────────────────────────────────────────
+// Same pattern as member/main.js: clicking a pill flips the lang and
+// re-fires the active loader so dynamic rows re-render in the new
+// language. Static markup is handled automatically by applyI18n()
+// inside lib/i18n.js on the ssam-lang-changed event.
+function _syncLangButtons() {
+  const cur = getLang();
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === cur);
+  });
+}
+document.querySelectorAll('[data-action="setLang"]').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.value));
+});
+onLangChange(() => {
+  _syncLangButtons();
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const page = active.id.replace('page-', '');
+  const loader = loaderMap[page];
+  if (loader) loader();
+});
+_syncLangButtons();
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -164,7 +193,7 @@ document.addEventListener('change', (e) => {
 // INIT
 // ════════════════════════════════════════════════════════════════════
 function _initHead() {
-  setApiStatus('ok', 'متصل');
+  setApiStatus('ok', t('common.connected'));
   // Respect the URL hash so refresh / shared link lands on the
   // intended tab. Default to dashboard otherwise.
   const m = location.hash.match(/^#\/head\/([a-z-]+)$/);

@@ -6,11 +6,12 @@
 
 import { esc, fmtDate } from '../../lib/format.js';
 import { api } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
 
 export async function loadDashboard() {
   const res = await api('head.dashboardSummary');
   if (!res || !res.success) {
-    _renderError('تعذّر تحميل البيانات. تحقق من اتصالك وأعد المحاولة.');
+    _renderError(t('hp.dash.err_load'));
     return;
   }
   const d = res.data || {};
@@ -20,8 +21,8 @@ export async function loadDashboard() {
   const greetingEl = document.getElementById('hd-greeting');
   const committeeEl = document.getElementById('hd-committee');
   if (greetingEl) {
-    const name = window.CURRENT_USER?.name || 'رئيس اللجنة';
-    greetingEl.textContent = `مرحباً، ${name}`;
+    const name = window.CURRENT_USER?.name || t('hp.dash.fallback_head_name');
+    greetingEl.textContent = t('hp.dash.greeting_named', { name });
   }
   if (committeeEl) {
     committeeEl.textContent = d.committee?.committee_name || '—';
@@ -39,7 +40,7 @@ export async function loadDashboard() {
   if (appsList) {
     const apps = d.pending_applications || [];
     if (!apps.length) {
-      appsList.innerHTML = '<div class="hd-empty">لا توجد طلبات بانتظار قرارك 🎉</div>';
+      appsList.innerHTML = `<div class="hd-empty">${esc(t('hp.dash.empty_apps'))}</div>`;
     } else {
       appsList.innerHTML = apps.map(_renderApplicationRow).join('');
     }
@@ -50,7 +51,7 @@ export async function loadDashboard() {
   if (hoursList) {
     const hrs = d.hours_pending || [];
     if (!hrs.length) {
-      hoursList.innerHTML = '<div class="hd-empty">لا توجد ساعات بانتظار اعتمادك ✅</div>';
+      hoursList.innerHTML = `<div class="hd-empty">${esc(t('hp.dash.empty_hours'))}</div>`;
     } else {
       hoursList.innerHTML = hrs.map(_renderHoursRow).join('');
     }
@@ -75,16 +76,22 @@ function _renderApplicationRow(a) {
       <div class="hd-queue-title">${esc(name)}</div>
       <div class="hd-queue-sub">${esc(status)}${when ? ` · ${when}` : ''}</div>
     </div>
-    <div class="hd-queue-action">قرّر ←</div>
+    <div class="hd-queue-action">${esc(t('hp.dash.action_decide'))}</div>
   </a>`;
 }
 
+// Application status enum (canonical English) → translation key. Values
+// not in this map fall back to the raw enum so a new server-side state
+// doesn't render as blank.
+const APP_STATUS_KEY = {
+  PendingTriage:       'hp.apps.status_pending_triage',
+  AssignedToCommittee: 'hp.apps.status_assigned',
+  AwaitingInterview:   'hp.apps.status_interview',
+  Accepted:            'hp.apps.status_accepted',
+  Rejected:            'hp.apps.status_rejected',
+};
 function _appStatusLabel(s) {
-  return ({
-    PendingTriage:         'بانتظار التوجيه',
-    AssignedToCommittee:   'موجّه للجنتك',
-    AwaitingInterview:     'بانتظار مقابلة',
-  })[s] || s || '';
+  return APP_STATUS_KEY[s] ? t(APP_STATUS_KEY[s]) : (s || '');
 }
 
 // One row in the hours-awaiting-primary-approval list.
@@ -92,7 +99,7 @@ function _renderHoursRow(h) {
   const name = h.member_preferred_name || h.member_full_name || '—';
   const proj = h.project_name || '—';
   const when = fmtDate(h.event_date || h.recorded_at) || '';
-  const hours = h.total_hours != null ? `${h.total_hours} ساعة` : '';
+  const hours = h.total_hours != null ? `${h.total_hours} ${t('mp.hours.hours_unit')}` : '';
   return `<a class="hd-queue-row" href="#/head/hours" data-action="showPage" data-page="hours">
     <div class="hd-queue-main">
       <div class="hd-queue-title">${esc(name)}</div>
