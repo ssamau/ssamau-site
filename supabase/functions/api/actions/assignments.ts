@@ -97,10 +97,34 @@ const assignmentsBulkMarkAttendance: Handler = async (body, user) => {
   return { count };
 };
 
+// Self-service assignment listing — member portal (Phase 5 of Branch 4).
+// Same shape as assignments.list filtered by member_id, but enforces the
+// filter server-side from the auth context so a member can't query
+// someone else's assignments by passing a different member_id in the
+// body. Returns the joined opportunity + project info needed to split
+// Upcoming vs Past on the client.
+const assignmentsListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  return sql`
+    SELECT a.*,
+      o.role_name, o.role_key, o.estimated_hours, o.project_id, o.owning_committee_id,
+      p.project_name, p.project_type, p.event_date, p.start_time, p.end_time, p.location,
+      c.committee_name
+    FROM assignments a
+    JOIN opportunities o ON o.opportunity_id = a.opportunity_id
+    LEFT JOIN projects   p ON p.project_id     = o.project_id
+    LEFT JOIN committees c ON c.committee_id   = o.owning_committee_id
+    WHERE a.member_id = ${user.member_id}
+    ORDER BY p.event_date DESC NULLS LAST, a.created_at DESC
+  `;
+};
+
 export const assignmentsActions: Record<string, Handler> = {
   'assignments.list':                assignmentsList,
   'assignments.add':                 assignmentsAdd,
   'assignments.remove':              assignmentsRemove,
   'assignments.markAttendance':      assignmentsMarkAttendance,
   'assignments.bulkMarkAttendance':  assignmentsBulkMarkAttendance,
+  'assignments.listOwn':             assignmentsListOwn,
 };

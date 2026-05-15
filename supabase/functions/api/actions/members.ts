@@ -8,7 +8,7 @@
 import { sql } from '../_sql.ts';
 import {
   httpErr, shortId,
-  requireAdminScope,
+  requireAuth, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
 
@@ -103,9 +103,72 @@ const deleteMember: Handler = async (body) => {
   return { member_id: id };
 };
 
+// ─── SELF-SERVICE (member portal — Phase 5 of Branch 4) ──────────────
+// These two actions are authenticated (any tier) but scoped to the
+// caller's OWN member row via user.member_id. They are intentionally
+// NOT in ADMIN_ACTIONS — a regular member must be able to call them
+// for their own portal. A head or admin calling them gets their own
+// row too (which is correct; they're members too and should be able
+// to keep their profile up to date without going through the admin UI).
+//
+// Dev account (no member_id) → 404 from getOwn / updateOwn. The dev
+// shouldn't be using the member portal; this is the right failure mode.
+
+const membersGetOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  const rows = await sql`
+    SELECT m.*, c.committee_name
+    FROM members m
+    LEFT JOIN committees c ON c.committee_id = m.committee_id
+    WHERE m.member_id = ${user.member_id}
+    LIMIT 1
+  ` as Array<Record<string, unknown>>;
+  if (!rows[0]) throw httpErr('Member row not found.', 404);
+  return rows[0];
+};
+
+// Self-update whitelist. Fields NOT in this list are admin-managed:
+//   member_id, full_name, name_en, national_id (immutable identity)
+//   committee_id, club_role, status, join_date, total_hours (admin domain)
+//   created_at, updated_at (timestamps)
+const membersUpdateOwn: Handler = async (body, user) => {
+  requireAuth(user);
+  if (!user.member_id) throw httpErr('No member profile linked to this account.', 404);
+  const data = (body.data ?? body) as Record<string, unknown>;
+  await sql`
+    UPDATE members SET
+      preferred_name             = COALESCE(${data.preferred_name             ?? null}, preferred_name),
+      email                      = COALESCE(${data.email                      ?? null}, email),
+      phone                      = COALESCE(${data.phone                      ?? null}, phone),
+      whatsapp                   = COALESCE(${data.whatsapp                   ?? null}, whatsapp),
+      gender                     = COALESCE(${data.gender                     ?? null}, gender),
+      date_of_birth              = COALESCE(${data.date_of_birth              ?? null}, date_of_birth),
+      profile_photo_url          = COALESCE(${data.profile_photo_url          ?? null}, profile_photo_url),
+      address_melbourne          = COALESCE(${data.address_melbourne          ?? null}, address_melbourne),
+      linkedin_url               = COALESCE(${data.linkedin_url               ?? null}, linkedin_url),
+      cv_url                     = COALESCE(${data.cv_url                     ?? null}, cv_url),
+      skills_hobbies             = COALESCE(${data.skills_hobbies             ?? null}, skills_hobbies),
+      about_self                 = COALESCE(${data.about_self                 ?? null}, about_self),
+      scholarship_entity         = COALESCE(${data.scholarship_entity         ?? null}, scholarship_entity),
+      scholarship_entity_other   = COALESCE(${data.scholarship_entity_other   ?? null}, scholarship_entity_other),
+      study_level                = COALESCE(${data.study_level                ?? null}, study_level),
+      degree_field               = COALESCE(${data.degree_field               ?? null}, degree_field),
+      university                 = COALESCE(${data.university                 ?? null}, university),
+      university_other           = COALESCE(${data.university_other           ?? null}, university_other),
+      study_started_window       = COALESCE(${data.study_started_window       ?? null}, study_started_window),
+      expected_graduation_window = COALESCE(${data.expected_graduation_window ?? null}, expected_graduation_window),
+      updated_at                 = NOW()
+    WHERE member_id = ${user.member_id}
+  `;
+  return { member_id: user.member_id };
+};
+
 export const membersActions: Record<string, Handler> = {
-  'getMembers':   getMembers,
-  'createMember': createMember,
-  'updateMember': updateMember,
-  'deleteMember': deleteMember,
+  'getMembers':       getMembers,
+  'createMember':     createMember,
+  'updateMember':     updateMember,
+  'deleteMember':     deleteMember,
+  'members.getOwn':   membersGetOwn,
+  'members.updateOwn': membersUpdateOwn,
 };

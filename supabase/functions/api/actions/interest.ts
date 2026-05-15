@@ -7,6 +7,7 @@
 
 import { sql } from '../_sql.ts';
 import {
+  httpErr, requireAuth, requireAdmin,
   type Handler,
 } from '../_helpers.ts';
 
@@ -43,11 +44,47 @@ const interestListAll: Handler = async () => sql`
   FROM interest_requests ir
   LEFT JOIN members  m ON m.member_id  = ir.member_id
   LEFT JOIN projects p ON p.project_id = ir.project_id
-  ORDER BY ir.submitted_at DESC
+  ORDER BY ir.reviewed_at NULLS FIRST, ir.submitted_at DESC
 `;
 
+// Admin triage — flip the reviewed_at timestamp on an interest row so it
+// fades to the bottom of the admin tab list. Body: { id, reviewed }.
+// reviewed=true sets reviewed_at=NOW(); reviewed=false clears it (admin
+// wants to reconsider). Admin-tier only — heads + members shouldn't be
+// triaging requests they can't act on.
+const interestMarkReviewed: Handler = async (body, user) => {
+  requireAdmin(user);
+  const id       = body.id as number | undefined;
+  const reviewed = body.reviewed !== false;  // default true
+  if (!id) throw httpErr('id is required', 400);
+  await sql`
+    UPDATE interest_requests
+    SET    reviewed_at = ${reviewed ? sql`NOW()` : null}
+    WHERE  id = ${id}
+  `;
+  return { id, reviewed };
+};
+
+// Member-portal self-scoped listing — returns only the caller's interest
+// rows so the opportunities tab can pre-mark "✓ مُسجّل" on rows the
+// member already expressed interest in. Without this, the button state
+// is in-memory only and resets on every reload — members would re-click,
+// see the same state-flip again, and assume the site is broken.
+// Returns the minimal shape needed for the client-side set lookup.
+const interestListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user.member_id) return [];     // dev account: no member_id → no interests
+  return sql`
+    SELECT id, project_id, interested, comment, submitted_at, reviewed_at
+    FROM interest_requests
+    WHERE member_id = ${user.member_id}
+  `;
+};
+
 export const interestActions: Record<string, Handler> = {
-  'interest.submit':  interestSubmit,
-  'interest.list':    interestList,
-  'interest.listAll': interestListAll,
+  'interest.submit':       interestSubmit,
+  'interest.list':         interestList,
+  'interest.listAll':      interestListAll,
+  'interest.listOwn':      interestListOwn,
+  'interest.markReviewed': interestMarkReviewed,
 };

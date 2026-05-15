@@ -542,8 +542,28 @@ tr:hover td { background:#fafcfa; }
 .cert-card{background:linear-gradient(135deg,var(--gd) 0%,#1e5f35 60%,var(--go) 100%);border-radius:var(--r);padding:1.75rem;color:#fff;text-align:center;max-width:460px;margin:0 auto;box-shadow:var(--shadow-md);}
 .cert-name{font-size:1rem;font-weight:800;color:var(--gg);margin:.6rem 0 .2rem;}
 .cert-code-box{margin-top:.85rem;background:rgba(255,255,255,.12);border-radius:var(--rs);padding:.45rem 1rem;font-family:monospace;font-size:.8rem;letter-spacing:.1em;}
-.int-bar{display:flex;height:7px;border-radius:50px;overflow:hidden;margin:.45rem 0;}
-.int-yes{background:var(--sc);}.int-no{background:var(--dn);}
+/* Interest-percentage mini-chart inside the 4th .sum-box. Sits below the
+ * numeric pct so it reinforces the value rather than standing alone —
+ * bumped from 7px to 10px tall + bg fill + transition so the
+ * width-change is animated when the bar updates. */
+.int-bar{display:flex;height:10px;border-radius:50px;overflow:hidden;margin:.4rem 0 .25rem;background:rgba(0,0,0,.05);}
+.int-yes{background:var(--sc);transition:width .4s ease;}
+.int-no{background:var(--dn);opacity:.55;}
+
+/* Reviewed interest rows fade so the admin's eye lands on un-triaged
+ * ones first. .int-row-reviewed is applied by renderInterest; the
+ * action column stays full opacity so the ↺ unmark button is still
+ * clear. */
+.int-row-reviewed td { opacity: .45; }
+.int-row-reviewed td:last-child { opacity: 1; }
+
+/* Approval-status badges — moved from member.css to admin.css so the
+ * interest tab can use .hs-finalapproved for the "✓ مُراجَع" pill. */
+.hs-badge { display:inline-block; font-size:.68rem; font-weight:700; padding:.15rem .55rem; border-radius:50px; white-space:nowrap; }
+.hs-draft           { background: rgba(234,179,8,.15);  color:#b45309; }
+.hs-primaryapproved { background: rgba(59,130,246,.15); color:#1d4ed8; }
+.hs-finalapproved   { background: rgba(22,163,74,.15);  color:#166534; }
+.hs-rejected        { background: rgba(220,38,38,.15);  color:#b91c1c; }
 .vol-rank{display:flex;align-items:center;gap:.65rem;padding:.52rem 0;border-bottom:1px solid var(--bd);}
 .vol-rank:last-child{border:none;}
 .rk-badge{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0;}

@@ -56,7 +56,7 @@ and defer the rest to a follow-up branch if priorities shift.
 | **2b** | Admin "Invite to portal" UI + auto-invite on `applications.accept` | ✅ Done — `getMembers` now joins `users` for account status; row buttons + invite modal; auto-invite side-effect on accept per requirements §6 |
 | **3** | Public signup endpoints (`auth.signup.completeByToken`, `.completeByPin`) + `signup.html` page | ✅ Done — Edge Function actions deployed + in PUBLIC_ACTIONS allowlist, signup.html mounted with mode toggle, sw.js shell updated |
 | **4** | Login routing: `access_level='member'` redirects to `member.html` instead of `admin.html` | ✅ Done — landingPageForAccess helper in auth.js; login.js routes on session save + already-logged-in re-entry; admin/main.js + member.html cross-guard each other; placeholder member.html with greeting + logout |
-| **5** | Member portal SPA shell + 4 tabs (profile, own hours, opportunities, assignments) | ⏳ Pending |
+| **5** | Member portal SPA shell + 4 tabs (profile, own hours, opportunities, assignments) | ✅ Done — 4 Edge Function actions deployed (5a), SPA shell + router (5b), 4 tab implementations + member.css (5c), sw.js cache bumped + member assets added to SHELL_URLS (5d). See sub-phase table below for commit hashes. |
 | **6** | Closing items: CV upload via Supabase Storage + member self-service password reset wired to existing branded template | ⏳ Pending |
 
 ## Phase details
@@ -153,21 +153,79 @@ Also: `member.html` checks session on load — kicks superadmins/heads back to `
 
 ### Phase 5 — Member portal SPA shell
 
-- `member.html` — Arabic-first RTL shell mirroring admin.html's layout (header with logo + greeting + logout, sidebar drawer on mobile, main content area)
-- `assets/js/member/main.js` — hash router, same registration pattern as admin
-- `assets/js/member/tabs/`:
-  - `profile.js` — view + edit own profile (calls `members.getOwn` + `members.updateOwn`)
-  - `hours.js` — own approved + pending hours (calls `hours.listOwn`)
-  - `opportunities.js` — browse open opportunities + sign up (filters `opportunities.list` to own committee or "open to all", uses existing `interest.submit`)
-  - `assignments.js` — opportunities the member is confirmed for (calls `assignments.listOwn`)
+Branch: `feature/member-portal-shell` (created 2026-05-15 from main after the role-system refactor merged).
 
-Routes: `#/member/profile`, `#/member/hours`, `#/member/opportunities`, `#/member/assignments`.
+#### Sub-phasing
 
-New Edge Function actions:
-- `members.getOwn` — returns the caller's own member row (no admin scope check; uses `user.member_id` as the implicit filter)
-- `members.updateOwn` — updates a whitelist of fields on the caller's own member row (name, phone, email, address, skills, etc.). NOT allowed to update: committee_id, club_role, status, total_hours.
-- `hours.listOwn` — returns only the caller's hours
-- `assignments.listOwn` — returns only the caller's assignments
+Each sub-phase is its own commit so this can survive context-compaction
+mid-flight. The plan is "land 5a → push → smoke-test → 5b → push → … → PR".
+
+| Sub | Scope | Status |
+|---|---|---|
+| **5a** | Backend: 4 self-scoped Edge Function actions (`members.getOwn`, `members.updateOwn`, `hours.listOwn`, `assignments.listOwn`). All require a JWT (any tier) but enforce `member_id === user.member_id` server-side. Not in ADMIN_ACTIONS allowlist — they're authenticated, not admin-gated. | ✅ Done — commit `459a7a1`, deployed + smoke-tested (all 4 return 401 not 404). |
+| **5b** | Frontend SPA shell. Rewrite `member.html` as a multi-tab layout mirroring `admin.html` (header + sidebar drawer on mobile + content area + 4 page divs). New `assets/js/member/router.js` (mirror of admin/router.js with `#/member/...` routes). New `assets/js/member/dispatch.js` (copy of admin/dispatch.js — same delegation pattern). New `assets/js/member/main.js` (entry: applyStoredTheme + auth guard + setLoaders + setHandlers + setupDispatch). Carry over the contact section from the placeholder into the profile tab so members keep a directory after Phase 5 ships. | ✅ Done — commit `5fca673`, browser-verified shell (page swap, hash routing, sidebar, theme toggle, user stamp, logout button). |
+| **5c** | Tab modules under `assets/js/member/tabs/`: `profile.js` (view + edit, calls `members.getOwn` / `members.updateOwn` + renders the leadership/committee-head directory), `hours.js` (calls `hours.listOwn`, groups by approval_status), `opportunities.js` (calls `opportunities.list`, client-side filters to own-committee OR open-to-all, uses existing `interest.submit`), `assignments.js` (calls `assignments.listOwn`, splits Upcoming vs Past by event date). | ✅ Done — commit `a1e3bd4`. Added `assets/css/member.css` for portal-specific styles. Data path requires a real member login — fully exercised on the Netlify deploy preview, not locally. |
+| **5d** | `sw.js` cache invalidation — bump `CACHE_VERSION` to `v4-2026-05-15-member-portal` and add `/member.html`, `/member.css`, `/assets/js/member/{main,router,dispatch}.js`, `/assets/js/member/tabs/*.js` to SHELL_URLS. End-to-end browser verification (open as member account, click each tab, edit profile, sign up for opportunity, check hours render) happens on the Netlify deploy preview. Old `assets/js/member.js` (the Phase 4 placeholder) deleted in the same commit. | ✅ Done — commit `5c69f0d`. |
+| **5e** | Self-service hours submission. New `hours.recordOwn` Edge Function action (auth-gated, member-scoped, enforces Principle 2 + one-row-per-assignment). Assignments tab renders a "📝 سجّل" button on every Attended row without an existing hours record; clicking opens an `#ov-log-hours` modal (hours_before / during / after + notes, estimated_hours pre-fill). Submit inserts at `approval_status='Draft'` so the row enters the §7 two-stage approval chain. SW cache bumped to `v5-2026-05-15-member-portal-hours`. | ✅ Done — commit `8cfc007`. |
+
+#### Routes
+
+| Hash route | Page | Loader |
+|---|---|---|
+| `#/member/profile` | `#page-profile` | `loadProfile()` (default landing) |
+| `#/member/hours` | `#page-hours` | `loadHours()` |
+| `#/member/opportunities` | `#page-opportunities` | `loadOpportunities()` |
+| `#/member/assignments` | `#page-assignments` | `loadAssignments()` |
+
+Refresh / bookmark / share link → respected via the initial-hash check in main.js, same trick admin/main.js uses.
+
+#### New Edge Function actions (sub-phase 5a)
+
+All in `supabase/functions/api/actions/` and registered in `index.ts`. None go in `ADMIN_ACTIONS` or `SUPERADMIN_ACTIONS` — they require auth but allow any tier (so a head can also call `members.getOwn` for their own profile without tripping an admin gate, even though heads already have full-table access via `getMembers`).
+
+| Action | File | Behaviour |
+|---|---|---|
+| `members.getOwn` | `actions/members.ts` | `requireAuth(user)`. If `!user.member_id` → 404 (the dev account has no member row; this is correct — the dev shouldn't be using the member portal anyway). `SELECT * FROM members WHERE member_id = ${user.member_id}` joined to committees for the human-readable label. |
+| `members.updateOwn` | `actions/members.ts` | `requireAuth(user)`. Whitelist update — only `full_name`, `preferred_name`, `phone`, `whatsapp`, `email`, `gender`, `dob`, `national_id`, `passport_no`, `address`, `linkedin_url`, `cv_url`, `skills`, `interests`, `notes`. Explicitly NOT updatable: `committee_id`, `club_role`, `status`, `total_hours`, `member_id`. SQL uses COALESCE so missing fields are no-ops. |
+| `hours.listOwn` | `actions/hours.ts` | `requireAuth(user)`. Same shape as `getMemberHours` but hard-filtered to `member_id = ${user.member_id}`. Returns approval_status, total_hours, recorded_at, project_name, event_date — enough to render a member's history. |
+| `assignments.listOwn` | `actions/assignments.ts` | `requireAuth(user)`. SELECT from `assignments` JOIN `opportunities` JOIN `projects` WHERE `member_id = ${user.member_id}` ORDER BY event_date DESC. Returns role_name, project_name, event_date, attendance_status — enough for the Upcoming/Past split client-side. |
+
+#### Frontend file layout (sub-phases 5b + 5c)
+
+```
+member.html                                # SPA shell — mirrors admin.html
+assets/js/member/
+  main.js          # entry — auth guard + setLoaders + setHandlers + setupDispatch
+  router.js        # mirror of admin/router.js with #/member/* routes
+  dispatch.js      # mirror of admin/dispatch.js (same code, separate module so admin imports don't leak)
+  tabs/
+    profile.js
+    hours.js
+    opportunities.js
+    assignments.js
+assets/css/
+  member.css       # tab-specific layout if base.css doesn't cover it (TBD during 5b)
+```
+
+#### Reusable libs that already exist
+
+Everything under `assets/js/lib/` is shared. The member portal will import:
+- `lib/auth.js` — getSession, isLoggedIn, signOut, landingPageForAccess
+- `lib/api.js` — callApi
+- `lib/theme.js` — applyStoredTheme, getTheme, setTheme
+- `lib/dom.js` — `$`, `$$`
+- `lib/ui.js` — toast (errors / save confirmations)
+- `lib/format.js` — date helpers if needed
+
+No new lib modules need to be created.
+
+#### Recovery instructions (for the next assistant if compaction wipes me)
+
+1. Branch is `feature/member-portal-shell`. Check `git branch --show-current`.
+2. Check the sub-phase status table above — pick the first ⏳ Pending row.
+3. The admin reference implementation lives at `assets/js/admin/{main,router,dispatch}.js` + `assets/js/admin/tabs/*.js`. Mirror that pattern.
+4. Auth-guard pattern: copy `_requireAuthOrRedirect()` from admin/main.js lines 119–143 but invert the landing check — bounce to admin.html if `landingPageForAccess(user.access) !== 'member.html'`.
+5. After all sub-phases land, open a PR to `main` titled "Branch 4 — Phase 5: member portal SPA shell".
 
 ### Phase 6 — Closing items
 

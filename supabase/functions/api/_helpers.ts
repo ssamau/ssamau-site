@@ -311,6 +311,7 @@ export const ADMIN_ACTIONS = new Set<string>([
   'setup.seedMembers',
   'hours.finalApprove',
   'users.create', 'users.update', 'users.delete',
+  'interest.markReviewed',
 ]);
 
 // Dev-tier actions: callable ONLY by `superadmin`. Reserved for

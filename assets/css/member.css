@@ -1,0 +1,90 @@
+/* Member portal styles — Phase 5 of Branch 4.
+ *
+ * Layered on top of admin.css (which provides .sidebar / .topbar / .page /
+ * .card / .fg etc.). Only adds new classes specific to the member portal —
+ * the profile edit form, the read-only header strip, the stat pill in the
+ * hours total, and the tab-specific empty-state visuals.
+ *
+ * If anything here ends up being equally useful on the admin side, hoist
+ * it into admin.css. Until then keeping member-only styles separate
+ * reduces blast radius if a class name collides.
+ */
+
+/* ─── Profile: read-only header strip ─────────────────────────────────── */
+.profile-readonly-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: .5rem .8rem;
+  background: var(--gl, #e8f5e9);
+  border-radius: 10px;
+  padding: .85rem 1rem;
+  margin-bottom: .65rem;
+}
+.prs-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .8rem;
+}
+.prs-label { color: var(--tl, #4b5563); font-weight: 600; white-space: nowrap; }
+.prs-value { color: var(--tx, #111827); font-weight: 700; }
+.prs-note {
+  margin: 0 0 1.1rem 0;
+  font-size: .72rem;
+  color: var(--tm, #9ca3af);
+  text-align: center;
+}
+
+/* ─── Profile: edit form ─────────────────────────────────────────────── */
+.profile-edit-form { padding: 0; }
+.fg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .5rem .8rem;
+}
+.pf-section {
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--g, #1A5C2E);
+  margin: 1.2rem 0 .55rem 0;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--bd, #e5e7eb);
+}
+
+/* Inputs in the profile form need bidi auto-detect (numbers/URLs render
+ * LTR even inside the RTL form) — same trick we use on login.html. */
+.profile-edit-form .fg input,
+.profile-edit-form .fg textarea {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* ─── Hours: total pill ────────────────────────────────────────────── */
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: var(--gl, #e8f5e9);
+  color: var(--g, #1A5C2E);
+  border-radius: 50px;
+  padding: .3rem .8rem;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.stat-pill strong { font-size: .9rem; }
+
+/* Approval-status badges (.hs-badge + variants) live in admin.css
+ * since both the member portal AND the admin's interest tab use them. */
+
+/* ─── Opportunities: interest button ───────────────────────────────── */
+.btn-interest {
+  font-size: .74rem;
+  padding: .35rem .85rem;
+}
+.btn-interest.expressed {
+  background: var(--gl, #e8f5e9);
+  color: var(--g, #1A5C2E);
+  border: 1px solid var(--g, #1A5C2E);
+  cursor: default;
+}
+
