@@ -443,19 +443,27 @@
     <div class="page" id="page-attendance">
       <div class="card">
         <div class="card-head">
-          <h3>✅ الحضور</h3>
+          <h3>✅ <span data-i18n="ap.sb.tab_attendance">الحضور</span></h3>
           <div class="card-head-right">
             <select class="filter-select" id="attendance-project-filter" data-action="loadAttendance">
-              <option value="">كل المشاريع</option>
+              <option value="" data-i18n="ap.att.filter_all_projects">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="attendance">+ تسجيل حضور</button>
-            <button class="btn btn-o" data-action="openModal" data-modal="bulk-att">⚡ جماعي</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="attendance" data-i18n="ap.att.add_btn">+ تسجيل حضور</button>
+            <button class="btn btn-o" data-action="openModal" data-modal="bulk-att" data-i18n="ap.att.bulk_btn">⚡ جماعي</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>العضو / المتطوع</th><th>المشروع / الفعالية</th><th>النوع</th><th>حالة الحضور</th><th>تاريخ الحضور</th><th>سجّله</th><th>إجراءات</th></tr></thead>
-            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="7">جاري التحميل…</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.att.col_name">العضو / المتطوع</th>
+              <th data-i18n="ap.att.col_project">المشروع / الفعالية</th>
+              <th data-i18n="ap.att.col_type">النوع</th>
+              <th data-i18n="ap.att.col_status">حالة الحضور</th>
+              <th data-i18n="ap.att.col_date">تاريخ الحضور</th>
+              <th data-i18n="ap.att.col_checker">سجّله</th>
+              <th data-i18n="ap.att.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -465,18 +473,27 @@
     <div class="page" id="page-hours">
       <div class="card">
         <div class="card-head">
-          <h3>⏱️ الساعات التطوعية</h3>
+          <h3>⏱️ <span data-i18n="ap.sb.tab_hours">الساعات التطوعية</span></h3>
           <div class="card-head-right">
             <select class="filter-select" id="hours-project-filter" data-action="loadHours">
-              <option value="">كل المشاريع</option>
+              <option value="" data-i18n="ap.hrs.filter_all_projects">كل المشاريع</option>
             </select>
-            <button class="btn btn-g" data-action="openModal" data-modal="hours">+ تسجيل ساعات</button>
+            <button class="btn btn-g" data-action="openModal" data-modal="hours" data-i18n="ap.hrs.add_btn">+ تسجيل ساعات</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>العضو / المتطوع</th><th>المشروع / الدور</th><th>قبل</th><th>خلال</th><th>بعد</th><th>الإجمالي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-            <tbody id="hours-tbody"><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
+            <thead><tr>
+              <th data-i18n="ap.hrs.col_name">العضو / المتطوع</th>
+              <th data-i18n="ap.hrs.col_project">المشروع / الدور</th>
+              <th data-i18n="ap.hrs.col_before">قبل</th>
+              <th data-i18n="ap.hrs.col_during">خلال</th>
+              <th data-i18n="ap.hrs.col_after">بعد</th>
+              <th data-i18n="ap.hrs.col_total">الإجمالي</th>
+              <th data-i18n="ap.hrs.col_status">الحالة</th>
+              <th data-i18n="ap.hrs.col_actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="hours-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -527,28 +544,36 @@
     <div class="page" id="page-interest">
       <div class="card">
         <div class="card-head">
-          <h3>🙋 طلبات المشاركة</h3>
+          <h3 data-i18n="ap.title.interest">🙋 طلبات المشاركة</h3>
           <div class="card-head-right">
             <label class="fg-check" style="font-size:.74rem;color:var(--tl)">
               <input type="checkbox" id="flt-int-show-reviewed" data-action="toggleReviewedVisibility"/>
-              عرض المُراجَعة
+              <span data-i18n="ap.int.show_reviewed">عرض المُراجَعة</span>
             </label>
-            <select class="filter-select" id="flt-int-prj" data-action="loadInterest"><option value="">كل المشاريع</option></select>
-            <button class="btn btn-g" data-action="openModal" data-modal="interest">+ تسجيل اهتمام</button>
+            <select class="filter-select" id="flt-int-prj" data-action="loadInterest"><option value="" data-i18n="ap.int.filter_all_projects">كل المشاريع</option></select>
+            <button class="btn btn-g" data-action="openModal" data-modal="interest" data-i18n="ap.int.add_btn">+ تسجيل اهتمام</button>
           </div>
         </div>
         <div class="sum-row">
-          <div class="sum-box"><div class="sum-n" id="int-total">—</div><div class="sum-l">إجمالي</div></div>
-          <div class="sum-box"><div class="sum-n" id="int-yes" style="color:var(--sc)">—</div><div class="sum-l">مهتمون</div></div>
-          <div class="sum-box"><div class="sum-n" id="int-no" style="color:var(--dn)">—</div><div class="sum-l">غير قادر</div></div>
+          <div class="sum-box"><div class="sum-n" id="int-total">—</div><div class="sum-l" data-i18n="ap.int.sum_total">إجمالي</div></div>
+          <div class="sum-box"><div class="sum-n" id="int-yes" style="color:var(--sc)">—</div><div class="sum-l" data-i18n="ap.int.sum_yes">مهتمون</div></div>
+          <div class="sum-box"><div class="sum-n" id="int-no" style="color:var(--dn)">—</div><div class="sum-l" data-i18n="ap.int.sum_no">غير قادر</div></div>
           <div class="sum-box">
             <div class="sum-n" id="int-pct" style="color:var(--g)">—</div>
             <div class="int-bar" id="int-bar-vis"><div class="int-yes" style="width:0%"></div><div class="int-no" style="flex:1"></div></div>
-            <div class="sum-l">نسبة الاهتمام</div>
+            <div class="sum-l" data-i18n="ap.int.sum_pct">نسبة الاهتمام</div>
           </div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>العضو</th><th>المشروع</th><th>مهتم</th><th>التوفر</th><th>تعليق</th><th>التاريخ</th><th>إجراء</th></tr></thead>
-        <tbody id="tb-interest"><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th data-i18n="ap.int.col_member">العضو</th>
+          <th data-i18n="ap.int.col_project">المشروع</th>
+          <th data-i18n="ap.int.col_interested">مهتم</th>
+          <th data-i18n="ap.int.col_avail">التوفر</th>
+          <th data-i18n="ap.int.col_comment">تعليق</th>
+          <th data-i18n="ap.int.col_date">التاريخ</th>
+          <th data-i18n="ap.int.col_actions">إجراء</th>
+        </tr></thead>
+        <tbody id="tb-interest"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -1195,34 +1220,39 @@
 <!-- ATTENDANCE MODAL -->
 <div class="overlay" id="ov-attendance">
   <div class="modal">
-    <div class="modal-head"><h3>✅ تسجيل حضور</h3><button class="modal-close" data-action="closeModal" data-modal="attendance">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.att.modal_title">✅ تسجيل حضور</h3><button class="modal-close" data-action="closeModal" data-modal="attendance">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="att-edit-id"/>
-      <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="att-project"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>نوع المشارك</label>
+      <div class="fg"><label><span data-i18n="ap.att.lbl_project">المشروع / الفعالية</span> <span class="required">*</span></label><select id="att-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.att.lbl_type">نوع المشارك</label>
         <select id="att-type" data-action="toggleAttFields">
-          <option value="Member">عضو</option>
-          <option value="Volunteer">متطوع</option>
+          <option value="Member"    data-i18n="ap.att.type_member">عضو</option>
+          <option value="Volunteer" data-i18n="ap.att.type_volunteer">متطوع</option>
         </select>
       </div>
       <div id="att-member-section">
-        <div class="fg"><label>العضو</label><select id="att-member"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.att.lbl_member">العضو</label><select id="att-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       </div>
       <div id="att-vol-section" style="display:none">
-        <div class="fg"><label>بريد المتطوع</label><input id="att-vol-email" type="email" dir="ltr"/></div>
+        <div class="fg"><label data-i18n="ap.att.lbl_vol_email">بريد المتطوع</label><input id="att-vol-email" type="email" dir="ltr"/></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label>حالة الحضور <span class="required">*</span></label>
-          <select id="att-status"><option>Present</option><option>Absent</option><option>Late</option><option>Excused</option></select>
+        <div class="fg"><label><span data-i18n="ap.att.lbl_status">حالة الحضور</span> <span class="required">*</span></label>
+          <select id="att-status">
+            <option value="Present" data-i18n="ap.att.status_present">Present</option>
+            <option value="Absent"  data-i18n="ap.att.absent">Absent</option>
+            <option value="Late"    data-i18n="ap.att.late">Late</option>
+            <option value="Excused" data-i18n="ap.att.excused">Excused</option>
+          </select>
         </div>
-        <div class="fg"><label>تاريخ الحضور</label><input id="att-date" type="date"/></div>
+        <div class="fg"><label data-i18n="ap.att.lbl_date">تاريخ الحضور</label><input id="att-date" type="date"/></div>
       </div>
-      <div class="fg"><label>سجّله</label><select id="att-checker"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>ملاحظات</label><textarea id="att-notes"></textarea></div>
+      <div class="fg"><label data-i18n="ap.att.lbl_checker">سجّله</label><select id="att-checker"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.att.lbl_notes">ملاحظات</label><textarea id="att-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="attendance">إلغاء</button>
-      <button class="btn btn-g" data-action="saveAttendance">💾 حفظ</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="attendance" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveAttendance" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -1230,7 +1260,7 @@
 <!-- HOURS MODAL -->
 <div class="overlay" id="ov-hours">
   <div class="modal">
-    <div class="modal-head"><h3>⏱️ تسجيل ساعات تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="hours">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.hrs.modal_title">⏱️ تسجيل ساعات تطوعية</h3><button class="modal-close" data-action="closeModal" data-modal="hours">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="hrs-edit-id"/>
       <input type="hidden" id="hrs-assignment-id"/>
@@ -1239,59 +1269,59 @@
            enforce that the person was marked Attended. Leave the dropdowns empty
            to fall back to the legacy direct-entry path (admin correction). -->
       <div style="background:var(--gl);border-radius:var(--rs);padding:.85rem 1rem;margin-bottom:1rem">
-        <div style="font-weight:700;color:var(--g);margin-bottom:.4rem;font-size:.85rem">
+        <div data-i18n="ap.hrs.via_opp_title" style="font-weight:700;color:var(--g);margin-bottom:.4rem;font-size:.85rem">
           🎯 تسجيل عبر فرصة (موصى به)
         </div>
-        <div style="font-size:.72rem;color:var(--tm);margin-bottom:.6rem">
+        <div data-i18n="ap.hrs.via_opp_hint" style="font-size:.72rem;color:var(--tm);margin-bottom:.6rem">
           الساعات المرتبطة بفرصة تتطلّب أن تكون حالة الحضور "حضر" — تطبيقاً للمبدأ الثاني.
         </div>
         <div class="fg-row">
-          <div class="fg"><label>الفرصة</label>
+          <div class="fg"><label data-i18n="ap.hrs.lbl_opportunity">الفرصة</label>
             <select id="hrs-opportunity" data-action="onHrsOpportunityChange">
-              <option value="">— تسجيل مباشر بدون فرصة —</option>
+              <option value="" data-i18n="ap.hrs.opp_direct_option">— تسجيل مباشر بدون فرصة —</option>
             </select>
           </div>
-          <div class="fg"><label>المسنَد (الحاضر)</label>
+          <div class="fg"><label data-i18n="ap.hrs.lbl_assignment">المسنَد (الحاضر)</label>
             <select id="hrs-assignment" data-action="onHrsAssignmentChange">
-              <option value="">— اختر بعد اختيار الفرصة —</option>
+              <option value="" data-i18n="ap.hrs.assign_choose_after">— اختر بعد اختيار الفرصة —</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div class="fg"><label>المشروع / الفعالية <span class="required">*</span></label><select id="hrs-project"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>نوع المشارك</label>
+      <div class="fg"><label><span data-i18n="ap.hrs.lbl_project">المشروع / الفعالية</span> <span class="required">*</span></label><select id="hrs-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.hrs.lbl_type">نوع المشارك</label>
         <select id="hrs-type" data-action="toggleHrsFields">
-          <option value="Member">عضو</option>
-          <option value="Volunteer">متطوع</option>
-          <option value="Advisor">مستشار</option>
+          <option value="Member"    data-i18n="ap.hrs.type_member">عضو</option>
+          <option value="Volunteer" data-i18n="ap.hrs.type_volunteer">متطوع</option>
+          <option value="Advisor"   data-i18n="ap.hrs.type_advisor">مستشار</option>
         </select>
       </div>
       <div id="hrs-member-section">
-        <div class="fg"><label>العضو</label><select id="hrs-member"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_member">العضو</label><select id="hrs-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       </div>
       <div id="hrs-vol-section" style="display:none">
-        <div class="fg"><label>بريد المتطوع</label><input id="hrs-vol-email" type="email" dir="ltr"/></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_vol_email">بريد المتطوع</label><input id="hrs-vol-email" type="email" dir="ltr"/></div>
       </div>
       <!-- Phase D — advisor participant. The select is filled by
            populateAdvisorSelects() when the hours modal opens. -->
       <div id="hrs-advisor-section" style="display:none">
-        <div class="fg"><label>المستشار</label><select id="hrs-advisor"><option value="">— اختر —</option></select></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_advisor">المستشار</label><select id="hrs-advisor"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       </div>
       <div class="fg-row3">
-        <div class="fg"><label>ساعات قبل</label><input id="hrs-before" type="number" min="0" step="0.5" value="0"/></div>
-        <div class="fg"><label>ساعات خلال</label><input id="hrs-during" type="number" min="0" step="0.5" value="0"/></div>
-        <div class="fg"><label>ساعات بعد</label><input id="hrs-after" type="number" min="0" step="0.5" value="0"/></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_before">ساعات قبل</label><input id="hrs-before" type="number" min="0" step="0.5" value="0"/></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_during">ساعات خلال</label><input id="hrs-during" type="number" min="0" step="0.5" value="0"/></div>
+        <div class="fg"><label data-i18n="ap.hrs.lbl_after">ساعات بعد</label><input id="hrs-after" type="number" min="0" step="0.5" value="0"/></div>
       </div>
       <div id="hrs-total-preview" style="background:var(--gl);border-radius:var(--rs);padding:.65rem 1rem;font-size:.82rem;font-weight:700;color:var(--g);margin-bottom:.85rem">
-        الإجمالي: <span id="hrs-total">0</span> ساعة
+        <span data-i18n="ap.hrs.total_preview_prefix">الإجمالي:</span> <span id="hrs-total">0</span> <span data-i18n="mp.hours.hours_unit">ساعة</span>
       </div>
-      <div class="fg"><label>سجّلها</label><select id="hrs-recorder"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>ملاحظات</label><textarea id="hrs-notes"></textarea></div>
+      <div class="fg"><label data-i18n="ap.hrs.lbl_recorder">سجّلها</label><select id="hrs-recorder"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.hrs.lbl_notes">ملاحظات</label><textarea id="hrs-notes"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="hours">إلغاء</button>
-      <button class="btn btn-g" data-action="saveHours">💾 تسجيل</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="hours" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="saveHours" data-i18n="ap.hrs.save_btn">💾 تسجيل</button>
     </div>
   </div>
 </div>
@@ -1320,15 +1350,24 @@
 <!-- INTEREST -->
 <div class="overlay" id="ov-interest">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>🙋 تسجيل اهتمام</h3><button class="modal-close" data-action="closeModal" data-modal="interest">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.int.modal_title">🙋 تسجيل اهتمام</h3><button class="modal-close" data-action="closeModal" data-modal="interest">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="int-prj-sel"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>العضو <span class="required">*</span></label><select id="int-mbr-sel"><option value="">— اختر —</option></select></div>
-      <div class="fg"><label>مهتم؟</label><select id="int-yn"><option value="true">نعم، أرغب</option><option value="false">لا، غير قادر</option></select></div>
-      <div class="fg"><label>التوفر</label><select id="int-av"><option>Full</option><option>Before</option><option>During</option><option>After</option><option>Partial</option></select></div>
-      <div class="fg"><label>تعليق</label><textarea id="int-cm"></textarea></div>
+      <div class="fg"><label><span data-i18n="ap.int.lbl_project">المشروع</span> <span class="required">*</span></label><select id="int-prj-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label><span data-i18n="ap.int.lbl_member">العضو</span> <span class="required">*</span></label><select id="int-mbr-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.int.lbl_interested">مهتم؟</label><select id="int-yn">
+        <option value="true"  data-i18n="ap.int.yn_yes">نعم، أرغب</option>
+        <option value="false" data-i18n="ap.int.yn_no">لا، غير قادر</option>
+      </select></div>
+      <div class="fg"><label data-i18n="ap.int.lbl_availability">التوفر</label><select id="int-av">
+        <option value="Full"    data-i18n="ap.par.avail_full">Full</option>
+        <option value="Before"  data-i18n="ap.par.avail_before">Before</option>
+        <option value="During"  data-i18n="ap.par.avail_during">During</option>
+        <option value="After"   data-i18n="ap.par.avail_after">After</option>
+        <option value="Partial" data-i18n="ap.par.avail_partial">Partial</option>
+      </select></div>
+      <div class="fg"><label data-i18n="ap.int.lbl_comment">تعليق</label><textarea id="int-cm"></textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="interest">إلغاء</button><button class="btn btn-g" data-action="saveInterest">💾 تسجيل</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="interest" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="saveInterest" data-i18n="ap.int.save_btn">💾 تسجيل</button></div>
   </div>
 </div>
 
@@ -1342,25 +1381,36 @@
 -->
 <div class="overlay" id="ov-int-assign">
   <div class="modal modal-sm">
-    <div class="modal-head"><h3>➕ تعيين العضو لفرصة</h3><button class="modal-close" data-action="closeModal" data-modal="int-assign">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.int.assign_title">➕ تعيين العضو لفرصة</h3><button class="modal-close" data-action="closeModal" data-modal="int-assign">✕</button></div>
     <div class="modal-body">
       <div style="background:var(--gl);border-radius:10px;padding:.75rem .95rem;margin-bottom:1rem;font-size:.82rem">
-        <div style="margin-bottom:.3rem"><strong>العضو:</strong> <span id="ia-member">—</span></div>
-        <div style="margin-bottom:.3rem"><strong>المشروع:</strong> <span id="ia-project">—</span></div>
-        <div><strong>التعليق:</strong> <span id="ia-comment" style="color:var(--tl)">—</span></div>
+        <div style="margin-bottom:.3rem"><strong data-i18n="ap.int.assign_member_label">العضو:</strong> <span id="ia-member">—</span></div>
+        <div style="margin-bottom:.3rem"><strong data-i18n="ap.int.assign_project_label">المشروع:</strong> <span id="ia-project">—</span></div>
+        <div><strong data-i18n="ap.int.assign_comment_label">التعليق:</strong> <span id="ia-comment" style="color:var(--tl)">—</span></div>
       </div>
       <div class="fg">
-        <label>الفرصة <span class="required">*</span></label>
-        <select id="ia-opp-sel"><option value="">جاري تحميل الفرص...</option></select>
-        <div class="fg-note" id="ia-opp-note" style="display:none">سيتم تحديد الفرصة تلقائياً حسب الدور المذكور في التعليق</div>
+        <label><span data-i18n="ap.int.assign_opp_label">الفرصة</span> <span class="required">*</span></label>
+        <!-- ia-opp-sel options are rewritten by openInterestAssign() in
+             interest.js — the placeholder option text is set via t()
+             so it follows the lang toggle even before the async load
+             completes. -->
+        <select id="ia-opp-sel"><option value="" data-i18n="ap.int.assign_opp_loading">جاري تحميل الفرص...</option></select>
+        <div class="fg-note" id="ia-opp-note" data-i18n="ap.int.assign_auto_hint" style="display:none">سيتم تحديد الفرصة تلقائياً حسب الدور المذكور في التعليق</div>
       </div>
-      <p style="font-size:.72rem;color:var(--tm);margin:.8rem 0 0;line-height:1.55">
+      <!--
+        Trailing hint contains an inline <strong>…</strong> tag — keep
+        the markup intact and load the text via innerHTML in JS rather
+        than data-i18n (data-i18n sets textContent and would escape
+        the tag). interest.js writes ap.int.assign_will_review_hint on
+        open + on lang change.
+      -->
+      <p id="ia-will-review-hint" style="font-size:.72rem;color:var(--tm);margin:.8rem 0 0;line-height:1.55">
         سيتم تأكيد التعيين وتعليم طلب الاهتمام كـ <strong>مُراجَع</strong> تلقائياً.
       </p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ol" data-action="closeModal" data-modal="int-assign">إلغاء</button>
-      <button class="btn btn-g" data-action="confirmInterestAssign" id="ia-confirm-btn">➕ تأكيد التعيين</button>
+      <button class="btn btn-ol" data-action="closeModal" data-modal="int-assign" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="confirmInterestAssign" id="ia-confirm-btn" data-i18n="ap.int.assign_confirm_btn">➕ تأكيد التعيين</button>
     </div>
   </div>
 </div>
@@ -1368,16 +1418,19 @@
 <!-- BULK ATTENDANCE -->
 <div class="overlay" id="ov-bulk-att">
   <div class="modal" style="max-width:820px">
-    <div class="modal-head"><h3>⚡ تسجيل حضور جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-att">✕</button></div>
+    <div class="modal-head"><h3 data-i18n="ap.att.bulk_title">⚡ تسجيل حضور جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="bulk-att">✕</button></div>
     <div class="modal-body">
-      <div class="fg"><label>المشروع <span class="required">*</span></label><select id="batt-prj" data-action="loadBulkAttGrid"><option value="">— اختر —</option></select></div>
-      <div id="bulk-att-grid" style="margin-top:.85rem"><p style="color:var(--tm);font-size:.82rem">اختر مشروعاً</p></div>
+      <div class="fg"><label><span data-i18n="ap.att.bulk_project_label">المشروع</span> <span class="required">*</span></label><select id="batt-prj" data-action="loadBulkAttGrid"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <!-- bulk-att-grid placeholder text is rewritten in attendance.js
+           by loadBulkAttGrid() — use a data-i18n on the empty-state
+           span so the default placeholder follows the lang toggle. -->
+      <div id="bulk-att-grid" style="margin-top:.85rem"><p style="color:var(--tm);font-size:.82rem" data-i18n="ap.att.bulk_pick_project">اختر مشروعاً</p></div>
       <div style="display:flex;gap:.5rem;margin-top:.85rem">
-        <button class="btn btn-g btn-sm" data-action="markAllAtt" data-status="Present">✅ الكل حضر</button>
-        <button class="btn btn-r btn-sm" data-action="markAllAtt" data-status="Absent">❌ الكل غاب</button>
+        <button class="btn btn-g btn-sm" data-action="markAllAtt" data-status="Present" data-i18n="ap.att.bulk_all_present_btn">✅ الكل حضر</button>
+        <button class="btn btn-r btn-sm" data-action="markAllAtt" data-status="Absent" data-i18n="ap.att.bulk_all_absent_btn">❌ الكل غاب</button>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-att">إلغاء</button><button class="btn btn-g" data-action="saveBulkAttendance">💾 حفظ الحضور</button></div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="bulk-att" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="saveBulkAttendance" data-i18n="ap.att.bulk_save_btn">💾 حفظ الحضور</button></div>
   </div>
 </div>
 

@@ -8,6 +8,22 @@
 import { DB, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, tag, fmtDate } from '../../lib/format.js';
 import { api, toast, closeModal } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
+
+// Attendance-status enum (canonical English from DB) → translation key.
+// Two distinct enums coexist in this codebase (assignment uses Pending/
+// Attended; attendance rows use Present/Late) — the keys for Absent +
+// Excused are shared. STATUS_COLORS still keys off the English values.
+const ATT_STATUS_KEY = {
+  Present: 'ap.att.status_present',
+  Absent:  'ap.att.absent',
+  Late:    'ap.att.late',
+  Excused: 'ap.att.excused',
+};
+const TYPE_KEY = {
+  Member:    'ap.att.type_member',
+  Volunteer: 'ap.att.type_volunteer',
+};
 
 // ══════════════════════════════════════════
 // ATTENDANCE
@@ -19,9 +35,10 @@ export async function loadAttendance(projectId) {
   const tbody = document.getElementById('attendance-tbody');
   const items = data.data || [];
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">لا يوجد حضور مسجّل بعد</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.att.empty'))}</td></tr>`;
     return;
   }
+  const deleteTargetName = t('ap.att.delete_target_name');
   tbody.innerHTML = items.map(a => {
     const member  = DB.members.find(m  => m.member_id  === a.member_id);
     const project = DB.projects.find(x => x.project_id === a.project_id);
@@ -32,7 +49,10 @@ export async function loadAttendance(projectId) {
     const name = isMember
       ? (member ? esc(member.preferred_name || member.full_name) : esc(a.member_id))
       : esc(a.volunteer_email || '—');
-    const typeLabel = isMember ? 'Member' : 'Volunteer';
+    const typeLabel = isMember ? t(TYPE_KEY.Member) : t(TYPE_KEY.Volunteer);
+    const statusLabel = ATT_STATUS_KEY[a.attendance_status]
+      ? t(ATT_STATUS_KEY[a.attendance_status])
+      : a.attendance_status;
     const checker = DB.members.find(m => m.member_id === a.checked_by_member_id);
     const projectCell = project
       ? `<div style="font-weight:600">${esc(project.project_name)}</div>
@@ -42,11 +62,11 @@ export async function loadAttendance(projectId) {
       <td><strong>${name}</strong></td>
       <td>${projectCell}</td>
       <td>${tag(typeLabel, isMember ? 't-b' : 't-p')}</td>
-      <td>${tag(a.attendance_status, STATUS_COLORS[a.attendance_status] || 't-gr')}</td>
+      <td>${tag(statusLabel, STATUS_COLORS[a.attendance_status] || 't-gr')}</td>
       <td>${fmtDate(a.attendance_date) || '—'}</td>
       <td>${checker ? esc(checker.preferred_name || checker.full_name) : '—'}</td>
       <td>
-        <button class="btn-icon del" data-action="confirmDelete" data-type="attendance" data-id="${a.attendance_id}" data-name="سجل الحضور هذا">🗑️</button>
+        <button class="btn-icon del" data-action="confirmDelete" data-type="attendance" data-id="${a.attendance_id}" data-name="${esc(deleteTargetName)}">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -63,10 +83,10 @@ export async function saveAttendance() {
     checked_by_member_id: gv('att-checker'),
     notes:              gv('att-notes'),
   };
-  if (!body.project_id || !body.attendance_status) { toast('المشروع وحالة الحضور مطلوبان', 'twarn'); return; }
+  if (!body.project_id || !body.attendance_status) { toast(t('ap.att.err_required'), 'twarn'); return; }
   const res = await api('recordAttendance', body);
   if (res) {
-    toast('✅ تم تسجيل الحضور');
+    toast(t('ap.att.success_record'));
     closeModal('attendance');
     if (document.getElementById('attendance-project-filter').value === body.project_id) {
       loadAttendance(body.project_id);
@@ -75,16 +95,17 @@ export async function saveAttendance() {
 }
 
 export function toggleAttFields() {
-  const t = gv('att-type');
-  document.getElementById('att-member-section').style.display = t === 'Member' ? '' : 'none';
-  document.getElementById('att-vol-section').style.display    = t === 'Volunteer' ? '' : 'none';
+  // Renamed from `t` so it doesn't shadow the imported i18n `t()`.
+  const ptype = gv('att-type');
+  document.getElementById('att-member-section').style.display = ptype === 'Member' ? '' : 'none';
+  document.getElementById('att-vol-section').style.display    = ptype === 'Volunteer' ? '' : 'none';
 }
 
 // ── BULK ATTENDANCE ──────────────────────────────────────────
 export async function loadBulkAttGrid(pid) {
   if (!pid) return;
   const grid = document.getElementById('bulk-att-grid');
-  grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>';
+  grid.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>${esc(t('common.loading'))}</div>`;
   const [pRes, aRes] = await Promise.all([
     api('participants.list', { project_id: pid }),
     api('attendance.list',   { project_id: pid })
@@ -92,7 +113,7 @@ export async function loadBulkAttGrid(pid) {
   const pars     = pRes?.data || [];
   const existing = aRes?.data || [];
   if (!pars.length) {
-    grid.innerHTML = '<p style="color:var(--tm);font-size:.82rem">لا يوجد مشاركون في هذه الفعالية</p>';
+    grid.innerHTML = `<p style="color:var(--tm);font-size:.82rem">${esc(t('ap.att.bulk_empty'))}</p>`;
     return;
   }
   grid.innerHTML = `<div class="att-grid">${pars.map(p => {
@@ -104,39 +125,51 @@ export async function loadBulkAttGrid(pid) {
     const cur = existing.find(a => a.member_id === key || a.volunteer_email === key);
     const cs  = cur ? cur.attendance_status : '';
     const cls = cs === 'Present' ? 'present' : cs === 'Absent' ? 'absent' : cs === 'Late' ? 'late' : cs === 'Excused' ? 'excused' : '';
+    // Render the localized status label inside the card. Cards store
+    // the canonical English value on a data-st attr so cycleAttStatus()
+    // can keep working off it without re-mapping localized text.
+    const stLabel = cs && ATT_STATUS_KEY[cs] ? t(ATT_STATUS_KEY[cs]) : (cs || '—');
     return `<div class="att-card ${cls}"
       data-mid="${p.member_id || ''}" data-ve="${p.volunteer_email || ''}" data-tp="${p.participant_type}"
+      data-st="${cs}"
       data-action="cycleAttStatus">
       <div class="att-av">${nm.charAt(0)}</div>
-      <div><div class="att-nm">${nm}</div><div class="att-st">${cs || '—'}</div></div>
+      <div><div class="att-nm">${nm}</div><div class="att-st">${esc(stLabel)}</div></div>
     </div>`;
   }).join('')}</div>`;
 }
 
+// cycleAttStatus reads + writes the canonical English value via a
+// data-st attr so the cycle stays language-independent. The displayed
+// text in .att-st is the localized label.
 export function cycleAttStatus(card) {
   const cycle = ['Present','Absent','Late','Excused',''];
   const stEl  = card.querySelector('.att-st');
-  const curr  = stEl.textContent === '—' ? '' : stEl.textContent;
+  const curr  = card.dataset.st || '';
   const next  = cycle[(cycle.indexOf(curr) + 1) % cycle.length];
-  stEl.textContent = next || '—';
+  card.dataset.st = next;
+  stEl.textContent = next && ATT_STATUS_KEY[next] ? t(ATT_STATUS_KEY[next]) : '—';
   card.className = 'att-card' +
     (next === 'Present' ? ' present' : next === 'Absent' ? ' absent' : next === 'Late' ? ' late' : next === 'Excused' ? ' excused' : '');
 }
 
 export function markAllAtt(status) {
   document.querySelectorAll('#bulk-att-grid .att-card').forEach(c => {
-    c.querySelector('.att-st').textContent = status;
+    c.dataset.st = status;
+    c.querySelector('.att-st').textContent = ATT_STATUS_KEY[status] ? t(ATT_STATUS_KEY[status]) : status;
     c.className = 'att-card ' + (status === 'Present' ? 'present' : status === 'Absent' ? 'absent' : 'late');
   });
 }
 
 export async function saveBulkAttendance() {
   const pid = gv('batt-prj');
-  if (!pid) { toast('اختر مشروعاً', 'twarn'); return; }
+  if (!pid) { toast(t('ap.par.err_pick_project'), 'twarn'); return; }
   const records = [];
   document.querySelectorAll('#bulk-att-grid .att-card').forEach(c => {
-    const st = c.querySelector('.att-st').textContent;
-    if (st && st !== '—') {
+    // Read the canonical English value off data-st (not the visible
+    // localized text in .att-st, which would change with the language).
+    const st = c.dataset.st || '';
+    if (st) {
       records.push({
         member_id:       c.dataset.mid,
         volunteer_email: c.dataset.ve,
@@ -146,10 +179,10 @@ export async function saveBulkAttendance() {
       });
     }
   });
-  if (!records.length) { toast('لا توجد تغييرات', 'twarn'); return; }
+  if (!records.length) { toast(t('ap.att.bulk_err_no_changes'), 'twarn'); return; }
   const r = await api('attendance.bulkRecord', { project_id: pid, records });
   if (r) {
-    toast(`✅ حُفظ ${r.inserted || r.saved || records.length} سجل حضور`);
+    toast(t('ap.att.bulk_success', { n: r.inserted || r.saved || records.length }));
     closeModal('bulk-att');
     const flt = document.getElementById('flt-att-prj');
     if (flt && flt.value === pid) loadAttendance(pid);

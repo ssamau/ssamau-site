@@ -18,6 +18,17 @@
 import { DB } from '../../lib/state.js';
 import { esc, gv, sv, tag, setEl } from '../../lib/format.js';
 import { api, apiGet, toast, openModal, closeModal, populateNewSelects } from '../../lib/ui.js';
+import { t } from '../../lib/i18n.js';
+
+// Availability enum (canonical English) → translation key. Shared with
+// the participant + opportunity availability vocabulary.
+const AVAIL_KEY = {
+  Full:    'ap.par.avail_full',
+  Before:  'ap.par.avail_before',
+  During:  'ap.par.avail_during',
+  After:   'ap.par.avail_after',
+  Partial: 'ap.par.avail_partial',
+};
 
 // Show-reviewed toggle state (default OFF — admins see only fresh
 // requests on load, can flip the checkbox to show all).
@@ -76,9 +87,15 @@ export function renderInterest(list) {
   const tb = document.getElementById('tb-interest');
   if (!tb) return;
   if (!list.length) {
-    tb.innerHTML = '<tr class="empty-row"><td colspan="7">لا توجد طلبات</td></tr>';
+    tb.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.int.empty'))}</td></tr>`;
     return;
   }
+  const yesLabel       = t('ap.int.yes');
+  const noLabel        = t('ap.int.no');
+  const reviewedBadge  = t('ap.int.row_reviewed_badge');
+  const unreviewTitle  = t('ap.int.row_unreview_title');
+  const assignBtnLabel = t('ap.int.row_assign_btn');
+  const reviewBtnTitle = t('ap.int.row_review_btn_title');
   // interest.listAll JOINs members + projects, so the API rows already
   // carry full_name, preferred_name, and project_name. Use them
   // directly; DB lookups remain as a fallback for the rare row missing
@@ -92,6 +109,9 @@ export function renderInterest(list) {
               || i.project_id;
     const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
     const reviewed = !!i.reviewed_at;
+    const availLabel = i.availability_type && AVAIL_KEY[i.availability_type]
+      ? t(AVAIL_KEY[i.availability_type])
+      : (i.availability_type || '—');
     // Encode the row payload in data-attrs so the dispatcher handlers can
     // open the assign-modal / toggle reviewed without re-fetching the row
     // server-side. Comment is escaped + carried as the role hint.
@@ -99,16 +119,16 @@ export function renderInterest(list) {
     return `<tr class="${reviewed ? 'int-row-reviewed' : ''}">
       <td><strong>${esc(name)}</strong></td>
       <td style="font-size:.76rem">${esc(proj)}</td>
-      <td>${tag(yn ? 'نعم ✓' : 'لا ✗', yn ? 't-g' : 't-r')}</td>
-      <td>${tag(i.availability_type || '—', 't-b')}</td>
+      <td>${tag(yn ? yesLabel : noLabel, yn ? 't-g' : 't-r')}</td>
+      <td>${tag(availLabel, 't-b')}</td>
       <td style="font-size:.76rem;max-width:130px">${esc(i.comment) || '—'}</td>
       <td style="font-size:.71rem;color:var(--tm)">${String(i.submitted_at || '').split('T')[0] || '—'}</td>
       <td style="white-space:nowrap">
         ${reviewed
-          ? `<span class="hs-badge hs-finalapproved" style="font-size:.66rem">✓ مُراجَع</span>
-             <button class="btn-icon" title="إلغاء المراجعة" data-action="interestMarkReviewed" ${rowAttrs} data-reviewed="false">↺</button>`
-          : `<button class="btn btn-g btn-sm" data-action="openInterestAssign" ${rowAttrs} style="font-size:.7rem;padding:.3rem .55rem">➕ تعيين</button>
-             <button class="btn-icon" title="تعليم كمُراجَع دون تعيين" data-action="interestMarkReviewed" ${rowAttrs} data-reviewed="true">✓</button>`}
+          ? `<span class="hs-badge hs-finalapproved" style="font-size:.66rem">${esc(reviewedBadge)}</span>
+             <button class="btn-icon" title="${esc(unreviewTitle)}" data-action="interestMarkReviewed" ${rowAttrs} data-reviewed="false">↺</button>`
+          : `<button class="btn btn-g btn-sm" data-action="openInterestAssign" ${rowAttrs} style="font-size:.7rem;padding:.3rem .55rem">${esc(assignBtnLabel)}</button>
+             <button class="btn-icon" title="${esc(reviewBtnTitle)}" data-action="interestMarkReviewed" ${rowAttrs} data-reviewed="true">✓</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -122,10 +142,10 @@ export async function saveInterest() {
     availability_type: gv('int-av'),
     comment:           gv('int-cm'),
   };
-  if (!body.project_id || !body.member_id) { toast('المشروع والعضو مطلوبان', 'twarn'); return; }
+  if (!body.project_id || !body.member_id) { toast(t('ap.int.err_required'), 'twarn'); return; }
   const r = await api('interest.submit', body);
   if (r) {
-    toast('✅ تم تسجيل الاهتمام');
+    toast(t('ap.int.success_save'));
     closeModal('interest');
     clearIntForm();
     loadInterestAll();
@@ -160,29 +180,40 @@ export async function openInterestAssign(el) {
   setEl('ia-member',  _activeInterest.name);
   setEl('ia-project', _activeInterest.projname);
   setEl('ia-comment', _activeInterest.comment || '—');
+  // Trailing "will mark reviewed" hint carries inline <strong> markup —
+  // load it via innerHTML so the tag survives. The static fallback in
+  // admin.html keeps the same shape so the AR-only render before JS
+  // runs still looks right.
+  const hintEl = document.getElementById('ia-will-review-hint');
+  if (hintEl) hintEl.innerHTML = t('ap.int.assign_will_review_hint');
   const sel = document.getElementById('ia-opp-sel');
-  sel.innerHTML = '<option value="">جاري تحميل الفرص...</option>';
+  sel.innerHTML = `<option value="">${esc(t('ap.int.assign_opp_loading'))}</option>`;
   document.getElementById('ia-opp-note').style.display = 'none';
   openModal('int-assign');
 
   // Load opportunities for this project (uses the existing endpoint).
   const res = await api('opportunities.list', { project_id: _activeInterest.project_id });
   if (!res || !res.success) {
-    sel.innerHTML = '<option value="">— تعذّر التحميل —</option>';
+    sel.innerHTML = `<option value="">${esc(t('ap.int.assign_opp_load_failed'))}</option>`;
     return;
   }
   const opps = (res.data || []).filter(o => o.status !== 'Done' && o.status !== 'Cancelled');
   if (!opps.length) {
-    sel.innerHTML = '<option value="">— لا توجد فرص متاحة لهذا المشروع —</option>';
+    sel.innerHTML = `<option value="">${esc(t('ap.int.assign_opp_none_available'))}</option>`;
     return;
   }
-  sel.innerHTML = '<option value="">— اختر فرصة —</option>' +
+  sel.innerHTML = `<option value="">${esc(t('ap.int.assign_opp_pick'))}</option>` +
     opps.map(o => `<option value="${esc(o.opportunity_id)}">${esc(o.role_name)} (${o.assigned_count || 0}/${o.headcount_needed || 1})</option>`).join('');
 
   // Auto-select if the comment hints at a specific role. Comment format
   // from the member portal is "مهتم بدور: <role_name>" — extract the
   // tail and case-insensitive match against opportunity.role_name.
-  const hint = (_activeInterest.comment || '').match(/مهتم بدور:\s*(.+)/);
+  // English-language hint variant ("interested in role:") is matched
+  // too so the portal can localize the comment without breaking
+  // auto-select.
+  const comment = _activeInterest.comment || '';
+  const hint = comment.match(/مهتم بدور:\s*(.+)/)
+            || comment.match(/interested in role:\s*(.+)/i);
   if (hint) {
     const wanted = hint[1].trim();
     const match  = opps.find(o => (o.role_name || '').trim() === wanted);
@@ -196,15 +227,15 @@ export async function openInterestAssign(el) {
 export async function confirmInterestAssign() {
   if (!_activeInterest) return;
   const oppId = gv('ia-opp-sel');
-  if (!oppId) { toast('اختر فرصة أولاً', 'twarn'); return; }
+  if (!oppId) { toast(t('ap.int.assign_err_pick_opp'), 'twarn'); return; }
   const btn = document.getElementById('ia-confirm-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري التعيين...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('ap.int.assign_confirming_btn'); }
   try {
     const r1 = await api('assignments.add', {
       data: { opportunity_id: oppId, member_id: _activeInterest.member_id },
     });
     if (!r1 || !r1.success) {
-      toast(r1?.error || 'فشل التعيين', 'twarn');
+      toast(r1?.error || t('ap.int.assign_err_fail'), 'twarn');
       return;
     }
     // Auto-mark reviewed on success — the typical case. If the
@@ -212,15 +243,15 @@ export async function confirmInterestAssign() {
     // landed, so we don't roll back; just surface a warning.
     const r2 = await api('interest.markReviewed', { id: _activeInterest.id, reviewed: true });
     if (!r2 || !r2.success) {
-      toast('تم التعيين، لكن تعذّر تعليم الطلب كمُراجَع', 'twarn');
+      toast(t('ap.int.assign_success_partial'), 'twarn');
     } else {
-      toast('✅ تم التعيين وتعليم الطلب كمُراجَع', 'tok');
+      toast(t('ap.int.assign_success_full'), 'tok');
     }
     closeModal('int-assign');
     _activeInterest = null;
     loadInterestAll();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '➕ تأكيد التعيين'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('ap.int.assign_confirm_btn'); }
   }
 }
 
@@ -231,6 +262,6 @@ export async function interestMarkReviewed(el) {
   const reviewed = el.dataset.reviewed === 'true';
   const r = await api('interest.markReviewed', { id, reviewed });
   if (!r || !r.success) return;
-  toast(reviewed ? 'تم تعليم الطلب كمُراجَع' : 'تم إلغاء المراجعة', 'tok');
+  toast(reviewed ? t('ap.int.mark_reviewed_set') : t('ap.int.mark_reviewed_clear'), 'tok');
   loadInterestAll();
 }

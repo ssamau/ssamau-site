@@ -15,6 +15,16 @@ import { DB, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag } from '../../lib/format.js';
 import { api, apiGet, toast, closeModal, clearForm } from '../../lib/ui.js';
 import { loadDashboard } from './dashboard.js';
+import { t } from '../../lib/i18n.js';
+
+// Approval-status enum → translation key. Reuses mp.hours.status_* so
+// the same labels show in the member portal and the admin hours tab.
+const HOURS_STATUS_KEY = {
+  Draft:           'mp.hours.status_draft',
+  PrimaryApproved: 'mp.hours.status_primary',
+  FinalApproved:   'mp.hours.status_final',
+  Rejected:        'mp.hours.status_rejected',
+};
 
 // ══════════════════════════════════════════
 // VOLUNTEER HOURS
@@ -26,7 +36,7 @@ export async function loadHours(projectId) {
   const tbody = document.getElementById('hours-tbody');
   const items = data.data || [];
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد ساعات مسجّلة</td></tr>';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('ap.hrs.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(h => renderHoursRow(h)).join('');
@@ -50,10 +60,7 @@ export function renderHoursRow(h) {
        ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`
     : esc(h.project_id);
   const status = h.approval_status || 'Draft';
-  const statusLabelAR = {
-    Draft: 'مسودة', PrimaryApproved: 'اعتماد أولي',
-    FinalApproved: 'اعتماد نهائي', Rejected: 'مرفوض',
-  }[status] || status;
+  const statusLabel = HOURS_STATUS_KEY[status] ? t(HOURS_STATUS_KEY[status]) : status;
 
   const access = (window.CURRENT_USER || {}).access;
   const isHead = access === 'head';
@@ -67,21 +74,21 @@ export function renderHoursRow(h) {
   // whose committee matches", so the same predicate gates every stage.
   const actions = [];
   if (status === 'Draft' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="اعتماد أولي" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_primary_title'))}" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
   } else if (status === 'PrimaryApproved' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="اعتماد نهائي" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="رفض" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_final_title'))}" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
   } else if (status === 'FinalApproved' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="رفض / استرجاع" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
+    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_rollback_title'))}" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
   }
-  actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="هذا السجل">🗑️</button>`);
+  actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="${esc(t('ap.hrs.delete_target_name'))}">🗑️</button>`);
 
   const approverHint = h.primary_approver_name
-    ? `<div style="font-size:.65rem;color:var(--tm);margin-top:.15rem">أولي: ${esc(h.primary_approver_name)}${h.final_approver_name ? ` · نهائي: ${esc(h.final_approver_name)}` : ''}</div>`
+    ? `<div style="font-size:.65rem;color:var(--tm);margin-top:.15rem">${esc(t('ap.hrs.approver_primary_label'))} ${esc(h.primary_approver_name)}${h.final_approver_name ? ` · ${esc(t('ap.hrs.approver_final_label'))} ${esc(h.final_approver_name)}` : ''}</div>`
     : '';
   const rejectHint = h.rejected_reason
-    ? `<div style="font-size:.65rem;color:var(--rd);margin-top:.15rem">سبب: ${esc(h.rejected_reason)}</div>`
+    ? `<div style="font-size:.65rem;color:var(--rd);margin-top:.15rem">${esc(t('ap.hrs.reject_reason_prefix'))} ${esc(h.rejected_reason)}</div>`
     : '';
 
   return `<tr>
@@ -91,24 +98,24 @@ export function renderHoursRow(h) {
     <td>${h.hours_during || 0}</td>
     <td>${h.hours_after || 0}</td>
     <td><strong style="color:var(--g)">${h.total_hours || 0}</strong></td>
-    <td>${tag(statusLabelAR, STATUS_COLORS[status] || 't-gr')}${approverHint}${rejectHint}</td>
+    <td>${tag(statusLabel, STATUS_COLORS[status] || 't-gr')}${approverHint}${rejectHint}</td>
     <td>${actions.join('')}</td>
   </tr>`;
 }
 
 export async function primaryApproveHours(id) {
   const res = await api('hours.primaryApprove', { id });
-  if (res && res.success) { toast('✅ اعتماد أولي'); loadHours(gv('hours-project-filter') || ''); }
+  if (res && res.success) { toast(t('ap.hrs.success_primary')); loadHours(gv('hours-project-filter') || ''); }
 }
 export async function finalApproveHours(id) {
   const res = await api('hours.finalApprove', { id });
-  if (res && res.success) { toast('✅ اعتماد نهائي'); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
+  if (res && res.success) { toast(t('ap.hrs.success_final')); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
 }
 export async function rejectHours(id) {
-  const reason = prompt('سبب الرفض (اختياري):');
+  const reason = prompt(t('ap.hrs.prompt_reject'));
   if (reason === null) return;
   const res = await api('hours.reject', { id, reason });
-  if (res && res.success) { toast('❌ تم الرفض'); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
+  if (res && res.success) { toast(t('ap.hrs.success_reject')); loadHours(gv('hours-project-filter') || ''); loadDashboard(); }
 }
 
 export async function saveHours() {
@@ -116,30 +123,32 @@ export async function saveHours() {
   const during = parseFloat(gv('hrs-during') || 0);
   const after  = parseFloat(gv('hrs-after')  || 0);
   const assignmentId = gv('hrs-assignment-id');
-  const t = gv('hrs-type');
+  // Renamed from `t` so it doesn't shadow the imported i18n `t()` —
+  // every t(...) call inside this function reaches the helper now.
+  const ptype = gv('hrs-type');
   // Phase D — pick the right participant identifier based on the type.
   // Exactly one is sent; the Edge Function rejects rows with more than
   // one identifier set.
   const body = {
     assignment_id:        assignmentId ? parseInt(assignmentId, 10) : null,
     project_id:           gv('hrs-project'),
-    participant_type:     t,
-    member_id:            t === 'Member'    ? gv('hrs-member')   : null,
-    volunteer_email:      t === 'Volunteer' ? gv('hrs-vol-email') : null,
-    advisor_id:           t === 'Advisor'   ? (parseInt(gv('hrs-advisor'), 10) || null) : null,
+    participant_type:     ptype,
+    member_id:            ptype === 'Member'    ? gv('hrs-member')   : null,
+    volunteer_email:      ptype === 'Volunteer' ? gv('hrs-vol-email') : null,
+    advisor_id:           ptype === 'Advisor'   ? (parseInt(gv('hrs-advisor'), 10) || null) : null,
     hours_before:         before,
     hours_during:         during,
     hours_after:          after,
     recorded_by_member_id:gv('hrs-recorder'),
     notes:                gv('hrs-notes'),
   };
-  if (!body.project_id) { toast('اختر مشروعاً', 'twarn'); return; }
-  if (before + during + after <= 0) { toast('أدخل عدد الساعات', 'twarn'); return; }
-  if (t === 'Advisor' && !body.advisor_id) { toast('اختر المستشار', 'twarn'); return; }
-  if (t === 'Member'  && !body.member_id)  { toast('اختر العضو', 'twarn');   return; }
+  if (!body.project_id) { toast(t('ap.hrs.err_pick_project'), 'twarn'); return; }
+  if (before + during + after <= 0) { toast(t('ap.hrs.err_zero'), 'twarn'); return; }
+  if (ptype === 'Advisor' && !body.advisor_id) { toast(t('ap.hrs.err_pick_advisor'), 'twarn'); return; }
+  if (ptype === 'Member'  && !body.member_id)  { toast(t('ap.hrs.err_pick_member'), 'twarn');   return; }
   const res = await api('recordHours', body);
   if (res && res.success) {
-    toast(`✅ تم تسجيل ${res.total_hours} ساعة`);
+    toast(t('ap.hrs.success_save', { n: res.total_hours }));
     closeModal('hours'); clearForm('hours');
     loadHours(gv('hours-project-filter') || '');
   }
@@ -218,12 +227,13 @@ export function onHrsAssignmentChange() {
 }
 
 export function toggleHrsFields() {
-  const t = gv('hrs-type');
-  document.getElementById('hrs-member-section').style.display  = t === 'Member'    ? '' : 'none';
-  document.getElementById('hrs-vol-section').style.display     = t === 'Volunteer' ? '' : 'none';
+  // Renamed from `t` so it doesn't shadow the imported i18n `t()`.
+  const ptype = gv('hrs-type');
+  document.getElementById('hrs-member-section').style.display  = ptype === 'Member'    ? '' : 'none';
+  document.getElementById('hrs-vol-section').style.display     = ptype === 'Volunteer' ? '' : 'none';
   // Phase D — advisor section. Mutually exclusive with member/volunteer.
   const advSection = document.getElementById('hrs-advisor-section');
-  if (advSection) advSection.style.display = t === 'Advisor' ? '' : 'none';
+  if (advSection) advSection.style.display = ptype === 'Advisor' ? '' : 'none';
 }
 
 // Live hours total preview — wired at import time, matching the original
