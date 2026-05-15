@@ -76,6 +76,35 @@
 /* Approval-status badges (.hs-badge + variants) live in admin.css
  * since both the member portal AND the admin's interest tab use them. */
 
+/* ─── Profile uploader blocks (CV + photo) ─────────────────────────── */
+/* Each uploader is one .fg with the standard label/note slots PLUS a
+ * .upl-current preview area and .upl-controls row. Layout is column-
+ * flex so the preview sits above the controls; on narrow screens the
+ * file input + buttons wrap naturally. */
+.upl-fg .upl-current {
+  margin: .35rem 0 .55rem;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-size: .82rem;
+}
+.upl-empty {
+  color: var(--tm, #9ca3af);
+  font-size: .78rem;
+  font-style: italic;
+}
+.upl-controls {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.upl-controls input[type="file"] {
+  font-size: .78rem;
+  color: var(--tl);
+  max-width: 100%;
+}
+
 /* ─── Opportunities: interest button ───────────────────────────────── */
 .btn-interest {
   font-size: .74rem;

@@ -42,6 +42,7 @@ import {
   filterMembersByRole, filterMembersByStatus,
   openInviteModal, sendInviteByEmail, sendInviteByPin,
   copyShownPin, confirmRevokeInvite,
+  openMemberFile,
 } from './tabs/members.js';
 import { loadAdvisors, saveAdvisor, editAdvisor } from './tabs/advisors.js';
 import { loadCommittees, saveCommittee, editCommittee } from './tabs/committees.js';
@@ -368,6 +369,8 @@ setHandlers({
   viewProfile:                 (el) => viewProfile(el.dataset.id),
   openAccountModalForMember:   (el) => openAccountModalForMember(el.dataset.id),
   openInviteModal:             (el) => openInviteModal(el.dataset.id),
+  // Phase-A storage — admin per-row CV / photo viewers
+  openMemberFile:              (el) => openMemberFile(el.dataset.id, el.dataset.kind),
   confirmRevokeInvite:         (el) => confirmRevokeInvite(el.dataset.id, el.dataset.name),
 
   // ── Single dynamic ID (numeric) ─────────────────────────────────
