@@ -45,19 +45,35 @@ export function renderThanks(list) {
 }
 
 export async function saveThanks() {
+  // Edge Function `thanks.send` expects:
+  //   { project_id, member_id, recipient_email, subject, message }
+  // The admin form historically sent `email_subject` / `email_body` —
+  // those names date back to the Apps Script port and were never
+  // updated when SMTP delivery got wired in (PR #22). Result: the
+  // server saw subject/message as undefined, used defaults, AND
+  // recipient_email was always missing so sendEmail was skipped and
+  // no row even reached the DB (the upsert chain bailed early).
+  // Now sending the right names + looking up the member's email
+  // from DB.members.
+  const mid = gv('thx-mbr');
+  const m   = DB.members.find(mb => mb.member_id === mid);
+  const recipient_email = m ? (m.email || '') : '';
   const body = {
-    project_id:           gv('thx-prj'),
-    participant_type:     gv('thx-tp'),
-    member_id:            gv('thx-mbr'),
-    email_subject:        gv('thx-sb'),
-    email_body:           gv('thx-bd'),
-    hours_included:       !!document.getElementById('thx-hi')?.checked,
-    outstanding_included: !!document.getElementById('thx-oi')?.checked,
+    project_id:       gv('thx-prj'),
+    member_id:        mid,
+    recipient_email,
+    subject:          gv('thx-sb'),
+    message:          gv('thx-bd'),
   };
   if (!body.project_id) { toast('اختر مشروعاً', 'twarn'); return; }
+  if (!body.recipient_email && body.member_id) {
+    toast('⚠️ العضو المختار ليس له بريد إلكتروني مسجّل — تواصل معه يدوياً', 'twarn');
+    return;
+  }
   const r = await api('thanks.send', body);
-  if (r) {
-    toast(`📧 ${r.sent_status}`);
+  if (r && r.success && r.data) {
+    const st = r.data.status;
+    toast(st === 'Sent' ? '📧 أُرسل' : '⚠️ فشل الإرسال — تحقّق من البريد', st === 'Sent' ? 'tok' : 'twarn');
     closeModal('thanks');
     ['thx-sb','thx-bd'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     loadThanks('');
@@ -68,17 +84,16 @@ export async function saveBulkThanks() {
   const pid = gv('bthx-prj');
   if (!pid) { toast('اختر مشروعاً', 'twarn'); return; }
   toast('⏳ جاري الإرسال...', 'twarn');
+  // bulkSend reads `subject` + `message` at top level, NOT inside an
+  // `options` nest — that nesting was the older Apps-Script-era shape.
   const r = await api('thanks.bulkSend', {
     project_id: pid,
-    options: {
-      subject:        gv('bthx-sb'),
-      custom_message: gv('bthx-msg'),
-      hours_included: !!document.getElementById('bthx-hi')?.checked,
-      outstanding_included: !!document.getElementById('bthx-oi')?.checked,
-    }
+    subject:    gv('bthx-sb'),
+    message:    gv('bthx-msg'),
   });
-  if (r) {
-    toast(`✅ أُرسل: ${r.sent} | تخطي: ${r.skipped || 0} | فشل: ${r.failed || 0}`);
+  if (r && r.success && r.data) {
+    const { sent = 0, failed = 0, count = 0 } = r.data;
+    toast(`✅ أُرسل: ${sent} / ${count} | فشل: ${failed}`, failed === 0 ? 'tok' : 'twarn');
     closeModal('bulk-thanks');
     loadThanks('');
   }
