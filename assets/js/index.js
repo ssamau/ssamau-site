@@ -586,6 +586,21 @@ function evTab(id, btn) {
 // All five updaters fail soft — if their data source is empty/missing the
 // static fallback markup just stays. We never want an API hiccup to leave the
 // page broken.
+
+// Homepage display rule (president feedback 2026-05-15): show ONLY the
+// first + last word of a member's full Arabic name on the public site.
+// Arabic full names are typically 4 words (given + father + grandfather +
+// family); the leadership chat directory still uses the full version,
+// but homepage cards should read as "فيصل العتيبي" not the full chain.
+// Single-word names pass through unchanged; two-word names also pass
+// through (already first + last).
+function shortName(full) {
+  if (!full) return '';
+  const parts = String(full).trim().split(/\s+/);
+  if (parts.length <= 2) return parts.join(' ');
+  return parts[0] + ' ' + parts[parts.length - 1];
+}
+
 function updateBoard(members) {
   const roles  = ['President', 'Vice President', 'Deputy Vice President'];
   const roleAr = { President: 'رئيس النادي السعودي في ملبورن', 'Vice President': 'نائب الرئيس', 'Deputy Vice President': 'نائبة الرئيس' };
@@ -598,8 +613,12 @@ function updateBoard(members) {
   // Without this filter, after the API patch the board page balloons from
   // the correct 3 cards to 8 (every VP/DVP including those embedded in a
   // committee), which was the bug visible in prod.
+  //
+  // Also filter to status='Active' — president flagged that an Inactive
+  // member's name was still appearing on the homepage after the admin
+  // flipped their status. Inactive board members shouldn't render.
   const board = members.filter((m) =>
-    roles.indexOf(m.club_role) !== -1 && !m.committee_id
+    roles.indexOf(m.club_role) !== -1 && !m.committee_id && m.status === 'Active'
   );
   if (!board.length) return;
 
@@ -607,15 +626,15 @@ function updateBoard(members) {
   if (!grid) return;
 
   grid.innerHTML = board.map((m) => {
-    const fullName = m.full_name || '';
-    const ini = fullName[0] || '?';
+    const displayName = shortName(m.full_name);
+    const ini = (m.full_name || '?')[0];
     const isF = m.gender === 'أنثى';
     const isP = m.club_role === 'President';
     return '<div class="bcard' + (isP ? ' pres' : '') + '">' +
       '<div class="bav' + (isF ? ' f' : '') + '">' + ini + '</div>' +
       '<div class="bnm">' +
-        '<span data-ar>' + fullName + '</span>' +
-        '<span data-en style="display:none">' + fullName + '</span>' +
+        '<span data-ar>' + displayName + '</span>' +
+        '<span data-en style="display:none">' + displayName + '</span>' +
       '</div>' +
       '<div class="brl">' +
         '<span data-ar>' + (roleAr[m.club_role] || m.club_role) + '</span>' +
@@ -625,11 +644,21 @@ function updateBoard(members) {
 }
 
 function updateCommittees(members, committees) {
+  // Public homepage only shows Active members — Inactive should disappear
+  // from the directory, board, and committee headcounts (president flagged
+  // this 2026-05-15). Keep the unfiltered list around only for the
+  // MBS_LIST search index since that drives the committee drawer search,
+  // and an inactive member's row may still be useful as a reference there;
+  // however, we explicitly mark them so the drawer can grey them out if
+  // it ever surfaces that signal.
+  const activeMembers = members.filter((m) => m.status === 'Active');
+
   // Overwrite the fallback MBS_LIST/COMS_DATA so the committee drawer shows
-  // live data when opened.
-  window.MBS_LIST = members.map((m) => {
+  // live data when opened. Uses activeMembers — the drawer search lists
+  // people you can actually contact / assign to opportunities.
+  window.MBS_LIST = activeMembers.map((m) => {
     const com = committees.find((c) => c.committee_id === m.committee_id);
-    return { nm: m.full_name, cm: com ? com.committee_name : '', gender: m.gender };
+    return { nm: shortName(m.full_name), cm: com ? com.committee_name : '', gender: m.gender };
   });
 
   document.querySelectorAll('.ccard').forEach((card) => {
@@ -639,14 +668,14 @@ function updateCommittees(members, committees) {
     const com = committees.find((c) => c.committee_name === comName);
     if (!com) return;
 
-    const count = members.filter((m) => m.committee_id === com.committee_id).length;
+    const count = activeMembers.filter((m) => m.committee_id === com.committee_id).length;
     const cct = card.querySelector('.cct [data-ar]');
     if (cct) cct.textContent = count + ' عضو';
     const cctEn = card.querySelector('.cct [data-en]');
     if (cctEn) cctEn.textContent = count + ' members';
 
-    const headMember = members.find((m) => m.member_id === com.committee_head_member_id);
-    const viceMember = members.find((m) => m.member_id === com.committee_vice_head_member_id);
+    const headMember = activeMembers.find((m) => m.member_id === com.committee_head_member_id);
+    const viceMember = activeMembers.find((m) => m.member_id === com.committee_vice_head_member_id);
 
     // Live DB is authoritative WHEN it has data. When it returns null for a
     // role, we fall back to whatever the static HTML / COMS_DATA already
@@ -657,12 +686,12 @@ function updateCommittees(members, committees) {
     // task). Once the DB catches up, the static fallback becomes a no-op.
     const chdEl = card.querySelector('.chd');
     if (chdEl && headMember) {
-      chdEl.textContent = headMember.full_name;
+      chdEl.textContent = shortName(headMember.full_name);
       chdEl.style.color = 'var(--go)';
     }
     const cdepEl = card.querySelector('.cdep');
     if (cdepEl && viceMember) {
-      cdepEl.textContent = 'نائب: ' + viceMember.full_name;
+      cdepEl.textContent = 'نائب: ' + shortName(viceMember.full_name);
     }
 
     // Patch COMS_DATA so the drawer (opened via oDrw) shows live heads.
@@ -677,17 +706,32 @@ function updateCommittees(members, committees) {
       if (match) {
         const cEntry = window.COMS_DATA.find((x) => x.id === match[1]);
         if (cEntry) {
-          if (headMember) { cEntry.hAr = headMember.full_name; cEntry.hEn = headMember.full_name; }
-          if (viceMember) { cEntry.depAr = viceMember.full_name; cEntry.depEn = viceMember.full_name; }
+          if (headMember) { cEntry.hAr = shortName(headMember.full_name); cEntry.hEn = shortName(headMember.full_name); }
+          if (viceMember) { cEntry.depAr = shortName(viceMember.full_name); cEntry.depEn = shortName(viceMember.full_name); }
         }
       }
     }
   });
 
-  // KPI: total active members count.
-  const totalActive = members.filter((m) => m.status === 'Active').length;
-  document.querySelectorAll('.kpi-n').forEach((el) => {
-    if (el.textContent.trim() === '59+') el.textContent = totalActive + '+';
+  // Patch the homepage stat counters by `data-stat` attribute so both
+  // copies (.stat-n in the hero + .kpi-n in the about-us block) stay in
+  // sync. Previously only ".kpi-n containing '59+'" was patched, which
+  // left the hero showing the stale '59+' while the about-us block showed
+  // the live count — the conflict the president flagged.
+  const totalActive = activeMembers.length;
+  document.querySelectorAll('[data-stat="active-members"]').forEach((el) => {
+    el.textContent = totalActive + '+';
+  });
+
+  // Specialized committees only — exclude rows tagged as Initiative
+  // (مرفأ today). Falls back to the full Active count if the new
+  // `category` column hasn't propagated to the API response yet (e.g.
+  // older cached deploy).
+  const specialized = committees.filter((c) =>
+    c.status === 'Active' && (c.category === 'Specialized' || !c.category)
+  ).length;
+  document.querySelectorAll('[data-stat="specialized-committees"]').forEach((el) => {
+    el.textContent = String(specialized);
   });
 }
 
@@ -698,11 +742,12 @@ function updateAdvisors(advisors) {
 
   grid.innerHTML = advisors.filter((a) => a.status === 'Active').map((a) => {
     const ini = (a.full_name || 'م')[0];
+    const displayName = shortName(a.full_name);
     return '<div class="adv-card">' +
       '<div class="adv-av">' + ini + '</div>' +
       '<div>' +
-        '<div class="adv-name" data-ar>' + a.full_name + '</div>' +
-        '<div class="adv-name" data-en style="display:none">' + a.full_name + '</div>' +
+        '<div class="adv-name" data-ar>' + displayName + '</div>' +
+        '<div class="adv-name" data-en style="display:none">' + displayName + '</div>' +
         '<div class="adv-role" data-ar>' + (a.advisory_role || 'مستشار النادي') + '</div>' +
         '<div class="adv-role" data-en style="display:none">' + (a.advisory_role || 'Club Advisor') + '</div>' +
       '</div></div>';
@@ -895,8 +940,8 @@ function renderRecentEvents(projects, members) {
 
     const mgrId   = p.assigned_event_manager_member_id || p.assigned_project_manager_member_id || '';
     const mgr     = members && mgrId ? members.find((m) => m.member_id === mgrId) : null;
-    const mgrName = mgr ? mgr.full_name : '';
-    const mgrIni  = mgrName ? mgrName[0] : '';
+    const mgrName = mgr ? shortName(mgr.full_name) : '';
+    const mgrIni  = mgr && mgr.full_name ? mgr.full_name[0] : '';
 
     const folderId    = stats.gallery_folder || '';
     const safeTitle   = (p.project_name || '').replace(/"/g, '&quot;');
