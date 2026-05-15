@@ -145,9 +145,16 @@ const usersList: Handler = async (_body, user) => {
   // auth_user_id) get the temp-password 🔑 button; migrated users get
   // the magic-link 📧 button. The email is auth.users.email (canonical
   // after migration) — different from members.email which may diverge.
+  // last_login_at: prefer auth.users.last_sign_in_at (kept fresh by
+  // Supabase Auth on every sign-in) over the legacy public.users
+  // column, which only the legacy bcrypt `auth` path ever updates —
+  // and after the 2026-05-16 cutover nobody uses that path anymore,
+  // so the legacy column is permanently frozen. Aliased back to
+  // `last_login_at` so the frontend reads from the same key as before.
   if (user.access === 'head') {
     return sql`
-      SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at, u.last_login_at,
+      SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at,
+             COALESCE(au.last_sign_in_at, u.last_login_at) AS last_login_at,
              au.email         AS auth_email,
              m.member_id,
              m.full_name      AS member_full_name,
@@ -173,7 +180,8 @@ const usersList: Handler = async (_body, user) => {
   if (user.access !== 'superadmin') throw httpErr('Forbidden', 403);
 
   return sql`
-    SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at, u.last_login_at,
+    SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at,
+           COALESCE(au.last_sign_in_at, u.last_login_at) AS last_login_at,
            u.member_id,
            au.email         AS auth_email,
            m.full_name      AS member_full_name,
