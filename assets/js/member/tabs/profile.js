@@ -21,6 +21,7 @@
 import { api, callApi, toast } from '../../lib/ui.js';
 import { esc, gv, sv, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
+import { t } from '../../lib/i18n.js';
 
 // Phase-A storage uploaders (CV + profile photo). Both files go to
 // private Supabase Storage buckets via `storage.uploadMemberFile`;
@@ -40,11 +41,11 @@ let _ownProfile = null;
 export async function loadProfile() {
   const wrap = document.getElementById('profile-form-wrap');
   if (!wrap) return;
-  wrap.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>جاري التحميل...</div>';
+  wrap.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>${esc(t('common.loading'))}</div>`;
 
   const data = await api('members.getOwn');
   if (!data || !data.success) {
-    wrap.innerHTML = '<p style="padding:1rem;color:var(--dn)">تعذّر تحميل ملفك الشخصي.</p>';
+    wrap.innerHTML = `<p style="padding:1rem;color:var(--dn)">${esc(t('mp.profile.err_load'))}</p>`;
     return;
   }
   _ownProfile = data.data || {};
@@ -66,38 +67,35 @@ function renderProfileForm(m) {
   const headerStrip = `
     <div class="profile-readonly-strip">
       <div class="prs-row">
-        <span class="prs-label">الاسم الكامل:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_full_name'))}</span>
         <span class="prs-value">${esc(m.full_name) || '—'}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">رقم الهوية:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_nid'))}</span>
         <span class="prs-value" style="direction:ltr">${esc(m.national_id) || '—'}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">اللجنة:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_committee'))}</span>
         <span class="prs-value">${esc(m.committee_name) || '—'}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">الدور:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_role'))}</span>
         <span class="prs-value">${esc(m.club_role) || '—'}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">الحالة:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_status'))}</span>
         <span class="prs-value">${esc(m.status) || '—'}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">إجمالي الساعات المعتمدة:</span>
-        <span class="prs-value"><strong>${m.total_hours || 0}</strong> ساعة</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_total_hours'))}</span>
+        <span class="prs-value"><strong>${m.total_hours || 0}</strong> ${esc(t('mp.hours.hours_unit'))}</span>
       </div>
       <div class="prs-row">
-        <span class="prs-label">تاريخ الانضمام:</span>
+        <span class="prs-label">${esc(t('mp.profile.ro_join_date'))}</span>
         <span class="prs-value">${fmtDate(m.join_date) || '—'}</span>
       </div>
     </div>
-    <p class="prs-note">
-      الحقول أعلاه مُدارة من قِبل الإدارة. إذا كان أحدها يحتاج إلى تحديث،
-      تواصل مع رئيس لجنتك أو الإدارة.
-    </p>
+    <p class="prs-note">${esc(t('mp.profile.ro_note'))}</p>
   `;
 
   // Editable form — the COALESCE-safe whitelist from members.updateOwn.
@@ -114,31 +112,31 @@ function renderProfileForm(m) {
   const formFields = `
     <div class="profile-edit-form">
       <div class="fg-grid">
-        ${field('preferred_name',          'الاسم المختصر',         m.preferred_name)}
-        ${field('email',                   'البريد الإلكتروني',     m.email,    'email')}
-        ${field('phone',                   'الجوال (أستراليا)',     m.phone,    'tel')}
-        ${field('whatsapp',                'الواتساب (السعودية)',   m.whatsapp, 'tel')}
-        ${field('gender',                  'الجنس',                 m.gender)}
-        ${field('date_of_birth',           'تاريخ الميلاد',         m.date_of_birth, 'date')}
-        ${field('address_melbourne',       'العنوان في ملبورن',     m.address_melbourne)}
-        ${field('linkedin_url',            'رابط LinkedIn',         m.linkedin_url, 'url')}
+        ${field('preferred_name',          t('mp.profile.lbl_preferred_name'), m.preferred_name)}
+        ${field('email',                   t('mp.profile.lbl_email'),          m.email,    'email')}
+        ${field('phone',                   t('mp.profile.lbl_phone'),          m.phone,    'tel')}
+        ${field('whatsapp',                t('mp.profile.lbl_whatsapp'),       m.whatsapp, 'tel')}
+        ${field('gender',                  t('mp.profile.lbl_gender'),         m.gender)}
+        ${field('date_of_birth',           t('mp.profile.lbl_dob'),            m.date_of_birth, 'date')}
+        ${field('address_melbourne',       t('mp.profile.lbl_address'),        m.address_melbourne)}
+        ${field('linkedin_url',            t('mp.profile.lbl_linkedin'),       m.linkedin_url, 'url')}
       </div>
-      <h4 class="pf-section">الدراسة والابتعاث</h4>
+      <h4 class="pf-section">${esc(t('mp.profile.sec_study'))}</h4>
       <div class="fg-grid">
-        ${field('university',              'الجامعة',               m.university)}
-        ${field('study_level',             'المرحلة الدراسية',      m.study_level)}
-        ${field('degree_field',            'التخصص',                m.degree_field)}
-        ${field('scholarship_entity',      'الجهة المبتعِثة',       m.scholarship_entity)}
-        ${field('study_started_window',    'بداية الدراسة',         m.study_started_window)}
-        ${field('expected_graduation_window','التخرج المتوقع',      m.expected_graduation_window)}
+        ${field('university',                t('mp.profile.lbl_university'),    m.university)}
+        ${field('study_level',               t('mp.profile.lbl_study_level'),   m.study_level)}
+        ${field('degree_field',              t('mp.profile.lbl_degree_field'),  m.degree_field)}
+        ${field('scholarship_entity',        t('mp.profile.lbl_scholarship'),   m.scholarship_entity)}
+        ${field('study_started_window',      t('mp.profile.lbl_study_started'), m.study_started_window)}
+        ${field('expected_graduation_window',t('mp.profile.lbl_graduation'),    m.expected_graduation_window)}
       </div>
-      <h4 class="pf-section">عن نفسك</h4>
-      ${textarea('skills_hobbies', 'المهارات والاهتمامات', m.skills_hobbies)}
-      ${textarea('about_self',     'نبذة عنك',             m.about_self)}
-      <h4 class="pf-section">الملفات</h4>
+      <h4 class="pf-section">${esc(t('mp.profile.sec_about'))}</h4>
+      ${textarea('skills_hobbies', t('mp.profile.lbl_skills'), m.skills_hobbies)}
+      ${textarea('about_self',     t('mp.profile.lbl_about'),  m.about_self)}
+      <h4 class="pf-section">${esc(t('mp.profile.sec_files'))}</h4>
       <div class="fg-grid">
-        ${uploaderBlock('photo', 'الصورة الشخصية', m.profile_photo_url)}
-        ${uploaderBlock('cv',    'السيرة الذاتية (PDF)', m.cv_url)}
+        ${uploaderBlock('photo', t('mp.profile.lbl_photo'), m.profile_photo_url)}
+        ${uploaderBlock('cv',    t('mp.profile.lbl_cv'),    m.cv_url)}
       </div>
     </div>
   `;
@@ -157,19 +155,19 @@ function renderProfileForm(m) {
 // the file picker has a value, then enabled.
 function uploaderBlock(kind, label, currentPath) {
   const accept = kind === 'cv' ? 'application/pdf' : 'image/jpeg,image/png,image/webp';
-  const placeholder = kind === 'cv'
-    ? '<span class="upl-empty">لا يوجد ملف بعد</span>'
-    : '<span class="upl-empty">لا توجد صورة بعد</span>';
+  const emptyKey = kind === 'cv' ? 'mp.profile.upl_no_file' : 'mp.profile.upl_no_photo';
+  const placeholder = `<span class="upl-empty">${esc(t(emptyKey))}</span>`;
+  const hintKey = kind === 'cv' ? 'mp.profile.upl_cv_hint' : 'mp.profile.upl_photo_hint';
   return `
     <div class="fg upl-fg" id="upl-${kind}-wrap">
       <label>${esc(label)}</label>
-      <div class="upl-current" id="upl-${kind}-current">${currentPath ? '<span class="upl-empty">جاري التحميل...</span>' : placeholder}</div>
+      <div class="upl-current" id="upl-${kind}-current">${currentPath ? `<span class="upl-empty">${esc(t('common.loading'))}</span>` : placeholder}</div>
       <div class="upl-controls">
         <input type="file" id="upl-${kind}-file" accept="${accept}" data-action="onUploaderChange" data-kind="${kind}" data-event="change"/>
-        <button class="btn btn-g btn-sm" type="button" data-action="submitUploader" data-kind="${kind}" id="upl-${kind}-btn" disabled>⬆ رفع</button>
-        ${currentPath ? `<button class="btn btn-ol btn-sm" type="button" data-action="deleteUploader" data-kind="${kind}">🗑 حذف</button>` : ''}
+        <button class="btn btn-g btn-sm" type="button" data-action="submitUploader" data-kind="${kind}" id="upl-${kind}-btn" disabled>${esc(t('mp.profile.upl_btn'))}</button>
+        ${currentPath ? `<button class="btn btn-ol btn-sm" type="button" data-action="deleteUploader" data-kind="${kind}">${esc(t('mp.profile.upl_delete'))}</button>` : ''}
       </div>
-      <div class="fg-note">${kind === 'cv' ? 'PDF فقط، 5 ميجابايت كحد أقصى' : 'JPG / PNG / WebP، 3 ميجابايت كحد أقصى'}</div>
+      <div class="fg-note">${esc(t(hintKey))}</div>
     </div>
   `;
 }
@@ -181,20 +179,19 @@ async function refreshUploaderPreview(kind, path) {
   const slot = document.getElementById(`upl-${kind}-current`);
   if (!slot) return;
   if (!path) {
-    slot.innerHTML = kind === 'cv'
-      ? '<span class="upl-empty">لا يوجد ملف بعد</span>'
-      : '<span class="upl-empty">لا توجد صورة بعد</span>';
+    const emptyKey = kind === 'cv' ? 'mp.profile.upl_no_file' : 'mp.profile.upl_no_photo';
+    slot.innerHTML = `<span class="upl-empty">${esc(t(emptyKey))}</span>`;
     return;
   }
   const res = await api('storage.getMemberFile', { data: { kind } });
   if (!res || !res.success || !res.data?.url) {
-    slot.innerHTML = '<span class="upl-empty" style="color:var(--dn)">تعذّر تحميل المعاينة</span>';
+    slot.innerHTML = `<span class="upl-empty" style="color:var(--dn)">${esc(t('mp.profile.upl_preview_failed'))}</span>`;
     return;
   }
   if (kind === 'photo') {
     slot.innerHTML = `<img src="${esc(res.data.url)}" alt="" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid var(--bd)"/>`;
   } else {
-    slot.innerHTML = `<a href="${esc(res.data.url)}" target="_blank" rel="noopener" style="color:var(--g);font-weight:700;text-decoration:none">📄 عرض الملف الحالي</a>`;
+    slot.innerHTML = `<a href="${esc(res.data.url)}" target="_blank" rel="noopener" style="color:var(--g);font-weight:700;text-decoration:none">${esc(t('mp.profile.upl_open_cv'))}</a>`;
   }
 }
 
@@ -213,44 +210,45 @@ export async function submitUploader(el) {
   const input = document.getElementById(`upl-${kind}-file`);
   const file  = input?.files?.[0];
   if (!file) {
-    toast('اختر ملفاً أولاً.', 'twarn');
+    toast(t('mp.profile.upl_pick_first'), 'twarn');
     return;
   }
   // Pre-validate size on the client too — saves an upload round-trip
   // for an obviously-oversized file. Server cap is the source of truth.
   const sizeCaps = { cv: 5 * 1024 * 1024, photo: 3 * 1024 * 1024 };
   if (file.size > sizeCaps[kind]) {
-    toast(`الملف أكبر من الحد المسموح (${sizeCaps[kind] / 1024 / 1024} ميجا).`, 'twarn');
+    toast(t('mp.profile.upl_too_large', { megs: sizeCaps[kind] / 1024 / 1024 }), 'twarn');
     return;
   }
   const btn = document.getElementById(`upl-${kind}-btn`);
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الرفع...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('mp.profile.upl_btn_uploading'); }
   try {
     const base64Data = await fileToBase64(file);
     const res = await api('storage.uploadMemberFile', {
       data: { kind, filename: file.name, contentType: file.type, base64Data },
     });
     if (!res || !res.success) {
-      toast(res?.error || 'فشل الرفع.', 'twarn');
+      toast(res?.error || t('mp.profile.upl_failed'), 'twarn');
       return;
     }
-    toast('تم الرفع.', 'tok');
+    toast(t('mp.profile.upl_success'), 'tok');
     // Re-load profile so the column update + signed URL are fresh.
     await loadProfile();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⬆ رفع'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('mp.profile.upl_btn'); }
   }
 }
 
 export async function deleteUploader(el) {
   const kind = el.dataset.kind;
-  if (!confirm(kind === 'cv' ? 'حذف السيرة الذاتية الحالية؟' : 'حذف الصورة الحالية؟')) return;
+  const confirmKey = kind === 'cv' ? 'mp.profile.upl_confirm_cv' : 'mp.profile.upl_confirm_photo';
+  if (!confirm(t(confirmKey))) return;
   const res = await api('storage.deleteMemberFile', { data: { kind } });
   if (!res || !res.success) {
-    toast(res?.error || 'فشل الحذف.', 'twarn');
+    toast(res?.error || t('mp.profile.upl_delete_failed'), 'twarn');
     return;
   }
-  toast('تم الحذف.', 'tok');
+  toast(t('mp.profile.upl_delete_success'), 'tok');
   await loadProfile();
 }
 
@@ -288,7 +286,7 @@ function textarea(id, label, value) {
 
 export async function saveProfile() {
   if (!_ownProfile) {
-    toast('لم يتم تحميل ملفك بعد، حاول مرة أخرى.', 'twarn');
+    toast(t('mp.profile.save_not_loaded'), 'twarn');
     return;
   }
   // Build a diff: only send fields that actually changed. This keeps
@@ -313,24 +311,24 @@ export async function saveProfile() {
     if (newVal !== oldVal) diff[f] = newVal || null;
   }
   if (!Object.keys(diff).length) {
-    toast('لا توجد تغييرات لحفظها.', 'tok');
+    toast(t('mp.profile.save_no_changes'), 'tok');
     return;
   }
 
   const btn = document.getElementById('profile-save-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ...'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('mp.profile.save_btn_saving'); }
   try {
     const res = await api('members.updateOwn', { data: diff });
     if (!res || !res.success) {
-      toast(res?.error || 'فشل الحفظ.', 'twarn');
+      toast(res?.error || t('mp.profile.save_failed'), 'twarn');
       return;
     }
-    toast('تم حفظ التعديلات.', 'tok');
+    toast(t('mp.profile.save_success'), 'tok');
     // Refresh cache + form values so subsequent saves diff against the
     // saved state, not the original load. Cheapest way is a re-load.
     await loadProfile();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 حفظ التعديلات'; }
+    if (btn) { btn.disabled = false; btn.textContent = t('mp.profile.save_btn'); }
   }
 }
 
@@ -350,12 +348,15 @@ const LEADERSHIP_ROLES = new Set([
 const HEAD_ROLES = new Set([
   'Committee Head', 'Committee Vice Head', 'Deputy Vice Head',
 ]);
-const ROLE_LABEL_AR = {
-  'President':              'الرئيس',
-  'Vice President':         'نائب الرئيس',
-  'Committee Head':         'رئيس اللجنة',
-  'Committee Vice Head':    'نائب رئيس اللجنة',
-  'Deputy Vice Head':       'مساعد نائب رئيس اللجنة',
+// Map enum value → translation key. t() resolves at render time so the
+// directory localizes correctly on language switch (main.js's
+// onLangChange re-fires loadProfile which re-renders this list).
+const ROLE_LABEL_KEY = {
+  'President':              'mp.role.president',
+  'Vice President':         'mp.role.vice_president',
+  'Committee Head':         'mp.role.committee_head',
+  'Committee Vice Head':    'mp.role.committee_vice_head',
+  'Deputy Vice Head':       'mp.role.deputy_vice_head',
 };
 
 async function loadContactDirectory() {
@@ -378,7 +379,7 @@ async function loadContactDirectory() {
   if (!wrap || !block) return;
 
   wrap.innerHTML = cards.map(m => {
-    const role = ROLE_LABEL_AR[m.club_role] || m.club_role || '';
+    const role = ROLE_LABEL_KEY[m.club_role] ? t(ROLE_LABEL_KEY[m.club_role]) : (m.club_role || '');
     const name = m.preferred_name || m.full_name || '—';
     const sub  = m.full_name && m.preferred_name && m.preferred_name !== m.full_name
       ? `<div style="font-size:.68rem;color:var(--tm,#9ca3af)">${esc(m.full_name)}</div>`
@@ -402,7 +403,7 @@ async function loadContactDirectory() {
     }
     const contactBlock = links.length
       ? `<div style="display:flex;flex-direction:column;gap:.35rem">${links.join('')}</div>`
-      : '<span style="font-size:.7rem;color:var(--tm,#9ca3af)">— لا يوجد رقم تواصل —</span>';
+      : `<span style="font-size:.7rem;color:var(--tm,#9ca3af)">${esc(t('mp.profile.contact_no_phone'))}</span>`;
 
     return `
       <div style="background:var(--bg,#fff);border:1px solid var(--bd,#e5e7eb);border-radius:10px;padding:.75rem .85rem">
