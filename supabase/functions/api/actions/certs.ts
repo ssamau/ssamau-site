@@ -3,12 +3,94 @@
 // Port of the CERTIFICATES section from netlify/functions/api.js (lines 843–919).
 // `certs.verify` is public (the verification URL on each certificate hits this
 // without auth); the other three require a logged-in user.
+//
+// SMTP wiring (2026-05-15, Eid-Al-Adha readiness): after a cert row is
+// inserted, an email goes to the recipient with the verification link
+// (https://ssamau.com/verify-cert.html?code=<cert_code>). The recipient
+// can also forward the link to verifiers (employers, scholarship admins).
+// Send failure is non-fatal — the cert row exists either way and admins
+// can re-send later via a follow-up action if needed.
 
 import { sql } from '../_sql.ts';
 import {
   httpErr, shortId,
   type Handler,
 } from '../_helpers.ts';
+import { sendEmail } from '../_email.ts';
+
+const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://ssamau.com';
+
+function escHtml(s: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Branded HTML email body for a certificate delivery. Used by both
+// certsIssue (single) and certsBulkIssue (per recipient in the loop).
+// recipientName / project / role / hours come from the cert row;
+// cert_code drives the verification link.
+function certDeliveryEmail(opts: {
+  recipientName: string; projectName: string; role: string;
+  hours: number | string; certCode: string;
+}): string {
+  const verifyUrl = `${SITE_URL}/verify-cert.html?code=${encodeURIComponent(opts.certCode)}`;
+  return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827">
+  <div style="max-width:600px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 60%,#b8932a 100%);padding:1.8rem 1.4rem;color:#fff;text-align:center">
+      <div style="font-size:1.6rem;font-weight:800;margin-bottom:.3rem">🏅</div>
+      <div style="font-size:1.05rem;font-weight:800">شهادتك جاهزة</div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.75);margin-top:.25rem">Your Certificate Is Ready</div>
+    </div>
+    <div style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937;line-height:1.75">
+      <p style="margin:0 0 .85rem 0">السلام عليكم ${escHtml(opts.recipientName)},</p>
+      <p style="margin:0 0 .85rem 0">يسعدنا تقديم شهادة تقدير لك على مشاركتك في:</p>
+
+      <div style="background:#f9fafb;border-radius:10px;padding:1rem;margin:.85rem 0;font-size:.86rem">
+        <div style="margin-bottom:.4rem"><span style="color:#6b7280">الفعالية:</span> <strong>${escHtml(opts.projectName)}</strong></div>
+        <div style="margin-bottom:.4rem"><span style="color:#6b7280">الدور:</span> <strong>${escHtml(opts.role)}</strong></div>
+        <div><span style="color:#6b7280">عدد الساعات:</span> <strong>${escHtml(String(opts.hours))}</strong></div>
+      </div>
+
+      <p style="margin:0 0 .85rem 0">يمكنك التحقق من الشهادة عبر الرابط التالي. الرابط نفسه قابل للمشاركة مع جهات التحقق (الجامعة، الجهة المبتعِثة، جهة عمل، ...):</p>
+
+      <div style="text-align:center;margin:1.2rem 0">
+        <a href="${verifyUrl}" style="display:inline-block;background:#1A5C2E;color:#fff;text-decoration:none;padding:.75rem 1.6rem;border-radius:50px;font-weight:700;font-size:.85rem">
+          🔍 رابط التحقق من الشهادة
+        </a>
+      </div>
+
+      <p style="margin:0 0 .4rem 0;font-size:.78rem;color:#6b7280;text-align:center">أو انسخ الرمز التالي وأدخله في صفحة التحقق:</p>
+      <div style="text-align:center;font-family:monospace;letter-spacing:.08em;font-size:.85rem;font-weight:700;color:#1A5C2E;background:#f0fdf4;border-radius:8px;padding:.55rem;margin:.4rem 0 1rem">
+        ${escHtml(opts.certCode)}
+      </div>
+    </div>
+    <div style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
+      <span style="color:#b8932a;font-weight:700">نادي الطلبة السعوديين في ملبورن</span><br/>
+      SSAM · Saudi Students Association in Melbourne
+    </div>
+  </div>
+</body></html>`;
+}
+
+// Fires an email best-effort; never throws. Caller still gets the cert
+// row even if delivery fails (the recipient can be re-emailed later).
+async function tryDeliverCert(opts: {
+  to: string | null; recipientName: string; projectName: string;
+  role: string; hours: number | string; certCode: string;
+}): Promise<void> {
+  if (!opts.to) return;
+  try {
+    await sendEmail({
+      to: opts.to,
+      subject: `شهادتك من نادي الطلبة السعوديين — ${opts.projectName}`,
+      html: certDeliveryEmail(opts),
+    });
+  } catch (err) {
+    console.warn('[certs] delivery email failed (cert row still created):', err);
+  }
+}
 
 // ─── CERTIFICATES ────────────────────────────────────────────────────
 const certsIssue: Handler = async (body, user) => {
@@ -22,6 +104,21 @@ const certsIssue: Handler = async (body, user) => {
             ${data.role || null}, ${data.hours || null}, ${user!.id})
     RETURNING id
   ` as Array<{ id: number }>;
+
+  // Look up the project name for the email body — the form may have only
+  // sent project_id. One round-trip is cheap and keeps the email handler
+  // honest if the admin form ever loses the project-name pre-fill.
+  const [project] = await sql`SELECT project_name FROM projects WHERE project_id = ${data.project_id}` as Array<{ project_name: string | null }>;
+
+  await tryDeliverCert({
+    to:            (data.recipient_email as string) || null,
+    recipientName: (data.recipient_name as string)  || '—',
+    projectName:   project?.project_name             || String(data.project_id || ''),
+    role:          (data.role as string)             || '—',
+    hours:         (data.hours as number | string)   ?? '—',
+    certCode:      code,
+  });
+
   return { id: r.id, cert_code: code };
 };
 
@@ -50,20 +147,37 @@ const certsBulkIssue: Handler = async (body, user) => {
     full_name: string | null; preferred_name: string | null; member_email: string | null;
     hours: number;
   }>;
+
+  const [project] = await sql`SELECT project_name FROM projects WHERE project_id = ${project_id}` as Array<{ project_name: string | null }>;
+  const projectName = project?.project_name || String(project_id || '');
+
   let count = 0;
+  let emailed = 0;
   for (const p of participants) {
     const code = shortId('CRT', 8);
+    const recipientName = p.preferred_name || p.full_name || p.volunteer_name || '—';
+    const recipientEmail = p.member_email || p.volunteer_email || null;
     await sql`
       INSERT INTO certificates (cert_code, member_id, project_id, recipient_name, recipient_email,
                                 role, hours, issued_by)
       VALUES (${code}, ${p.member_id || null}, ${project_id},
-              ${p.preferred_name || p.full_name || p.volunteer_name || null},
-              ${p.member_email || p.volunteer_email || null},
+              ${recipientName}, ${recipientEmail},
               ${role || null}, ${p.hours || 0}, ${user!.id})
     `;
     count++;
+    if (recipientEmail) {
+      await tryDeliverCert({
+        to:            recipientEmail,
+        recipientName,
+        projectName,
+        role:          role || '—',
+        hours:         p.hours || 0,
+        certCode:      code,
+      });
+      emailed++;
+    }
   }
-  return { count };
+  return { count, emailed };
 };
 
 const certsList: Handler = async (body) => {

@@ -33,7 +33,7 @@
 // step. ~150 lines of plain JS, easier to audit than 50KB of bundled
 // library code, and we control every cache hit.
 
-const CACHE_VERSION = 'v5-2026-05-15-member-portal-hours';
+const CACHE_VERSION = 'v6-2026-05-15-eid-readiness';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -50,6 +50,7 @@ const SHELL_URLS = [
   '/apply.html',
   '/reset-password.html',
   '/signup.html',
+  '/verify-cert.html',
   '/manifest.json',
   // CSS
   '/assets/css/base.css',
@@ -65,6 +66,7 @@ const SHELL_URLS = [
   '/assets/js/login.js',
   '/assets/js/reset-password.js',
   '/assets/js/signup.js',
+  '/assets/js/verify-cert.js',
   '/assets/js/admin/main.js',
   '/assets/js/member/main.js',
   '/assets/js/member/router.js',

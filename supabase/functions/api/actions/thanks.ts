@@ -2,51 +2,121 @@
 //
 // Port of the THANKS section from netlify/functions/api.js (lines 799–842).
 //
-// Email sending is intentionally NOT wired up here — the Apps Script version uses
-// GmailApp under the club's Google account. Sending real email from Netlify needs
-// a separate provider (Resend / Postmark / SendGrid). For now we record the entry
-// with status='Logged' so the UI keeps working; flip to status='Sent' once an
-// email provider is wired in.
+// SMTP wiring (2026-05-15, Eid-Al-Adha readiness): both `thanks.send`
+// and `thanks.bulkSend` now actually deliver email via _email.ts's
+// sendEmail() helper using the same Google Workspace SMTP path the
+// invite + application-notification flows use. The DB row is inserted
+// first (so the audit trail exists regardless of SMTP outcome) and then
+// status is updated to 'Sent' or 'Failed' based on the send result.
+// Pre-existing rows still have status='Logged' from the previous code
+// path; that's a separate manual cleanup if the president wants to
+// retry them.
 
 import { sql } from '../_sql.ts';
 import {
   type Handler,
 } from '../_helpers.ts';
+import { sendEmail } from '../_email.ts';
+
+// Cheap HTML escaper for free-form text inserted into email bodies.
+// The subject + message come from the admin form — we don't trust the
+// admin to write XSS-safe HTML, but we also want to render plain text
+// nicely. So: escape everything, then turn double newlines into <p>
+// boundaries and single newlines into <br>.
+function htmlBody(message: string): string {
+  const esc = (s: string) => s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const paragraphs = String(message || '').split(/\n\s*\n/);
+  return paragraphs
+    .map(p => '<p style="margin:0 0 .85rem 0;line-height:1.7">' + esc(p).replace(/\n/g, '<br/>') + '</p>')
+    .join('');
+}
+
+// Branded HTML shell — same gold/green letterhead the invite emails use
+// so recipients recognise the sender visually. Arabic-first RTL.
+function thanksEnvelope(message: string): string {
+  return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Almarai',Arial,sans-serif;color:#111827">
+  <div style="max-width:560px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div style="background:linear-gradient(135deg,#1A5C2E 0%,#0e3a1c 100%);padding:1.6rem 1.4rem;color:#fff;text-align:center">
+      <div style="font-size:1.05rem;font-weight:800;letter-spacing:.02em">نادي الطلبة السعوديين في ملبورن</div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:.2rem">SSAM · Saudi Students Association in Melbourne</div>
+    </div>
+    <div style="padding:1.6rem 1.4rem;font-size:.92rem;color:#1f2937">
+      ${htmlBody(message)}
+    </div>
+    <div style="padding:.95rem 1.4rem;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:.7rem;color:#6b7280;text-align:center">
+      مع خالص الشكر والتقدير<br/>
+      <span style="color:#b8932a;font-weight:700">SSAM Committee</span>
+    </div>
+  </div>
+</body></html>`;
+}
 
 // ─── THANKS ──────────────────────────────────────────────────────────
 const thanksSend: Handler = async (body, user) => {
-  const data = (body.data ?? body) as Record<string, unknown>;
+  const data    = (body.data ?? body) as Record<string, unknown>;
+  const to      = (data.recipient_email as string) || '';
+  const subject = (data.subject as string) || 'رسالة شكر — نادي الطلبة السعوديين في ملبورن';
+  const message = (data.message as string) || '';
+
+  // Insert first so the row exists even if SMTP fails. Status starts as
+  // 'Pending' to make the in-flight state visible if the function dies
+  // before the UPDATE lands.
   const [r] = await sql`
     INSERT INTO thanks_emails (member_id, project_id, recipient_email, subject, message, status, sent_by)
     VALUES (${data.member_id || null}, ${data.project_id || null},
-            ${data.recipient_email || null}, ${data.subject}, ${data.message},
-            'Logged', ${user!.id})
+            ${to || null}, ${subject}, ${message},
+            'Pending', ${user!.id})
     RETURNING id
   ` as Array<{ id: number }>;
-  return { id: r.id };
+
+  let status: 'Sent' | 'Failed' = 'Failed';
+  if (to) {
+    const ok = await sendEmail({ to, subject, html: thanksEnvelope(message) });
+    status = ok ? 'Sent' : 'Failed';
+  }
+  await sql`UPDATE thanks_emails SET status = ${status} WHERE id = ${r.id}`;
+  return { id: r.id, status };
 };
 
 const thanksBulkSend: Handler = async (body, user) => {
   const project_id = body.project_id as string | undefined;
-  const subject = body.subject as string | undefined;
-  const message = body.message as string | undefined;
+  const subject    = (body.subject as string) || 'رسالة شكر — نادي الطلبة السعوديين في ملبورن';
+  const message    = (body.message as string) || '';
   const recipients = await sql`
     SELECT pa.member_id, pa.volunteer_email, m.email AS member_email
     FROM participants pa
     LEFT JOIN members m ON m.member_id = pa.member_id
     WHERE pa.project_id = ${project_id}
   ` as Array<{ member_id: string | null; volunteer_email: string | null; member_email: string | null }>;
-  let count = 0;
+
+  // Render the envelope once and reuse — message is identical for every
+  // recipient in a bulk send. Saves work per call when blasting many
+  // thank-yous after a big event.
+  const html = thanksEnvelope(message);
+
+  let sent = 0;
+  let failed = 0;
   for (const rec of recipients) {
-    await sql`
+    const to = rec.member_email || rec.volunteer_email || null;
+    const [r] = await sql`
       INSERT INTO thanks_emails (member_id, project_id, recipient_email, subject, message, status, sent_by)
       VALUES (${rec.member_id || null}, ${project_id},
-              ${rec.member_email || rec.volunteer_email || null},
-              ${subject}, ${message}, 'Logged', ${user!.id})
-    `;
-    count++;
+              ${to}, ${subject}, ${message}, 'Pending', ${user!.id})
+      RETURNING id
+    ` as Array<{ id: number }>;
+
+    let status: 'Sent' | 'Failed' = 'Failed';
+    if (to) {
+      const ok = await sendEmail({ to, subject, html });
+      status = ok ? 'Sent' : 'Failed';
+    }
+    await sql`UPDATE thanks_emails SET status = ${status} WHERE id = ${r.id}`;
+    if (status === 'Sent') sent++; else failed++;
   }
-  return { count };
+  return { count: recipients.length, sent, failed };
 };
 
 const thanksList: Handler = async (body) => {
