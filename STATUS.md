@@ -2,8 +2,11 @@
 
 > One-line: i18n + RTL fix done. Head portal now has attendance (with
 > edit/delete) and a rich members tab mirroring admin (sans edit/NID).
+> Latest: fixed English-mode table-header misalignment + reverted the
+> lang-toggle pinning so pills flip with sidebar placement.
 
-Updated: 2026-05-16 (Faisal + Claude). Update this when you ship something
+Updated: 2026-05-16 (Faisal + Claude). Branch is clean + pushed to
+origin/main at commit a59b347. Update this when you ship something
 material — the goal is that the next coding session can pick up the
 project's mental model without re-reading 6k lines of commit messages.
 
