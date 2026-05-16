@@ -262,10 +262,8 @@ body::before {
    admin / member / head sidebars, scaled down for the login card. */
 .lang-toggle {
   display: flex;
-  /* Pin pill order regardless of UI direction so the user's
-   * just-clicked pill doesn't swap sides on language change — same
-   * reasoning as the sidebar .lang-toggle in admin.css. */
-  direction: ltr;
+  /* Pills inherit document direction — order tracks sidebar/UI side:
+   * AR (RTL) → العربية / English; EN (LTR) → English / العربية. */
   gap: .3rem;
   justify-content: center;
   margin: 0 0 1rem;

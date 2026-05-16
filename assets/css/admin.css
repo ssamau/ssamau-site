@@ -147,7 +147,7 @@
 /* Table */
 .table-wrap { overflow-x:auto; }
 table { width:100%; border-collapse:collapse; }
-th { background:var(--bg-soft); font-size:.7rem; font-weight:700; color:var(--tl); padding:.55rem 1rem; text-align:right; border-bottom:1px solid var(--bd); white-space:nowrap; }
+th { background:var(--bg-soft); font-size:.7rem; font-weight:700; color:var(--tl); padding:.55rem 1rem; text-align:start; border-bottom:1px solid var(--bd); white-space:nowrap; }
 td { padding:.7rem 1rem; border-bottom:1px solid var(--bd); font-size:.82rem; vertical-align:middle; }
 tr:last-child td { border-bottom:none; }
 tr:hover td { background:var(--bg-soft); }
@@ -300,7 +300,7 @@ tr:hover td { background:var(--bg-soft); }
 .setup-icon { font-size:3rem; margin-bottom:1rem; }
 .setup-box h2 { font-size:1.1rem; font-weight:800; color:var(--gd); margin-bottom:.5rem; }
 .setup-box p { font-size:.84rem; color:var(--tl); line-height:1.7; margin-bottom:1.5rem; }
-.setup-steps { text-align:right; background:var(--bg); border-radius:var(--rs); padding:1rem; margin-bottom:1.5rem; }
+.setup-steps { text-align:start; background:var(--bg); border-radius:var(--rs); padding:1rem; margin-bottom:1.5rem; }
 .setup-step { display:flex; gap:.75rem; align-items:flex-start; margin-bottom:.65rem; font-size:.82rem; }
 .setup-step:last-child { margin:0; }
 .step-n { width:20px; height:20px; border-radius:50%; background:var(--g); color:#fff; font-size:.7rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:.1rem; }
@@ -661,17 +661,13 @@ tr:hover td { background:var(--bg-soft); }
 
 /* ── Language toggle (member / head / admin sidebars) ─────────────────
    Same two-pill pattern as the auth pages' .lang-toggle, scaled for the
-   compact sidebar context. Sits between the sb-nav and the sb-theme row
-   (added in Phase 3 of the i18n rollout).
-   `direction: ltr` pins the pill order so العربية stays on the left of
-   the row and English stays on the right regardless of UI direction —
-   otherwise toggling language would swap which pill the user just
-   clicked, breaking the muscle-memory of "the pill I want is the right
-   one in EN, the left one in AR". The theme-toggle row right below
-   uses the same trick for the 🌓 / ☀️ / 🌙 ordering. */
+   compact sidebar context. Sits between the sb-nav and the sb-theme row.
+   No direction pin — pills inherit the document direction so the order
+   tracks the sidebar's physical side: in Arabic (sidebar on right) the
+   row reads العربية / English; in English (sidebar on left) it flips
+   to English / العربية. */
 .lang-toggle {
   display: flex;
-  direction: ltr;
   gap: .3rem;
   justify-content: center;
   padding: .5rem .75rem;
