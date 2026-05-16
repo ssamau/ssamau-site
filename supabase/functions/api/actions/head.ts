@@ -139,12 +139,18 @@ const headDashboardSummary: Handler = async (body, user) => {
 // activity first.
 const headAttendanceList: Handler = async (body, user) => {
   const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
-  // We restrict the rows to attendance that belongs (somehow) to this
-  // committee. Two routing rules:
-  //   1. project-linked rows whose project is owned by this committee
-  //   2. ad-hoc meeting rows whose attendee is a member of this committee
-  //   3. ad-hoc meeting rows recorded by this committee's head (for
-  //      external-volunteer attendance that has no member_id link)
+  // Show every row that's "this committee's business":
+  //   1. recorded_by = the current head — always show what THIS head
+  //      personally logged, no matter whose project / member it
+  //      touched. This is the critical fix: an admin-created project
+  //      without owning_committee_id used to record successfully but
+  //      then disappear from the head's list.
+  //   2. recorded_by = anyone in this committee — covers other heads /
+  //      future co-heads on the same committee.
+  //   3. project is OWNED by this committee.
+  //   4. ad-hoc meeting whose attendee is a member of this committee.
+  // De-duped by the row id (a row matching multiple clauses still
+  // appears once because SELECT … WHERE OR is row-scoped).
   return sql`
     SELECT a.id AS attendance_id, a.*,
            m.full_name      AS member_full_name,
@@ -154,15 +160,16 @@ const headAttendanceList: Handler = async (body, user) => {
            p.event_date     AS project_event_date,
            p.owning_committee_id
     FROM   public.attendance a
-    LEFT JOIN public.members  m ON m.member_id  = a.member_id
-    LEFT JOIN public.projects p ON p.project_id = a.project_id
-    LEFT JOIN public.users    u ON u.id         = a.recorded_by
+    LEFT JOIN public.members  m  ON m.member_id  = a.member_id
+    LEFT JOIN public.projects p  ON p.project_id = a.project_id
+    LEFT JOIN public.users    ru ON ru.id        = a.recorded_by
+    LEFT JOIN public.members  rm ON rm.member_id = ru.member_id
     WHERE  a.attendance_status <> 'Deleted'
       AND  (
-        (a.project_id    IS NOT NULL AND p.owning_committee_id = ${committee_id})
-        OR (a.meeting_title IS NOT NULL AND m.committee_id      = ${committee_id})
-        OR (a.meeting_title IS NOT NULL AND u.member_id IN
-            (SELECT mm.member_id FROM public.members mm WHERE mm.committee_id = ${committee_id}))
+        a.recorded_by = ${user!.id}
+        OR rm.committee_id      = ${committee_id}
+        OR p.owning_committee_id = ${committee_id}
+        OR m.committee_id        = ${committee_id}
       )
     ORDER BY COALESCE(a.meeting_date, a.recorded_at::DATE) DESC, a.recorded_at DESC
     LIMIT 500
