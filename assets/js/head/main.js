@@ -16,11 +16,16 @@ import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
 import {
   getSession, clearSession, isLoggedIn, signOut,
 } from '../lib/auth.js';
-import { setApiStatus, filterTable } from '../lib/ui.js';
+import { setApiStatus, filterTable, closeModal } from '../lib/ui.js';
 import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from './router.js';
 
 import { loadDashboard }       from './tabs/dashboard.js';
-import { loadHeadMembers }     from './tabs/members.js';
+import {
+  loadHeadMembers,
+  openHeadMemberFile, openHeadMemberProfile,
+  openHeadInviteModal, headSendInviteByEmail, headSendInviteByPin,
+  headCopyShownPin, headConfirmRevokeInvite,
+} from './tabs/members.js';
 import {
   loadHeadOpportunities,
   toggleOpportunityCreateForm, createOpportunity,
@@ -179,6 +184,19 @@ document.addEventListener('click', (e) => {
     case 'hd.attendance.save':       saveHeadAttendance(); break;
     case 'hd.attendance.edit':       editHeadAttendance(el.dataset.id); break;
     case 'hd.attendance.delete':     deleteHeadAttendance(el.dataset.id); break;
+    // Members tab — view profile, view uploaded file, invite portal
+    // account, revoke pending invite. Mirrors admin's affordances.
+    case 'hd.members.viewProfile':   openHeadMemberProfile(el.dataset.id); break;
+    case 'hd.members.openFile':      openHeadMemberFile(el.dataset.id, el.dataset.kind); break;
+    case 'hd.members.invite.open':   openHeadInviteModal(el.dataset.id); break;
+    case 'hd.members.invite.revoke': headConfirmRevokeInvite(el.dataset.id, el.dataset.name); break;
+    // Invite modal — three buttons inside the modal body. Use direct
+    // ids on the shared admin-style markup so we don't need to fork it.
+    case 'sendInviteByEmail':        headSendInviteByEmail(); break;
+    case 'sendInviteByPin':          headSendInviteByPin(); break;
+    case 'copyShownPin':             headCopyShownPin(); break;
+    // Generic close-modal — the invite + profile modals dispatch this.
+    case 'closeModal':               closeModal(el.dataset.modal); break;
     case 'profile.save':             saveProfile(); break;
     // onUploaderChange is a CHANGE event on a file <input>, handled in
     // the separate change listener below — not here.

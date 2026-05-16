@@ -206,13 +206,14 @@
             <thead>
               <tr>
                 <th data-i18n="hp.members.col_name">الاسم</th>
+                <th data-i18n="hp.members.col_contact">التواصل</th>
                 <th data-i18n="hp.members.col_role">الدور</th>
-                <th data-i18n="hp.members.col_uni">الجامعة / التخصص</th>
                 <th data-i18n="hp.members.col_hours">الساعات</th>
                 <th data-i18n="hp.members.col_status">الحالة</th>
+                <th data-i18n="hp.members.col_actions">إجراءات</th>
               </tr>
             </thead>
-            <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -528,6 +529,82 @@
     <div class="modal-footer">
       <button class="btn btn-ol btn-sm" data-action="hd.attendance.close" data-i18n="hp.att.cancel_btn">إلغاء</button>
       <button class="btn btn-g btn-sm" data-action="hd.attendance.save" id="hd-att-save-btn" data-i18n="hp.att.save_btn">💾 تسجيل الحضور</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MEMBER INVITE MODAL (mirrors admin.html) ══════════ -->
+<!-- Same three-state flow as admin's invite modal: pick method → PIN
+     result or email confirmation. Heads inherit the same auth.invite.*
+     endpoints (server-side those accept head OR superadmin). -->
+<div class="overlay" id="ov-member-invite">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h3 data-i18n="hp.invite.title">📩 دعوة العضو إلى لوحة الأعضاء</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="member-invite">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Member context (set by openInviteModal in head/tabs/members.js) -->
+      <div style="background:var(--gl);border-radius:var(--rs);padding:.75rem;margin-bottom:1rem;font-size:.85rem">
+        <div style="font-weight:600" id="invite-member-name">—</div>
+        <div style="font-size:.78rem;color:var(--tm);direction:ltr;text-align:left" id="invite-member-email">—</div>
+      </div>
+
+      <!-- STATE 1: pick a method -->
+      <div id="invite-choose">
+        <p data-i18n="hp.invite.choose_prompt" style="font-size:.85rem;margin-bottom:1rem">اختر طريقة الدعوة:</p>
+        <button class="btn btn-g" style="width:100%;margin-bottom:.5rem" data-action="sendInviteByEmail" id="invite-email-btn" data-i18n="hp.invite.email_btn">📧 إرسال رابط بالبريد الإلكتروني</button>
+        <div data-i18n="hp.invite.email_help" style="font-size:.72rem;color:var(--tm);margin-bottom:.85rem;text-align:center" id="invite-email-help">
+          يستلم العضو رابطاً صالحاً 7 أيام لاختيار كلمة المرور بنفسه.
+        </div>
+        <button class="btn btn-y" style="width:100%" data-action="sendInviteByPin" data-i18n="hp.invite.pin_btn">🔢 إنشاء رمز PIN</button>
+        <div data-i18n="hp.invite.pin_help" style="font-size:.72rem;color:var(--tm);margin-top:.4rem;text-align:center">
+          رمز من 6 أرقام يُسلَّم للعضو خارج النظام (واتساب، شفاهيًا…). صالح 72 ساعة.
+        </div>
+      </div>
+
+      <!-- STATE 2: PIN result -->
+      <div id="invite-pin-result" style="display:none;text-align:center">
+        <p data-i18n="hp.invite.pin_result_lead" style="font-size:.85rem;color:var(--tm);margin-bottom:.85rem">
+          انسخ الرمز الآن — لن يظهر مرة أخرى. سلّمه للعضو بقناة آمنة.
+        </p>
+        <div style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;padding:.85rem;font-family:Menlo,Consolas,monospace;font-size:1.6rem;font-weight:700;color:#1A5C2E;letter-spacing:.3em;direction:ltr" id="invite-pin-value">—</div>
+        <div data-i18n="hp.invite.pin_result_after" style="font-size:.78rem;color:var(--tm);margin-top:.75rem">
+          صالح لـ 72 ساعة. يستخدم العضو رقم الهوية + هذا الرمز عند الدخول إلى صفحة التسجيل.
+        </div>
+        <button class="btn btn-g" style="margin-top:1rem;width:100%" data-action="copyShownPin" data-i18n="hp.invite.pin_copy_btn">📋 نسخ الرمز</button>
+      </div>
+
+      <!-- STATE 3: email sent -->
+      <div id="invite-email-result" style="display:none;text-align:center">
+        <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">✅</div>
+        <p data-i18n="hp.invite.email_sent_title" style="font-size:.95rem;font-weight:600;margin-bottom:.4rem">تم إرسال الدعوة</p>
+        <p style="font-size:.78rem;color:var(--tm)" id="invite-email-result-target">—</p>
+        <p data-i18n="hp.invite.email_sent_help" style="font-size:.72rem;color:var(--tm);margin-top:.75rem">
+          الرابط صالح لـ 7 أيام. إذا لم يصل البريد خلال ساعة، تحقق من مجلد الرسائل غير المرغوب فيها أو أعد الإرسال.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="member-invite" data-i18n="hp.invite.close_btn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MEMBER PROFILE MODAL ══════════ -->
+<!-- Lightweight read-only profile view — hero + stats + hours history.
+     openHeadMemberProfile() in members.js writes #hd-prof-content. -->
+<div class="overlay" id="ov-hd-profile">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <h3 data-i18n="hp.members.profile_title">👤 ملف العضو</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="hd-profile">✕</button>
+    </div>
+    <div class="modal-body" id="hd-prof-content">
+      <div style="text-align:center;color:var(--tm);padding:2rem" data-i18n="common.loading">جاري التحميل...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="hd-profile" data-i18n="hp.invite.close_btn">إغلاق</button>
     </div>
   </div>
 </div>

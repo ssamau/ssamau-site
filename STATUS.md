@@ -1,7 +1,7 @@
 # SSAM site — current status
 
-> One-line: All 7 i18n phases shipped + an RTL/LTR layout fix. Now adding
-> an attendance tab to the head portal.
+> One-line: i18n + RTL fix done. Head portal now has attendance (with
+> edit/delete) and a rich members tab mirroring admin (sans edit/NID).
 
 Updated: 2026-05-16 (Faisal + Claude). Update this when you ship something
 material — the goal is that the next coding session can pick up the
@@ -52,30 +52,39 @@ project's mental model without re-reading 6k lines of commit messages.
 
 ## Active work
 
-**Head-portal attendance tab** (suggested by a committee head 2026-05-16).
-The current head portal (`head.html`) doesn't have an attendance section
-— heads can mark attendance only on the admin portal, which requires
-admin tier.
+**Head members tab — rich admin-like layout** (2026-05-16). Heads now
+get the same row shape admin uses on the Members tab, scoped to their
+own committee, with two permission-deltas vs admin:
+- National ID column REMOVED (privacy — heads aren't admins).
+- No ✏️ edit / 🗑️ delete buttons; heads can only 👤 view profile,
+  view 🖼/📄 uploaded files, and 📩/🔄/❌ manage portal invites.
 
-Scope (agreed with user):
-1. New `attendance` tab in head sidebar, between `hours` and
-   `applications`.
-2. Two registration modes:
-   a. Linked to an existing project/event from the head's committee
-      → uses the existing project-scoped flow.
-   b. Ad-hoc meeting (online / in-person) → head enters meeting title,
-      type, date, start time, optional location.
-3. For BOTH modes, the head can input hours which auto-FinalApprove
-   (skip the two-stage approval chain) and count toward the member's
-   `total_hours` immediately.
-4. Attendees: members of head's committee + free-text external
-   volunteers (name/email).
-5. Schema: migration adds nullable meeting fields to `attendance`,
-   makes `project_id` nullable, adds a CHECK that exactly one of
-   `project_id` / `meeting_title` is set per row. `meeting_hours`
-   column holds the head's input; `recomputeMemberTotalHours()` is
-   widened to sum both `hours` table (FinalApproved) + attendance
-   `meeting_hours`.
+Implementation:
+- [head.html](head.html:204): table cols are now Name / Contact / Role
+  / Hours / Status / Actions. Two modals embedded at the bottom of
+  body: `#ov-member-invite` (copied from admin.html) and `#ov-hd-profile`
+  (custom — profile hero + stats + hours history modal, not a separate
+  tab like admin uses).
+- [head/tabs/members.js](assets/js/head/tabs/members.js) — full
+  rewrite. Mirrors admin's renderMembers cell shapes (contact stack
+  with LTR + 📱/💬 prefixes; file-icons next to name; invite-state
+  buttons gated off `account_*` flags). New module-level cache
+  `_members` so language toggles re-render without re-fetching.
+- [head/main.js](assets/js/head/main.js) — wires `hd.members.*` click
+  actions + the shared `sendInviteByEmail` / `sendInviteByPin` /
+  `copyShownPin` / `closeModal` actions used inside the invite +
+  profile overlays.
+- Server already permits heads on `auth.invite.*` and
+  `storage.getMemberFile` (committee-scoped check), so no Edge
+  Function changes were needed.
+
+**Previously shipped: head attendance tab** — record / edit / delete
+attendance against either a project from the head's committee or an
+ad-hoc meeting (Online/InPerson with date/time/location). Hours from
+meetings sum into the member's `total_hours` via the widened
+`recomputeMemberTotalHours()`. Migration
+`20260516120001_head_attendance_meetings.sql` adds nullable meeting
+columns + a XOR check.
 
 ---
 
