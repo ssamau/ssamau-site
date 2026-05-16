@@ -577,6 +577,13 @@ export default {
   'hp.att.err_pick_member':     'Pick a member.',
   'hp.att.err_vol_name':        'Volunteer name is required.',
   'hp.att.success_record':      '✅ Attendance recorded.',
+  'hp.att.modal_edit_title':    '✏️ Edit attendance',
+  'hp.att.row_edit_title':      'Edit',
+  'hp.att.row_delete_title':    'Delete',
+  'hp.att.delete_confirm':      'Delete this attendance record? This can\'t be undone.',
+  'hp.att.success_update':      '✅ Record updated.',
+  'hp.att.success_delete':      '🗑️ Deleted.',
+  'hp.att.save_edit_btn':       '💾 Save changes',
 
   // ─── Admin portal: chrome + dashboard (Phase 5a) ──────────────────
   // ap.* mirrors hp.* / mp.*. Tab labels follow the same wording as
@@ -1435,6 +1442,7 @@ export default {
   'err.notfound.opportunity':   'Opportunity not found.',
   'err.notfound.project':       'Project not found.',
   'err.notfound.user':          'User not found.',
+  'err.notfound.attendance':    'Attendance record not found.',
 
   // — Required fields —
   'err.required.id':                'id is required.',

@@ -34,6 +34,7 @@ import {
 import {
   loadHeadAttendance, openHeadAttendanceModal, closeHeadAttendanceModal,
   saveHeadAttendance, onHeadAttModeChange, onHeadAttAttendeeChange,
+  editHeadAttendance, deleteHeadAttendance,
 } from './tabs/attendance.js';
 // Reuse the member-portal self-edit profile module — same form, same
 // uploaders, same backend endpoints. The "my-profile" tab on head.html
@@ -176,6 +177,8 @@ document.addEventListener('click', (e) => {
     case 'hd.attendance.open':       openHeadAttendanceModal(); break;
     case 'hd.attendance.close':      closeHeadAttendanceModal(); break;
     case 'hd.attendance.save':       saveHeadAttendance(); break;
+    case 'hd.attendance.edit':       editHeadAttendance(el.dataset.id); break;
+    case 'hd.attendance.delete':     deleteHeadAttendance(el.dataset.id); break;
     case 'profile.save':             saveProfile(); break;
     // onUploaderChange is a CHANGE event on a file <input>, handled in
     // the separate change listener below — not here.

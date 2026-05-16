@@ -282,8 +282,129 @@ const headAttendanceRecord: Handler = async (body, user) => {
   return { attendance_id: r.id };
 };
 
+// Update + delete a row the head previously recorded. Both gate on
+// `recorded_by = current user` so a head can only edit/delete what
+// they personally logged — heads don't get to retcon someone else's
+// committee work. Admin/superadmin path stays on /admin's attendance
+// tab (no auto-FinalApprove there).
+
+const headAttendanceUpdate: Handler = async (body, user) => {
+  const id = Number(body.id);
+  if (!Number.isFinite(id)) throw httpErr('err.required.id', 400);
+  const data = (body.data ?? {}) as Record<string, unknown>;
+  const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
+
+  // Load the existing row + scope-check authorship.
+  const [existing] = await sql`
+    SELECT * FROM public.attendance WHERE id = ${id}
+  ` as Array<Record<string, unknown>>;
+  if (!existing) throw httpErr('err.notfound.attendance', 404);
+  if (existing.recorded_by !== user!.id && user!.access !== 'superadmin') {
+    throw httpErr('err.access.forbidden', 403);
+  }
+
+  // Validate hours range if changing.
+  let newHours: number | null | undefined = undefined;
+  if (data.meeting_hours !== undefined) {
+    if (data.meeting_hours === null || data.meeting_hours === '') {
+      newHours = null;
+    } else {
+      const n = Number(data.meeting_hours);
+      if (!Number.isFinite(n) || n < 0 || n > 24) {
+        throw httpErr('err.business.hours_out_of_range', 400);
+      }
+      newHours = n;
+    }
+  }
+
+  // If member is changing, scope-check the new member belongs to this committee.
+  const newMemberId = (data.member_id as string | undefined);
+  if (newMemberId !== undefined && newMemberId !== existing.member_id) {
+    if (newMemberId) {
+      const [m] = await sql`SELECT committee_id FROM public.members WHERE member_id = ${newMemberId}` as Array<{ committee_id: string | null }>;
+      if (!m) throw httpErr('err.notfound.member', 404);
+      if (m.committee_id !== committee_id) throw httpErr('err.access.member_committee_scope', 403);
+    }
+  }
+
+  await sql`
+    UPDATE public.attendance SET
+      attendance_status   = COALESCE(${(data.attendance_status as string) ?? null}, attendance_status),
+      notes               = COALESCE(${(data.notes as string) ?? null},             notes),
+      meeting_title       = COALESCE(${(data.meeting_title as string) ?? null},     meeting_title),
+      meeting_type        = COALESCE(${(data.meeting_type as string) ?? null},      meeting_type),
+      meeting_date        = COALESCE(${(data.meeting_date as string) ?? null},      meeting_date),
+      meeting_start_time  = COALESCE(${(data.meeting_start_time as string) ?? null},meeting_start_time),
+      meeting_location    = COALESCE(${(data.meeting_location as string) ?? null},  meeting_location),
+      meeting_hours       = ${newHours === undefined ? sql`meeting_hours` : newHours},
+      member_id           = COALESCE(${newMemberId ?? null}, member_id),
+      volunteer_name      = COALESCE(${(data.volunteer_name as string) ?? null},    volunteer_name),
+      volunteer_email     = COALESCE(${(data.volunteer_email as string) ?? null},   volunteer_email),
+      updated_at          = NOW()
+    WHERE id = ${id}
+  `;
+
+  // Recompute totals if the row touches a member's hours. Cover both
+  // the old and new member ids — if member_id changed and the old row
+  // contributed hours, the old member's total also needs a refresh.
+  const oldMemberId = existing.member_id as string | null;
+  const finalMemberId = (newMemberId ?? oldMemberId) as string | null;
+  const ids = [oldMemberId, finalMemberId].filter((x, i, a) => x && a.indexOf(x) === i) as string[];
+  for (const mid of ids) {
+    await sql`
+      UPDATE public.members SET total_hours = (
+        SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${mid} AND approval_status = 'FinalApproved'
+      ) + (
+        SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${mid} AND meeting_hours IS NOT NULL AND attendance_status <> 'Deleted'
+      )
+      WHERE member_id = ${mid}
+    `;
+  }
+  return { attendance_id: id };
+};
+
+const headAttendanceDelete: Handler = async (body, user) => {
+  const id = Number(body.id);
+  if (!Number.isFinite(id)) throw httpErr('err.required.id', 400);
+  await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
+
+  // Soft-delete (status='Deleted') to preserve the audit trail.
+  // Other tabs already filter `attendance_status <> 'Deleted'` so
+  // the row vanishes from every list immediately.
+  const [existing] = await sql`SELECT recorded_by, member_id FROM public.attendance WHERE id = ${id}` as Array<{ recorded_by: number; member_id: string | null }>;
+  if (!existing) throw httpErr('err.notfound.attendance', 404);
+  if (existing.recorded_by !== user!.id && user!.access !== 'superadmin') {
+    throw httpErr('err.access.forbidden', 403);
+  }
+
+  await sql`
+    UPDATE public.attendance
+       SET attendance_status = 'Deleted', updated_at = NOW()
+     WHERE id = ${id}
+  `;
+  // If the deleted row contributed meeting_hours, recompute the
+  // member's cached total so their hours roll back immediately.
+  if (existing.member_id) {
+    await sql`
+      UPDATE public.members SET total_hours = (
+        SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${existing.member_id} AND approval_status = 'FinalApproved'
+      ) + (
+        SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${existing.member_id} AND meeting_hours IS NOT NULL AND attendance_status <> 'Deleted'
+      )
+      WHERE member_id = ${existing.member_id}
+    `;
+  }
+  return { attendance_id: id, deleted: true };
+};
+
 export const headActions: Record<string, Handler> = {
-  'head.dashboardSummary': headDashboardSummary,
-  'head.attendance.list':  headAttendanceList,
-  'head.attendance.record':headAttendanceRecord,
+  'head.dashboardSummary':  headDashboardSummary,
+  'head.attendance.list':   headAttendanceList,
+  'head.attendance.record': headAttendanceRecord,
+  'head.attendance.update': headAttendanceUpdate,
+  'head.attendance.delete': headAttendanceDelete,
 };

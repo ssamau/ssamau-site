@@ -44,6 +44,13 @@ const MEETING_TYPE_KEY = {
 let _committeeMembers = [];
 let _committeeProjects = [];
 
+// Cache of the latest list — used by openHeadAttendanceModal(id) to
+// pre-fill the modal in edit mode without an extra round-trip.
+let _attendanceRows = [];
+
+// Current attendance row being edited, if any. Null in record-new mode.
+let _editingId = null;
+
 // gv() reads element.value by id. The mode + attendee-type radios in
 // the modal share a `name` but have distinct ids — gv() against the
 // shared name returns '' (no element with that id). These helpers
@@ -63,12 +70,21 @@ export async function loadHeadAttendance() {
     return;
   }
   const rows = res.data || [];
+  _attendanceRows = rows;
   if (!rows.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('hp.att.empty'))}</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows.map(renderRow).join('');
+}
+
+// User-id of the currently-signed-in head — used to gate the edit
+// + delete buttons to rows this head personally recorded. Falls back
+// to -1 (no match) if CURRENT_USER isn't set, which means no rows
+// get edit/delete affordances and that's a safer default than "everyone".
+function _myUserId() {
+  return (window.CURRENT_USER && window.CURRENT_USER.id) || -1;
 }
 
 function renderRow(a) {
@@ -111,19 +127,47 @@ function renderRow(a) {
     ? `<strong style="color:var(--g)">${Number(a.meeting_hours)}</strong> <span style="color:var(--tm);font-size:.72rem">${esc(t('hp.att.hours_suffix'))}</span>`
     : '<span style="color:var(--tm)">—</span>';
 
+  // Actions cell — edit + delete buttons appear only on rows the
+  // current head personally recorded. recorded_by is a foreign key
+  // to users.id; we compare against window.CURRENT_USER.id which the
+  // auth layer wrote at session restore. Other heads' rows show an
+  // em-dash so the column stays uniform-width.
+  const mine = Number(a.recorded_by) === Number(_myUserId());
+  const actions = mine
+    ? `<button class="btn-icon edit" data-action="hd.attendance.edit" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_edit_title'))}">✏️</button>
+       <button class="btn-icon del"  data-action="hd.attendance.delete" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_delete_title'))}">🗑️</button>`
+    : '<span style="color:var(--tm)">—</span>';
+
   return `<tr>
     <td><strong>${attendee}</strong></td>
     <td>${context}</td>
     <td style="font-size:.78rem">${when || '—'}</td>
     <td>${statusTag}</td>
     <td>${hoursCell}</td>
-    <td>—</td>
+    <td>${actions}</td>
   </tr>`;
 }
 
-// ─── Modal: record attendance ───────────────────────────────────────
+// ─── Modal: record / edit attendance ────────────────────────────────
+// Opens in record-new mode when called with no args; in edit mode when
+// passed an attendance row's id. Edit mode pre-fills every form field
+// from the cached row in _attendanceRows so we don't need an extra
+// server round-trip just to populate the form.
 
-export async function openHeadAttendanceModal() {
+export async function openHeadAttendanceModal(attendanceId) {
+  _editingId = attendanceId ? Number(attendanceId) : null;
+
+  // Headers + footer save-button labels swap based on mode.
+  const modalHead = document.querySelector('#ov-hd-att .modal-head h3');
+  const saveBtn   = document.getElementById('hd-att-save-btn');
+  if (_editingId) {
+    if (modalHead) modalHead.textContent = t('hp.att.modal_edit_title');
+    if (saveBtn)   saveBtn.textContent   = t('hp.att.save_edit_btn');
+  } else {
+    if (modalHead) modalHead.textContent = t('hp.att.modal_title');
+    if (saveBtn)   saveBtn.textContent   = t('hp.att.save_btn');
+  }
+
   // Reset the form. Each open re-fetches members + the committee's
   // projects so the dropdowns are fresh (heads occasionally add a new
   // project mid-session via the admin portal).
@@ -167,6 +211,71 @@ export async function openHeadAttendanceModal() {
     .filter(m => m.status !== 'Inactive')
     .filter(m => myCommittee ? m.committee_id === myCommittee : true);
   _populateAttDropdowns();
+
+  // Pre-fill in edit mode. Done AFTER dropdowns hydrate so the
+  // select.value = ... lines have options to land on. The cached
+  // _attendanceRows came from the most recent loadHeadAttendance().
+  if (_editingId) {
+    const row = _attendanceRows.find(r => Number(r.attendance_id) === _editingId);
+    if (row) _prefillFromRow(row);
+  }
+}
+
+// Set every form field from an attendance row. Branches on whether
+// the row is project-linked or an ad-hoc meeting, and whether the
+// attendee is a member or external volunteer. Calls the sync helpers
+// at the end so the conditional sub-sections are visible.
+function _prefillFromRow(row) {
+  if (row.meeting_title) {
+    const mr = document.getElementById('hd-att-mode-meeting');
+    if (mr) mr.checked = true;
+    sv('hd-att-meeting-title', row.meeting_title || '');
+    sv('hd-att-meeting-type',  row.meeting_type  || 'Online');
+    sv('hd-att-meeting-date',  row.meeting_date  ? String(row.meeting_date).slice(0, 10) : '');
+    // TIME columns come back as 'HH:MM:SS' — the <input type=time>
+    // wants HH:MM. Trim the seconds.
+    sv('hd-att-meeting-time',  row.meeting_start_time ? String(row.meeting_start_time).slice(0, 5) : '');
+    sv('hd-att-meeting-location', row.meeting_location || '');
+    sv('hd-att-hours', row.meeting_hours != null ? String(row.meeting_hours) : '');
+  } else {
+    const pr = document.getElementById('hd-att-mode-project');
+    if (pr) pr.checked = true;
+    sv('hd-att-project', row.project_id || '');
+  }
+  if (row.member_id) {
+    const am = document.getElementById('hd-att-attendee-member');
+    if (am) am.checked = true;
+    sv('hd-att-member', row.member_id || '');
+  } else {
+    const av = document.getElementById('hd-att-attendee-volunteer');
+    if (av) av.checked = true;
+    sv('hd-att-vol-name',  row.volunteer_name  || '');
+    sv('hd-att-vol-email', row.volunteer_email || '');
+  }
+  sv('hd-att-status', row.attendance_status || 'Present');
+  sv('hd-att-notes',  row.notes || '');
+  _syncAttModeUi();
+  _syncAttAttendeeUi();
+}
+
+// Public entry point for the per-row edit button. Looks the row up
+// from the cache and opens the modal in edit mode.
+export function editHeadAttendance(id) {
+  openHeadAttendanceModal(id);
+}
+
+// Soft-delete a row via head.attendance.delete. Confirms via
+// window.confirm so we don't need a second modal for one button.
+export async function deleteHeadAttendance(id) {
+  if (!confirm(t('hp.att.delete_confirm'))) return;
+  const { toast } = await import('../../lib/ui.js');
+  const res = await api('head.attendance.delete', { id: Number(id) });
+  if (!res || !res.success) {
+    toast(localizeError(res?.error, res?.errorParams) || t('common.generic_error'), 'twarn');
+    return;
+  }
+  toast(t('hp.att.success_delete'), 'tok');
+  await loadHeadAttendance();
 }
 
 export function closeHeadAttendanceModal() {
@@ -261,17 +370,22 @@ export async function saveHeadAttendance() {
   }
 
   const btn = document.getElementById('hd-att-save-btn');
-  if (btn) { btn.disabled = true; btn.textContent = t('common.loading'); }
+  const savingLabel = t('common.loading');
+  const restoreLabel = _editingId ? t('hp.att.save_edit_btn') : t('hp.att.save_btn');
+  if (btn) { btn.disabled = true; btn.textContent = savingLabel; }
   try {
-    const res = await api('head.attendance.record', { data: body });
+    const res = _editingId
+      ? await api('head.attendance.update', { id: _editingId, data: body })
+      : await api('head.attendance.record', { data: body });
     if (!res || !res.success) {
       toast(localizeError(res?.error, res?.errorParams) || t('common.generic_error'), 'twarn');
       return;
     }
-    toast(t('hp.att.success_record'), 'tok');
+    toast(_editingId ? t('hp.att.success_update') : t('hp.att.success_record'), 'tok');
+    _editingId = null;
     closeHeadAttendanceModal();
     await loadHeadAttendance();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = t('hp.att.save_btn'); }
+    if (btn) { btn.disabled = false; btn.textContent = restoreLabel; }
   }
 }

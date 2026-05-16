@@ -593,6 +593,13 @@ export default {
   'hp.att.err_pick_member':     'اختر عضواً',
   'hp.att.err_vol_name':        'اسم المتطوع مطلوب',
   'hp.att.success_record':      '✅ تم تسجيل الحضور',
+  'hp.att.modal_edit_title':    '✏️ تعديل سجل الحضور',
+  'hp.att.row_edit_title':      'تعديل',
+  'hp.att.row_delete_title':    'حذف',
+  'hp.att.delete_confirm':      'حذف سجل الحضور؟ لا يمكن التراجع.',
+  'hp.att.success_update':      '✅ تم تحديث السجل',
+  'hp.att.success_delete':      '🗑️ تم الحذف',
+  'hp.att.save_edit_btn':       '💾 حفظ التعديلات',
 
   // ─── Admin portal: chrome + dashboard (Phase 5a) ──────────────────
   // ap.* namespace mirrors hp.* / mp.*. Sidebar (sb), topbar, page
@@ -1469,6 +1476,7 @@ export default {
   'err.notfound.opportunity':   'الفرصة غير موجودة',
   'err.notfound.project':       'المشروع غير موجود',
   'err.notfound.user':          'المستخدم غير موجود',
+  'err.notfound.attendance':    'سجل الحضور غير موجود',
 
   // — Required fields —
   'err.required.id':                'المعرّف مطلوب (id)',
