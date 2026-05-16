@@ -14,10 +14,16 @@
 #app { display:flex; min-height:100vh; }
 
 /* ── SIDEBAR ── */
+/* Phase 7 fix: pin to the START of the inline axis, not physical right.
+ * RTL → start = right (Arabic UI looks the same as before).
+ * LTR → start = left (English UI flips the sidebar to the left as
+ * users naturally expect). All other inline-direction properties
+ * below follow the same logical-property pattern so the layout
+ * mirrors cleanly without a single .dir-ltr override. */
 .sidebar {
   width:var(--sb);
   background:var(--gd);
-  position:fixed; top:0; right:0; bottom:0;
+  position:fixed; top:0; inset-inline-start:0; bottom:0;
   z-index:200; display:flex; flex-direction:column;
   overflow:hidden;
   transition:transform .25s;
@@ -56,14 +62,18 @@
   color:rgba(255,255,255,.6);
   cursor:pointer; transition:all .15s;
   font-size:.84rem; font-weight:500;
-  border-right:3px solid transparent;
+  /* Active-tab indicator sits on the inline-END edge of the row —
+   * the side facing the page content, which flips with direction. */
+  border-inline-end:3px solid transparent;
   user-select:none;
 }
 .sb-item:hover { color:#fff; background:rgba(255,255,255,.06); }
-.sb-item.active { color:var(--gg); background:rgba(184,147,42,.1); border-right-color:var(--go); }
+.sb-item.active { color:var(--gg); background:rgba(184,147,42,.1); border-inline-end-color:var(--go); }
 .sb-item .sb-ic { width:18px; text-align:center; flex-shrink:0; font-size:.9rem; }
 .sb-badge {
-  margin-right:auto; background:var(--go); color:#fff;
+  /* Pushes the badge to the inline-END of the row (away from the icon
+   * + label), matching RTL + LTR without per-direction tweaks. */
+  margin-inline-start:auto; background:var(--go); color:#fff;
   font-size:.6rem; font-weight:800; min-width:17px; height:17px;
   border-radius:9px; display:flex; align-items:center; justify-content:center;
   padding:0 .3rem;
@@ -78,7 +88,10 @@
 .sb-config-btn:hover { background:rgba(255,255,255,.06); color:#fff; }
 
 /* ── MAIN ── */
-.main { margin-right:var(--sb); flex:1; display:flex; flex-direction:column; min-height:100vh; }
+/* margin-inline-start reserves space at the inline-START of the page
+ * for the sidebar — so in RTL it leaves room on the right, and in LTR
+ * it leaves room on the left, matching wherever .sidebar pinned itself. */
+.main { margin-inline-start:var(--sb); flex:1; display:flex; flex-direction:column; min-height:100vh; }
 
 /* ── TOPBAR ── */
 .topbar {
@@ -243,7 +256,9 @@ tr:hover td { background:var(--bg-soft); }
 .committee-bar { display:flex; align-items:center; gap:.75rem; margin-bottom:.65rem; }
 .cb-name { width:130px; font-size:.78rem; font-weight:600; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cb-bar { flex:1; background:#f0f0f0; border-radius:50px; height:20px; overflow:hidden; }
-.cb-fill { height:100%; border-radius:50px; background:var(--g); display:flex; align-items:center; justify-content:flex-end; padding-left:.4rem; transition:width .6s; }
+/* padding-inline-end gives the % label breathing room from the
+ * trailing inside-edge of the fill, working in both RTL + LTR. */
+.cb-fill { height:100%; border-radius:50px; background:var(--g); display:flex; align-items:center; justify-content:flex-end; padding-inline-end:.4rem; transition:width .6s; }
 .cb-fill span { font-size:.65rem; font-weight:800; color:#fff; white-space:nowrap; }
 
 /* Volunteer rank */
@@ -340,7 +355,10 @@ tr:hover td { background:var(--bg-soft); }
  * (managed by JS) so the user sees their current pick. */
 .sb-theme { margin-top: auto; padding: .6rem .85rem .9rem; border-top: 1px solid var(--bd); }
 .sb-theme-label { font-size: .65rem; font-weight: 700; color: var(--tm); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .03em; }
-.sb-theme-row { display: flex; gap: .3rem; }
+/* direction:ltr pins the 🌓 / ☀️ / 🌙 order so the buttons don't
+ * swap visual positions when the UI flips RTL ↔ LTR — same reasoning
+ * as the .lang-toggle row above. */
+.sb-theme-row { display: flex; direction: ltr; gap: .3rem; }
 .sb-theme-btn {
   flex: 1;
   background: transparent;
@@ -358,9 +376,17 @@ tr:hover td { background:var(--bg-soft); }
 .sb-theme-btn.active { background: var(--gl); border-color: var(--g); color: var(--g); }
 
 @media(max-width:900px) {
+  /* Hide-by-default direction: the sidebar slides off whichever physical
+   * edge it lives on. Sidebar pins to inline-START → RTL = right edge,
+   * LTR = left edge. translateX only takes physical X, so we cover both
+   * cases explicitly: positive for RTL (slide off the right), negative
+   * for LTR (slide off the left). The same rule lets .sidebar.open
+   * snap back to translateX(0) in both directions. */
   .sidebar { transform:translateX(100%); }
-  .sidebar.open { transform:translateX(0); }
-  .main { margin-right:0; }
+  [dir="ltr"] .sidebar { transform:translateX(-100%); }
+  .sidebar.open,
+  [dir="ltr"] .sidebar.open { transform:translateX(0); }
+  .main { margin-inline-start:0; }
   .stats-grid { grid-template-columns:1fr 1fr; }
   .dash-grid { grid-template-columns:1fr; }
   .profile-stats { grid-template-columns:1fr 1fr; }
@@ -627,7 +653,7 @@ tr:hover td { background:var(--bg-soft); }
 .com-bar{display:flex;align-items:center;gap:.6rem;margin-bottom:.52rem;}
 .com-bar-lbl{width:115px;font-size:.74rem;font-weight:600;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .com-bar-trk{flex:1;background:#f0f0f0;border-radius:50px;height:17px;overflow:hidden;}
-.com-bar-fill{height:100%;border-radius:50px;background:var(--g);display:flex;align-items:center;justify-content:flex-end;padding-left:.3rem;transition:width .5s;}
+.com-bar-fill{height:100%;border-radius:50px;background:var(--g);display:flex;align-items:center;justify-content:flex-end;padding-inline-end:.3rem;transition:width .5s;}
 .com-bar-fill span{font-size:.62rem;font-weight:800;color:#fff;white-space:nowrap;}
 .seed-txt{font-size:.78rem;color:var(--wn);font-weight:600;}
 @media(max-width:880px){.proj-kpis{grid-template-columns:1fr 1fr;}.sum-row{grid-template-columns:1fr 1fr;}}
@@ -636,9 +662,16 @@ tr:hover td { background:var(--bg-soft); }
 /* ── Language toggle (member / head / admin sidebars) ─────────────────
    Same two-pill pattern as the auth pages' .lang-toggle, scaled for the
    compact sidebar context. Sits between the sb-nav and the sb-theme row
-   (added in Phase 3 of the i18n rollout). */
+   (added in Phase 3 of the i18n rollout).
+   `direction: ltr` pins the pill order so العربية stays on the left of
+   the row and English stays on the right regardless of UI direction —
+   otherwise toggling language would swap which pill the user just
+   clicked, breaking the muscle-memory of "the pill I want is the right
+   one in EN, the left one in AR". The theme-toggle row right below
+   uses the same trick for the 🌓 / ☀️ / 🌙 ordering. */
 .lang-toggle {
   display: flex;
+  direction: ltr;
   gap: .3rem;
   justify-content: center;
   padding: .5rem .75rem;

@@ -189,7 +189,10 @@
   .hd-kpi-grid          { grid-template-columns: 1fr 1fr; gap: .55rem; }
   .hd-kpi-value         { font-size: 1.6rem; }
   .hd-quickactions-row  { grid-template-columns: 1fr; }
-  .hd-welcome           { flex-direction: column; align-items: flex-start; text-align: right; }
+  /* text-align: start follows the UI direction — right in RTL, left in
+   * LTR — so the mobile welcome strip doesn't look misaligned when the
+   * user toggles to English. */
+  .hd-welcome           { flex-direction: column; align-items: flex-start; text-align: start; }
   .hd-welcome-emoji     { font-size: 2rem; align-self: flex-end; }
 }
 

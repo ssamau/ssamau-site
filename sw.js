@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v43-2026-05-16-i18n-phase7-homepage';
+const CACHE_VERSION = 'v44-2026-05-16-rtl-ltr-flip-fix';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
