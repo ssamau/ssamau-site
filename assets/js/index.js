@@ -538,29 +538,67 @@ document.querySelectorAll('a[href^="#"]').forEach((a) => {
 });
 
 // ── LANGUAGE TOGGLE (AR ⇄ EN, pure DOM class swap) ──────────────────────────
-let isAR = true;
-function toggleLang() {
-  isAR = !isAR;
+// Phase 7: persist the chosen language under `ssam_lang` (same key used by
+// the rest of the app — login/apply/portals/admin all share it). On first
+// load, honour any previously saved preference; if none, default to the
+// browser's preferred language (en-* → English, anything else → Arabic).
+// This makes the toggle survive reloads AND keeps the homepage in sync
+// with the portals — switching to English on /admin and going back to /
+// keeps the English view instead of snapping back to Arabic.
+const SSAM_LANG_KEY = 'ssam_lang';
+
+function _initialHomeLang() {
+  try {
+    const saved = localStorage.getItem(SSAM_LANG_KEY);
+    if (saved === 'ar' || saved === 'en') return saved;
+  } catch { /* private mode / disabled storage */ }
+  const nav = (navigator.language || '').toLowerCase();
+  return nav.startsWith('en') ? 'en' : 'ar';
+}
+
+let isAR = _initialHomeLang() === 'ar';
+
+function _applyLangToDom() {
   const btn  = document.getElementById('lang-btn');
+  const html = document.documentElement;
   const body = document.body;
   if (isAR) {
-    body.classList.remove('en-lang');
-    body.dir = 'rtl';
-    document.documentElement.lang = 'ar';
-    btn.textContent = 'EN';
+    body && body.classList.remove('en-lang');
+    if (body) body.dir = 'rtl';
+    html.lang = 'ar';
+    html.dir  = 'rtl';
+    if (btn) btn.textContent = 'EN';
     document.querySelectorAll('[data-en]').forEach((el) => { el.style.display = 'none'; });
     document.querySelectorAll('[data-ar]').forEach((el) => { el.style.display = ''; });
   } else {
-    body.classList.add('en-lang');
-    body.dir = 'ltr';
-    document.documentElement.lang = 'en';
-    btn.textContent = 'AR';
+    body && body.classList.add('en-lang');
+    if (body) body.dir = 'ltr';
+    html.lang = 'en';
+    html.dir  = 'ltr';
+    if (btn) btn.textContent = 'AR';
     document.querySelectorAll('[data-ar]').forEach((el) => { el.style.display = 'none'; });
     document.querySelectorAll('[data-en]').forEach((el) => {
       const tag = el.tagName.toLowerCase();
       el.style.display = (tag === 'a' || tag === 'span' || tag === 'button') ? 'inline' : 'block';
     });
   }
+}
+
+function toggleLang() {
+  isAR = !isAR;
+  try { localStorage.setItem(SSAM_LANG_KEY, isAR ? 'ar' : 'en'); } catch { /* ignore */ }
+  _applyLangToDom();
+}
+
+// Apply on load so a saved English preference paints English on first
+// frame (rather than flashing Arabic for a moment before the toggle
+// runs). Safe to call before DOMContentLoaded — the query selectors
+// just return empty NodeLists if the body isn't parsed yet, and the
+// init wiring below re-applies right after parse.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _applyLangToDom);
+} else {
+  _applyLangToDom();
 }
 
 // ── EVENTS TABS (upcoming / past) ───────────────────────────────────────────
