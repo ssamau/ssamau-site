@@ -31,6 +31,10 @@ import {
 import {
   loadHeadApplications, acceptApplication, rejectApplication, requestInterview,
 } from './tabs/applications.js';
+import {
+  loadHeadAttendance, openHeadAttendanceModal, closeHeadAttendanceModal,
+  saveHeadAttendance, onHeadAttModeChange, onHeadAttAttendeeChange,
+} from './tabs/attendance.js';
 // Reuse the member-portal self-edit profile module — same form, same
 // uploaders, same backend endpoints. The "my-profile" tab on head.html
 // has matching element ids so this module works as-is.
@@ -81,6 +85,7 @@ const loaderMap = {
   members:       loadHeadMembers,
   opportunities: loadHeadOpportunities,
   hours:         loadHeadHours,
+  attendance:    loadHeadAttendance,
   applications:  loadHeadApplications,
   'my-profile':  loadProfile,
 };
@@ -165,6 +170,12 @@ document.addEventListener('click', (e) => {
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
     case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
     case 'hd.opps.create':           createOpportunity(); break;
+    // Attendance tab (added 2026-05-16). open/close/save are click
+    // handlers; modeChange + attendeeChange are change-event handlers
+    // on the radio inputs, handled in the change-listener below.
+    case 'hd.attendance.open':       openHeadAttendanceModal(); break;
+    case 'hd.attendance.close':      closeHeadAttendanceModal(); break;
+    case 'hd.attendance.save':       saveHeadAttendance(); break;
     case 'profile.save':             saveProfile(); break;
     // onUploaderChange is a CHANGE event on a file <input>, handled in
     // the separate change listener below — not here.
@@ -183,9 +194,16 @@ document.addEventListener('input', (e) => {
 // The input declares `data-event="change"` so the click-only path
 // above wouldn't pick it up.
 document.addEventListener('change', (e) => {
-  const el = e.target.closest('[data-action="onUploaderChange"][data-event="change"]');
-  if (!el) return;
-  onUploaderChange(el);
+  const upl = e.target.closest('[data-action="onUploaderChange"][data-event="change"]');
+  if (upl) { onUploaderChange(upl); return; }
+  // Attendance tab radios — mode (project vs meeting) + attendee type
+  // (member vs volunteer) flip which sub-section of the form is visible.
+  const att = e.target.closest('[data-action="hd.attendance.modeChange"], [data-action="hd.attendance.attendeeChange"]');
+  if (att) {
+    const a = att.dataset.action;
+    if (a === 'hd.attendance.modeChange')     onHeadAttModeChange();
+    else if (a === 'hd.attendance.attendeeChange') onHeadAttAttendeeChange();
+  }
 });
 
 

@@ -55,6 +55,9 @@
     <div class="sb-item" data-page="hours" data-action="showPage">
       <span class="sb-ic">⏱️</span><span data-i18n="hp.sb.hours">الساعات</span>
     </div>
+    <div class="sb-item" data-page="attendance" data-action="showPage">
+      <span class="sb-ic">✅</span><span data-i18n="hp.sb.attendance">الحضور</span>
+    </div>
     <div class="sb-item" data-page="applications" data-action="showPage">
       <span class="sb-ic">📥</span><span data-i18n="hp.sb.applications">طلبات الانضمام</span>
     </div>
@@ -307,6 +310,42 @@
       </div>
     </div>
 
+    <!-- ══════════ ATTENDANCE (added 2026-05-16) ══════════ -->
+    <!-- Head-portal attendance tab. Records attendance for committee
+         members on existing projects OR on ad-hoc meetings the head
+         describes inline. Heads can attribute hours on meeting rows;
+         those auto-FinalApprove and count toward the member's total
+         immediately (see actions/head.ts + recomputeMemberTotalHours
+         in actions/hours.ts). -->
+    <div class="page" id="page-attendance">
+      <div class="card">
+        <div class="card-head">
+          <h3 data-i18n="hp.att.card_title">✅ سجل الحضور</h3>
+          <div class="card-head-right">
+            <button class="btn btn-g btn-sm" data-action="hd.attendance.open" data-i18n="hp.att.add_btn">➕ تسجيل حضور</button>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="hp.att.lead">
+          سجّل حضور أعضاء لجنتك على المشاريع أو الاجتماعات المخصصة.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="hp.att.col_attendee">الحاضر</th>
+                <th data-i18n="hp.att.col_context">المشروع / الاجتماع</th>
+                <th data-i18n="hp.att.col_date">التاريخ</th>
+                <th data-i18n="hp.att.col_status">الحالة</th>
+                <th data-i18n="hp.att.col_hours">الساعات</th>
+                <th data-i18n="hp.att.col_actions">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="hd-att-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ══════════ MY PROFILE ══════════ -->
     <!-- Self-edit profile for the head. Reuses the member portal's
          profile module (assets/js/member/tabs/profile.js) — same form,
@@ -354,6 +393,143 @@
     </div>
 
   </main>
+</div>
+
+<!-- ══════════ HEAD ATTENDANCE MODAL (added 2026-05-16) ══════════ -->
+<!-- One overlay with two top-level branches:
+     mode=project  → project dropdown only.
+     mode=meeting  → meeting title + type + date + time + optional location.
+     attendee=member  → member dropdown.
+     attendee=volunteer → name + optional email.
+     The hours-wrap section only shows in meeting mode; project-linked
+     attendance gets its hours via the opportunity+hours flow. -->
+<div class="overlay" id="ov-hd-att">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-i18n="hp.att.modal_title">➕ تسجيل حضور</h3>
+      <button class="modal-close" data-action="hd.attendance.close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Mode toggle: project vs meeting -->
+      <div class="fg">
+        <label data-i18n="hp.att.mode_label" style="font-weight:700;margin-bottom:.4rem">نوع التسجيل</label>
+        <label class="fg-check" style="margin-bottom:.3rem">
+          <input type="radio" name="hd-att-mode" id="hd-att-mode-project" value="project" data-action="hd.attendance.modeChange" checked/>
+          <span data-i18n="hp.att.mode_project">مشروع/فعالية موجود</span>
+        </label>
+        <label class="fg-check">
+          <input type="radio" name="hd-att-mode" id="hd-att-mode-meeting" value="meeting" data-action="hd.attendance.modeChange"/>
+          <span data-i18n="hp.att.mode_meeting">اجتماع مخصص</span>
+        </label>
+      </div>
+
+      <!-- Project sub-form (default) -->
+      <div id="hd-att-project-section">
+        <div class="fg">
+          <label data-i18n="hp.att.lbl_project">المشروع</label>
+          <select id="hd-att-project">
+            <option value="" data-i18n="hp.att.project_pick">— اختر المشروع —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Meeting sub-form (hidden by default) -->
+      <div id="hd-att-meeting-section" style="display:none">
+        <div class="fg">
+          <label data-i18n="hp.att.lbl_meeting_title">عنوان الاجتماع</label>
+          <input id="hd-att-meeting-title" type="text" data-i18n-placeholder="hp.att.ph_meeting_title" placeholder="مثل: اجتماع تنسيق فعالية اليوم الوطني"/>
+        </div>
+        <div class="fg-row">
+          <div class="fg" style="flex:1">
+            <label data-i18n="hp.att.lbl_meeting_type">نوع الاجتماع</label>
+            <select id="hd-att-meeting-type">
+              <option value="Online"   data-i18n="hp.att.meeting_type_online">عن بُعد</option>
+              <option value="InPerson" data-i18n="hp.att.meeting_type_inperson">حضوري</option>
+            </select>
+          </div>
+          <div class="fg" style="flex:1">
+            <label data-i18n="hp.att.lbl_meeting_date">تاريخ الاجتماع</label>
+            <input id="hd-att-meeting-date" type="date"/>
+          </div>
+          <div class="fg" style="flex:1">
+            <label data-i18n="hp.att.lbl_meeting_time">وقت البداية</label>
+            <input id="hd-att-meeting-time" type="time"/>
+          </div>
+        </div>
+        <div class="fg">
+          <label data-i18n="hp.att.lbl_meeting_location">الموقع (اختياري)</label>
+          <input id="hd-att-meeting-location" type="text" data-i18n-placeholder="hp.att.ph_meeting_location" placeholder="مثل: Docklands Community Hub أو رابط Zoom"/>
+        </div>
+      </div>
+
+      <!-- Attendee-type toggle -->
+      <div class="fg" style="margin-top:.6rem">
+        <label data-i18n="hp.att.lbl_attendee_type" style="font-weight:700;margin-bottom:.4rem">نوع الحاضر</label>
+        <label class="fg-check" style="margin-bottom:.3rem">
+          <input type="radio" name="hd-att-attendee-type" id="hd-att-attendee-member" value="member" data-action="hd.attendance.attendeeChange" checked/>
+          <span data-i18n="hp.att.attendee_member">عضو من اللجنة</span>
+        </label>
+        <label class="fg-check">
+          <input type="radio" name="hd-att-attendee-type" id="hd-att-attendee-volunteer" value="volunteer" data-action="hd.attendance.attendeeChange"/>
+          <span data-i18n="hp.att.attendee_volunteer">متطوع خارجي</span>
+        </label>
+      </div>
+
+      <!-- Member picker (default) -->
+      <div id="hd-att-member-section">
+        <div class="fg">
+          <label data-i18n="hp.att.lbl_member">العضو</label>
+          <select id="hd-att-member">
+            <option value="" data-i18n="hp.att.member_pick">— اختر العضو —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Volunteer fields (hidden by default) -->
+      <div id="hd-att-volunteer-section" style="display:none">
+        <div class="fg-row">
+          <div class="fg" style="flex:1">
+            <label data-i18n="hp.att.lbl_volunteer_name">اسم المتطوع</label>
+            <input id="hd-att-vol-name" type="text"/>
+          </div>
+          <div class="fg" style="flex:1">
+            <label data-i18n="hp.att.lbl_volunteer_email">بريد المتطوع (اختياري)</label>
+            <input id="hd-att-vol-email" type="email" dir="ltr"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status + hours (hours visible only in meeting mode) -->
+      <div class="fg-row" style="margin-top:.6rem">
+        <div class="fg" style="flex:1">
+          <label data-i18n="hp.att.lbl_status">حالة الحضور</label>
+          <select id="hd-att-status">
+            <option value="Present" data-i18n="hp.att.status_present">حضر</option>
+            <option value="Absent"  data-i18n="hp.att.status_absent">غاب</option>
+            <option value="Late"    data-i18n="hp.att.status_late">تأخر</option>
+            <option value="Excused" data-i18n="hp.att.status_excused">معذور</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:1" id="hd-att-hours-wrap">
+          <label data-i18n="hp.att.lbl_hours">الساعات التطوعية (اختياري)</label>
+          <input id="hd-att-hours" type="number" min="0" max="24" step="0.5"/>
+          <div class="fg-note" data-i18n="hp.att.hours_hint" style="font-size:.7rem;color:var(--tm);margin-top:.25rem">
+            تُحتسب فوراً ضمن رصيد العضو.
+          </div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label data-i18n="hp.att.lbl_notes">ملاحظات (اختياري)</label>
+        <textarea id="hd-att-notes" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol btn-sm" data-action="hd.attendance.close" data-i18n="hp.att.cancel_btn">إلغاء</button>
+      <button class="btn btn-g btn-sm" data-action="hd.attendance.save" id="hd-att-save-btn" data-i18n="hp.att.save_btn">💾 تسجيل الحضور</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast container — referenced by lib/ui.js `toast()`. Without this

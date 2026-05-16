@@ -1,9 +1,15 @@
 // Committee-head landing-page handlers.
 //
-// One action for now: `head.dashboardSummary`, which aggregates the
-// four KPIs the head needs at-a-glance plus the top-N rows for the
-// two pending queues (applications waiting on a decision + hours
-// waiting on primary approval).
+// Two areas:
+//   - `head.dashboardSummary` aggregates the four KPIs the head sees
+//     at-a-glance + top-N rows for the pending queues.
+//   - `head.attendance.list` / `head.attendance.record` — the
+//     committee-head attendance tab, added 2026-05-16 at a head's
+//     request. Records attendance either against an existing project
+//     in the committee OR against an ad-hoc meeting (online /
+//     in-person) the head describes inline. Hours assigned by the
+//     head auto-FinalApprove since heads own the approval chain for
+//     their own committee.
 //
 // Permissioning: caller must have `access_level = 'head'` and a
 // committee_id set; or `access_level = 'superadmin'` (for testing or
@@ -17,31 +23,34 @@ import {
   type Handler,
 } from '../_helpers.ts';
 
-const headDashboardSummary: Handler = async (body, user) => {
-  requireAuth(user);
-
-  // Resolve target committee: heads always see their own; superadmin
-  // can pass an override for preview/testing.
-  let committee_id: string | null = null;
-  if (user!.access === 'head') {
-    if (!user!.committee_id) throw httpErr('err.access.head_no_committee', 409);
-    committee_id = user!.committee_id;
-  } else if (user!.access === 'superadmin') {
-    committee_id = (body.committee_id as string | undefined) || null;
-    if (!committee_id) {
-      // Fall back to the first active committee — useful for "what does
-      // a head see?" exploration without picking one manually.
-      const rows = await sql`
-        SELECT committee_id FROM public.committees
-        WHERE status = 'Active'
-        ORDER BY committee_name LIMIT 1
-      ` as Array<{ committee_id: string }>;
-      committee_id = rows[0]?.committee_id || null;
-    }
-    if (!committee_id) throw httpErr('err.business.no_committees_setup', 404);
-  } else {
-    throw httpErr('err.access.head_or_dev_only', 403);
+// Resolve the target committee for a head-portal request. Heads
+// always operate on their own committee; superadmin can pass an
+// explicit override for preview/testing. Throws on anyone else.
+async function resolveHeadCommittee(
+  user: { access?: string; committee_id?: string | null } | null,
+  bodyCommitteeId: string | null | undefined,
+): Promise<string> {
+  if (!user) throw httpErr('err.auth.unauthorized', 401);
+  if (user.access === 'head') {
+    if (!user.committee_id) throw httpErr('err.access.head_no_committee', 409);
+    return user.committee_id;
   }
+  if (user.access === 'superadmin') {
+    if (bodyCommitteeId) return bodyCommitteeId;
+    const rows = await sql`
+      SELECT committee_id FROM public.committees
+      WHERE status = 'Active' ORDER BY committee_name LIMIT 1
+    ` as Array<{ committee_id: string }>;
+    if (!rows[0]) throw httpErr('err.business.no_committees_setup', 404);
+    return rows[0].committee_id;
+  }
+  throw httpErr('err.access.head_or_dev_only', 403);
+}
+
+const headDashboardSummary: Handler = async (body, user) => {
+  // resolveHeadCommittee centralises the "head OR superadmin-with-
+  // override" branching shared with head.attendance.* handlers below.
+  const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
 
   // Committee meta — name + the head's own profile-friendly info.
   const [committeeRow] = await sql`
@@ -122,6 +131,152 @@ const headDashboardSummary: Handler = async (body, user) => {
   };
 };
 
+// ─── Head attendance tab (2026-05-16) ───────────────────────────────
+// List attendance rows scoped to the head's committee. Returns BOTH
+// project-linked rows (existing attendance flow) AND ad-hoc meeting
+// rows (new). Joined with members + projects so the client can render
+// a uniform table without extra lookups. Sorted with most recent
+// activity first.
+const headAttendanceList: Handler = async (body, user) => {
+  const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
+  // We restrict the rows to attendance that belongs (somehow) to this
+  // committee. Two routing rules:
+  //   1. project-linked rows whose project is owned by this committee
+  //   2. ad-hoc meeting rows whose attendee is a member of this committee
+  //   3. ad-hoc meeting rows recorded by this committee's head (for
+  //      external-volunteer attendance that has no member_id link)
+  return sql`
+    SELECT a.id AS attendance_id, a.*,
+           m.full_name      AS member_full_name,
+           m.preferred_name AS member_preferred_name,
+           m.committee_id   AS member_committee_id,
+           p.project_name,
+           p.event_date     AS project_event_date,
+           p.owning_committee_id
+    FROM   public.attendance a
+    LEFT JOIN public.members  m ON m.member_id  = a.member_id
+    LEFT JOIN public.projects p ON p.project_id = a.project_id
+    LEFT JOIN public.users    u ON u.id         = a.recorded_by
+    WHERE  a.attendance_status <> 'Deleted'
+      AND  (
+        (a.project_id    IS NOT NULL AND p.owning_committee_id = ${committee_id})
+        OR (a.meeting_title IS NOT NULL AND m.committee_id      = ${committee_id})
+        OR (a.meeting_title IS NOT NULL AND u.member_id IN
+            (SELECT mm.member_id FROM public.members mm WHERE mm.committee_id = ${committee_id}))
+      )
+    ORDER BY COALESCE(a.meeting_date, a.recorded_at::DATE) DESC, a.recorded_at DESC
+    LIMIT 500
+  `;
+};
+
+// Record attendance — either against an existing project or an ad-hoc
+// meeting. Validates "exactly one of project_id / meeting_title" at the
+// application level too, so we get a friendly error before the CHECK
+// constraint fires. If the head supplies meeting_hours, the row is the
+// canonical record of those hours — no parallel `hours` table insert
+// needed, because recomputeMemberTotalHours() also sums
+// attendance.meeting_hours per member (see hours.ts).
+const headAttendanceRecord: Handler = async (body, user) => {
+  const data = (body.data ?? body) as Record<string, unknown>;
+  const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
+
+  const project_id    = (data.project_id as string | undefined) || null;
+  const meeting_title = ((data.meeting_title as string | undefined) || '').trim() || null;
+
+  // Exactly one of project_id / meeting_title.
+  if ((project_id && meeting_title) || (!project_id && !meeting_title)) {
+    throw httpErr('err.business.attendance_project_xor_meeting', 400);
+  }
+
+  // For project-linked rows, verify the project belongs to this committee
+  // (heads can't record attendance for another committee's event).
+  if (project_id) {
+    const [proj] = await sql`
+      SELECT owning_committee_id FROM public.projects WHERE project_id = ${project_id}
+    ` as Array<{ owning_committee_id: string | null }>;
+    if (!proj) throw httpErr('err.notfound.project', 404);
+    if (proj.owning_committee_id && proj.owning_committee_id !== committee_id) {
+      throw httpErr('err.access.committee_scope', 403);
+    }
+  }
+
+  // For ad-hoc meetings, require the supporting metadata so the row
+  // is self-describing (the DB CHECK only enforces the title). Heads
+  // can leave meeting_location null for purely-online meetings.
+  if (meeting_title) {
+    if (!data.meeting_type || !data.meeting_date || !data.meeting_start_time) {
+      throw httpErr('err.required.meeting_fields', 400);
+    }
+  }
+
+  // For member-attendance, verify the member is in this committee
+  // (volunteer rows skip this check — anyone can be an external
+  // attendee on the head's meeting).
+  const member_id = (data.member_id as string | undefined) || null;
+  if (member_id) {
+    const [m] = await sql`
+      SELECT committee_id FROM public.members WHERE member_id = ${member_id}
+    ` as Array<{ committee_id: string | null }>;
+    if (!m) throw httpErr('err.notfound.member', 404);
+    if (m.committee_id !== committee_id) {
+      throw httpErr('err.access.member_committee_scope', 403);
+    }
+  }
+
+  // Meeting-hours sanity: non-negative, at most a sensible upper bound
+  // so a typo can't add 999 hours to a member's total.
+  let meeting_hours: number | null = null;
+  if (data.meeting_hours != null && data.meeting_hours !== '') {
+    const n = Number(data.meeting_hours);
+    if (!Number.isFinite(n) || n < 0 || n > 24) {
+      throw httpErr('err.business.hours_out_of_range', 400);
+    }
+    meeting_hours = n;
+  }
+
+  const status = (data.attendance_status as string | undefined) || 'Present';
+
+  const [r] = await sql`
+    INSERT INTO public.attendance (
+      project_id, member_id, volunteer_name, volunteer_email,
+      attendance_status, notes, recorded_by,
+      meeting_title, meeting_type, meeting_date, meeting_start_time,
+      meeting_location, meeting_hours
+    ) VALUES (
+      ${project_id}, ${member_id}, ${(data.volunteer_name as string) || null},
+      ${(data.volunteer_email as string) || null},
+      ${status}, ${(data.notes as string) || null}, ${user!.id},
+      ${meeting_title}, ${(data.meeting_type as string) || null},
+      ${(data.meeting_date as string) || null},
+      ${(data.meeting_start_time as string) || null},
+      ${(data.meeting_location as string) || null},
+      ${meeting_hours}
+    )
+    RETURNING id
+  ` as Array<{ id: number }>;
+
+  // If we attributed hours to a member, recompute their cached total
+  // so the homepage / member portal reflects the new entry. Skip for
+  // volunteer-only rows (no member to update) and for zero-hour
+  // attendance (no impact on the running total).
+  if (member_id && meeting_hours && meeting_hours > 0) {
+    await sql`
+      UPDATE public.members SET total_hours = (
+        SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${member_id} AND approval_status = 'FinalApproved'
+      ) + (
+        SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${member_id} AND meeting_hours IS NOT NULL
+      )
+      WHERE member_id = ${member_id}
+    `;
+  }
+
+  return { attendance_id: r.id };
+};
+
 export const headActions: Record<string, Handler> = {
   'head.dashboardSummary': headDashboardSummary,
+  'head.attendance.list':  headAttendanceList,
+  'head.attendance.record':headAttendanceRecord,
 };

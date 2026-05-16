@@ -233,9 +233,18 @@ const getMemberHours: Handler = async (body) => {
   `;
 };
 
-// Single source of truth for `members.total_hours`: sum of FinalApproved hours
-// only. Everything that records/edits/approves hours must call this with the
-// affected member_id (or no-op on null) so the cache stays consistent.
+// Single source of truth for `members.total_hours`. Sums TWO sources:
+//   1. `hours` table rows at FinalApproved (the regular approval flow
+//      used by the member portal + admin tab).
+//   2. `attendance.meeting_hours` (head-portal attendance tab,
+//      2026-05-16). Heads can attribute hours to a member on an
+//      ad-hoc meeting row without going through the two-stage approval
+//      chain — those hours live on the attendance row and need to be
+//      summed here so the member's cached total stays correct.
+//
+// Everything that records/edits/approves hours OR records meeting
+// attendance with hours must call this with the affected member_id
+// (or no-op on null) so the cache stays consistent.
 async function recomputeMemberTotalHours(member_id: string | null | undefined): Promise<void> {
   if (!member_id) return;
   await sql`
@@ -244,6 +253,12 @@ async function recomputeMemberTotalHours(member_id: string | null | undefined): 
       FROM hours
       WHERE member_id = ${member_id}
         AND approval_status = 'FinalApproved'
+    ) + (
+      SELECT COALESCE(SUM(meeting_hours), 0)
+      FROM attendance
+      WHERE member_id = ${member_id}
+        AND meeting_hours IS NOT NULL
+        AND attendance_status <> 'Deleted'
     )
     WHERE member_id = ${member_id}
   `;

@@ -101,7 +101,13 @@ export function showPage(page) {
   if (el) el.classList.add('active');
   const si = document.querySelector(`[data-page="${page}"]`);
   if (si) si.classList.add('active');
-  document.getElementById('page-title').textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) {
+    // Sync data-i18n too so applyI18n() (fired on lang change) doesn't
+    // revert the title to whatever was baked into the static HTML.
+    titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+    if (PAGE_TITLES[page]) titleEl.setAttribute('data-i18n', PAGE_TITLES[page]);
+  }
 
   // Load data on navigation
   // تحقق من صلاحية الصفحة

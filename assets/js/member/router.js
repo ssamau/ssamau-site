@@ -77,7 +77,12 @@ export function showPage(page) {
   const si = document.querySelector(`[data-page="${page}"]`);
   if (si) si.classList.add('active');
   const titleEl = document.getElementById('page-title');
-  if (titleEl) titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+  if (titleEl) {
+    // Sync data-i18n too so applyI18n() (fired on language change)
+    // doesn't revert the title to the static-HTML default.
+    titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+    if (PAGE_TITLES[page]) titleEl.setAttribute('data-i18n', PAGE_TITLES[page]);
+  }
 
   if (_loaders[page]) _loaders[page]();
 

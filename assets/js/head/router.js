@@ -11,6 +11,7 @@ export const PAGE_TITLES = {
   members:       'hp.title.members',
   opportunities: 'hp.title.opportunities',
   hours:         'hp.title.hours',
+  attendance:    'hp.title.attendance',
   applications:  'hp.title.applications',
   'my-profile':  'hp.title.my_profile',
 };
@@ -45,7 +46,16 @@ export function showPage(page) {
   const si = document.querySelector(`.sb-item[data-page="${page}"]`);
   if (si) si.classList.add('active');
   const titleEl = document.getElementById('page-title');
-  if (titleEl) titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+  if (titleEl) {
+    // Sync BOTH textContent AND data-i18n. Without the data-i18n
+    // rewrite, applyI18n() on the next language change overwrites
+    // textContent with whatever data-i18n was baked into the HTML
+    // (always hp.title.dashboard) and the topbar reverts to the
+    // wrong page name. Updating data-i18n here means applyI18n()
+    // will reach into the catalog with the correct key.
+    titleEl.textContent = PAGE_TITLES[page] ? t(PAGE_TITLES[page]) : page;
+    if (PAGE_TITLES[page]) titleEl.setAttribute('data-i18n', PAGE_TITLES[page]);
+  }
 
   if (_loaders[page]) _loaders[page]();
 
