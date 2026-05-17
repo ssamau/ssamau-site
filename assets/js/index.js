@@ -919,8 +919,16 @@ function updateEvents(projects) {
           ? '<div class="ev-name-en">' + esc(parsed.nameEn) + '</div>'
           : '';
 
+        // Header: if a cover_photo_url is on the row, use the image
+        // with a gradient overlay so the white month/name text stays
+        // legible. Otherwise the category-color class on .ev-hdr keeps
+        // the existing rotation. Mirrors the past-event renderer's
+        // pattern so cover photos work in both timelines.
+        const hdrStyle = p.cover_photo_url
+          ? ' style="background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,.65) 100%),url(&quot;' + esc(p.cover_photo_url) + '&quot;) center/cover"'
+          : '';
         return '<div class="ev-card">' +
-          '<div class="ev-hdr ' + meta.color + '">' +
+          '<div class="ev-hdr ' + meta.color + '"' + hdrStyle + '>' +
             flagshipBadge +
             '<div class="ev-month">' + esc(monthAr) + '</div>' +
             '<div class="ev-month-en">' + esc(monthEn) + '</div>' +

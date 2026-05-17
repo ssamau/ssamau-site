@@ -85,6 +85,55 @@ const uploadProjectPhoto: Handler = async (body, user) => {
   return { project_id, cover_photo_url: url };
 };
 
+// Clear the cover photo for a project. Best-effort on the storage
+// side: if the object is missing (admin deleted it manually from the
+// Supabase dashboard — exactly the bug this action fixes), we still
+// null out projects.cover_photo_url so the row stops pointing at a
+// 404'd URL and the upload UI can re-render the "no photo yet"
+// placeholder.
+//
+// Same committee scope as upload — head can only delete covers on
+// projects their committee owns; admin/superadmin pass through.
+const deleteProjectPhoto: Handler = async (body, user) => {
+  requireAuth(user);
+  const data       = (body.data ?? body) as Record<string, unknown>;
+  const project_id = data.project_id as string | undefined;
+  if (!project_id) throw httpErr('err.required.project_id', 400);
+
+  const [project] = await sql`
+    SELECT owning_committee_id, cover_photo_url FROM projects WHERE project_id = ${project_id}
+  ` as Array<{ owning_committee_id: string | null; cover_photo_url: string | null }>;
+  if (!project) throw httpErr('err.notfound.project', 404);
+  requireAdminScope(user, project.owning_committee_id);
+
+  // Try to extract the storage path from the stored public URL. Public
+  // URLs follow the shape `<SUPABASE_URL>/storage/v1/object/public/<bucket>/<path>`.
+  // If we can't parse it (no URL set, or stored value was tampered with),
+  // skip the storage delete entirely — the column-null step still runs
+  // so the orphaned URL is cleared either way.
+  if (project.cover_photo_url) {
+    const marker = `/storage/v1/object/public/${PROJECT_BUCKET}/`;
+    const idx    = project.cover_photo_url.indexOf(marker);
+    if (idx >= 0) {
+      const path = project.cover_photo_url.slice(idx + marker.length);
+      try {
+        const sb = svcClient();
+        // remove() returns { error } on failure. We log and continue —
+        // a 404 from storage shouldn't block the row update, otherwise
+        // the user is stuck with an orphaned URL forever.
+        const { error } = await sb.storage.from(PROJECT_BUCKET).remove([path]);
+        if (error) console.warn('[storage_project.delete] remove error (ignored):', error.message);
+      } catch (err) {
+        console.warn('[storage_project.delete] remove threw (ignored):', err);
+      }
+    }
+  }
+
+  await sql`UPDATE projects SET cover_photo_url = NULL, updated_at = NOW() WHERE project_id = ${project_id}`;
+  return { project_id, cover_photo_url: null };
+};
+
 export const projectStorageActions: Record<string, Handler> = {
   'storage.uploadProjectPhoto': uploadProjectPhoto,
+  'storage.deleteProjectPhoto': deleteProjectPhoto,
 };

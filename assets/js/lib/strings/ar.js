@@ -1049,6 +1049,10 @@ export default {
   'ap.prj.err_pick_image':      'اختر صورة أولاً.',
   'ap.prj.err_image_too_large': 'الصورة أكبر من 4 ميجابايت.',
   'ap.prj.err_upload_failed':   'فشل الرفع.',
+  'ap.prj.photo_delete_btn':    'حذف الصورة',
+  'ap.prj.photo_delete_confirm':'هل تريد حذف صورة الغلاف؟ سيُحذف الملف من التخزين.',
+  'ap.prj.success_delete_photo':'تم حذف صورة الغلاف.',
+  'ap.prj.err_delete_photo':    'تعذّر حذف صورة الغلاف.',
   'ap.prj.success_save':        '✅ تم الحفظ',
   'ap.prj.success_upload':      'تم رفع صورة الغلاف.',
   // Project detail page (#/admin/project-detail)

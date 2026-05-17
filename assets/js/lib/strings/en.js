@@ -1032,6 +1032,10 @@ export default {
   'ap.prj.err_pick_image':      'Pick an image first.',
   'ap.prj.err_image_too_large': 'Image is larger than 4 MB.',
   'ap.prj.err_upload_failed':   'Upload failed.',
+  'ap.prj.photo_delete_btn':    'Remove photo',
+  'ap.prj.photo_delete_confirm':'Remove the cover photo? The file will be deleted from storage.',
+  'ap.prj.success_delete_photo':'Cover photo removed.',
+  'ap.prj.err_delete_photo':    'Couldn’t remove the cover photo.',
   'ap.prj.success_save':        '✅ Saved.',
   'ap.prj.success_upload':      'Cover photo uploaded.',
   // Project detail page (#/admin/project-detail)

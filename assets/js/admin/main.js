@@ -55,7 +55,7 @@ import { loadCommittees, saveCommittee, editCommittee } from './tabs/committees.
 import {
   loadProjects, saveProject, editProject,
   filterProjectsByStatus, openModalWithPrj,
-  onProjectPhotoChange, uploadProjectPhotoFromForm,
+  onProjectPhotoChange, uploadProjectPhotoFromForm, deleteProjectPhotoFromForm,
 } from './tabs/projects.js';
 import {
   loadParticipants, saveParticipant, toggleParticipantFields,
@@ -466,6 +466,7 @@ setHandlers({
   // Phase B — project cover photo uploader (inside project edit modal)
   onProjectPhotoChange:        (el) => onProjectPhotoChange(el),
   uploadProjectPhoto:          uploadProjectPhotoFromForm,
+  deleteProjectPhoto:          deleteProjectPhotoFromForm,
   openApplicationReview:       (el) => openApplicationReview(el.dataset.id),
   openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
   // Phase 2 of post-beta — opportunity notification flow

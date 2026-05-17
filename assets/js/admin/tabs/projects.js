@@ -141,8 +141,15 @@ export function editProject(id) {
   document.getElementById('prj-photo-wrap').style.display    = '';
   const currentEl = document.getElementById('prj-photo-current');
   if (currentEl) {
+    // Cover preview + delete button. The delete button only renders
+    // when there's a URL to clear, and onerror falls back to the
+    // "missing image" indicator so an orphaned URL (storage object
+    // gone, column still set) doesn't render as a broken icon.
     currentEl.innerHTML = p.cover_photo_url
-      ? `<img src="${esc(p.cover_photo_url)}" alt="" style="max-width:220px;height:auto;border-radius:8px;border:1px solid var(--bd)"/>`
+      ? `<div style="display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap">
+           <img src="${esc(p.cover_photo_url)}" alt="" style="max-width:220px;height:auto;border-radius:8px;border:1px solid var(--bd)" onerror="this.replaceWith(Object.assign(document.createElement('div'),{textContent:'⚠️',title:'',style:'font-size:1.4rem;padding:.4rem .6rem;border:1px dashed var(--bd);border-radius:8px'}))"/>
+           <button class="btn btn-ol btn-sm" type="button" data-action="deleteProjectPhoto" title="${esc(t('ap.prj.photo_delete_btn'))}">🗑️ ${esc(t('ap.prj.photo_delete_btn'))}</button>
+         </div>`
       : `<span style="font-size:.78rem;color:var(--tm);font-style:italic">${esc(t('ap.prj.photo_none_yet'))}</span>`;
   }
   // Reset the picker + button so a previous unsubmitted file doesn't
@@ -198,6 +205,26 @@ export async function uploadProjectPhotoFromForm() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = t('ap.prj.photo_upload_btn'); }
   }
+}
+
+// Clear the cover from the open project — wired via data-action on the
+// 🗑️ button next to the preview. Confirms first because the action is
+// irreversible (the storage object is removed). Backend nulls
+// cover_photo_url even if the storage delete fails, so this also acts
+// as a recovery path for the user's reported bug (object gone from
+// Supabase, URL still stuck on the row).
+export async function deleteProjectPhotoFromForm() {
+  const projectId = gv('prj-edit-id');
+  if (!projectId) { toast(t('ap.prj.err_save_first'), 'twarn'); return; }
+  if (!confirm(t('ap.prj.photo_delete_confirm'))) return;
+  const res = await api('storage.deleteProjectPhoto', { data: { project_id: projectId } });
+  if (!res || !res.success) {
+    toast(localizeError(res?.error, res?.errorParams) || t('ap.prj.err_delete_photo'), 'twarn');
+    return;
+  }
+  toast(t('ap.prj.success_delete_photo'), 'tok');
+  await loadProjects();
+  editProject(projectId);
 }
 
 // ── PROJECT DETAIL ────────────────────────────────────────────
