@@ -12,14 +12,22 @@ import {
 } from '../_helpers.ts';
 
 // ─── ATTENDANCE ──────────────────────────────────────────────────────
+// 2026-05-18: now writes `checked_by_member_id` — the club member who
+// physically did the attendance check, distinct from `recorded_by`
+// (the system user running the data-entry session). The admin form
+// has always carried a "checked by" picker but the column didn't
+// exist, so the audit-trail value was dropped on every save and the
+// list view's "checked by" column rendered blank. Migration
+// 20260518100001 added the column.
 const recordAttendance: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   const [r] = await sql`
     INSERT INTO attendance (project_id, participant_id, member_id, volunteer_email,
-                            attendance_status, notes, recorded_by)
+                            attendance_status, notes, recorded_by, checked_by_member_id)
     VALUES (${data.project_id}, ${data.participant_id || null},
             ${data.member_id || null}, ${data.volunteer_email || null},
-            ${data.attendance_status || 'Present'}, ${data.notes || null}, ${user!.id})
+            ${data.attendance_status || 'Present'}, ${data.notes || null}, ${user!.id},
+            ${data.checked_by_member_id || null})
     RETURNING id
   ` as Array<{ id: number }>;
   return { id: r.id, attendance_id: r.id };
@@ -40,18 +48,20 @@ const attendanceBulkRecord: Handler = async (body, user) => {
     if (existing.length) {
       await sql`
         UPDATE attendance
-        SET attendance_status = ${r.attendance_status},
-            notes = ${r.notes || null},
-            recorded_by = ${user!.id}
+        SET attendance_status    = ${r.attendance_status},
+            notes                = ${r.notes || null},
+            recorded_by          = ${user!.id},
+            checked_by_member_id = COALESCE(${r.checked_by_member_id || null}, checked_by_member_id)
         WHERE id = ${existing[0].id}
       `;
     } else {
       await sql`
         INSERT INTO attendance (project_id, participant_id, member_id, volunteer_email,
-                                attendance_status, notes, recorded_by)
+                                attendance_status, notes, recorded_by, checked_by_member_id)
         VALUES (${project_id}, ${r.participant_id || null},
                 ${r.member_id || null}, ${r.volunteer_email || null},
-                ${r.attendance_status}, ${r.notes || null}, ${user!.id})
+                ${r.attendance_status}, ${r.notes || null}, ${user!.id},
+                ${r.checked_by_member_id || null})
       `;
     }
     count++;

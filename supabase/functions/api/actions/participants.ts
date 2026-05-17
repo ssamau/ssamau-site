@@ -12,13 +12,30 @@ import {
 } from '../_helpers.ts';
 
 // ─── PARTICIPANTS ────────────────────────────────────────────────────
+// 2026-05-18: started writing the four columns the admin form has
+// always collected but the schema didn't carry (participation_status,
+// availability_type, manager_notes, outstanding_flag). Migration
+// 20260518100001 added the columns; this is the matching INSERT
+// expansion. _sql.ts coerces '' → null so a CHECK constraint won't
+// fail on an unselected dropdown.
 const addParticipant: Handler = async (body, user) => {
   requireAuth(user);
   const data = (body.data ?? body) as Record<string, unknown>;
+  const outstanding = data.outstanding_flag === true
+                   || data.outstanding_flag === 'true'
+                   || data.outstanding_flag === 1;
   const [r] = await sql`
-    INSERT INTO participants (project_id, participant_type, member_id, volunteer_name, volunteer_email)
-    VALUES (${data.project_id}, ${data.participant_type},
-            ${data.member_id || null}, ${data.volunteer_name || null}, ${data.volunteer_email || null})
+    INSERT INTO participants (
+      project_id, participant_type,
+      member_id, volunteer_name, volunteer_email,
+      participation_status, availability_type, manager_notes, outstanding_flag
+    )
+    VALUES (
+      ${data.project_id}, ${data.participant_type},
+      ${data.member_id || null}, ${data.volunteer_name || null}, ${data.volunteer_email || null},
+      ${data.participation_status || null}, ${data.availability_type || null},
+      ${data.manager_notes || null}, ${outstanding}
+    )
     RETURNING id
   ` as Array<{ id: number }>;
   return { id: r.id, participant_id: r.id };
