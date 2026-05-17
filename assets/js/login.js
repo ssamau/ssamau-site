@@ -52,6 +52,14 @@ const idInput  = $('#identifier');
 const lastUser = getLastUsername();
 if (idInput && lastUser) idInput.value = lastUser;
 
+// Surface the "you've been marked inactive" message when the permission
+// watcher (lib/permission-watcher.js) bounced the user here mid-session.
+// We can't show the error before showError() is defined further down, so
+// wrap in a microtask — runs after the rest of the module finishes parsing.
+if (new URLSearchParams(window.location.search).get('inactive') === '1') {
+  queueMicrotask(() => showError(t('err.access.member_inactive')));
+}
+
 // ── Language toggle wiring ──────────────────────────────────────────
 // The two .lang-btn pills carry `data-action="setLang"` + a value.
 // Sync the active-class indicator + flip language on click. The

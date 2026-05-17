@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v58-2026-05-17-sw-aggressive-updates';
+const CACHE_VERSION = 'v59-2026-05-17-permission-watcher-opps-fix';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -73,6 +73,7 @@ const SHELL_URLS = [
   '/assets/js/lib/strings/ar.js',
   '/assets/js/lib/strings/en.js',
   '/assets/js/lib/support.js',
+  '/assets/js/lib/permission-watcher.js',
   '/assets/js/login.js',
   '/assets/js/reset-password.js',
   '/assets/js/signup.js',

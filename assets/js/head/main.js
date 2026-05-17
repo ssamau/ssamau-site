@@ -16,6 +16,9 @@ import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
 import {
   getSession, clearSession, isLoggedIn, signOut,
 } from '../lib/auth.js';
+// Permission revalidation — same module the admin/member portals use.
+// Detects server-side access_level or status changes without a re-login.
+import { startPermissionWatcher } from '../lib/permission-watcher.js';
 import { setApiStatus, filterTable, closeModal, openModal } from '../lib/ui.js';
 import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from './router.js';
 
@@ -93,6 +96,8 @@ function _requireHeadAuthOrRedirect() {
 }
 _requireHeadAuthOrRedirect();
 window.addEventListener('pageshow', _requireHeadAuthOrRedirect);
+// Start the permission watcher — same hooks as admin/member.
+startPermissionWatcher();
 
 async function logout() {
   if (!confirm(t('common.confirm_logout'))) return;

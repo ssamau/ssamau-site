@@ -27,6 +27,9 @@ import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
 import {
   getSession, clearSession, isLoggedIn, signOut, landingPageForAccess,
 } from '../lib/auth.js';
+// Permission revalidation — same module as admin/head. Bounces the
+// user to login if marked inactive and reloads on access-level change.
+import { startPermissionWatcher } from '../lib/permission-watcher.js';
 import { setApiStatus } from '../lib/ui.js';
 import {
   showPage, closeSidebar, toggleSidebar, setLoaders,
@@ -81,6 +84,8 @@ function _requireMemberAuthOrRedirect() {
 }
 _requireMemberAuthOrRedirect();
 window.addEventListener('pageshow', _requireMemberAuthOrRedirect);
+// Start permission watcher — same hooks as admin + head.
+startPermissionWatcher();
 
 async function logout() {
   if (!confirm(t('common.confirm_logout'))) return;

@@ -19,6 +19,10 @@
 //      addEventListener bindings, at which point the shim is gone.
 
 import { getSession, clearSession, isLoggedIn, signOut, landingPageForAccess } from '../lib/auth.js';
+// Re-validates the user's access level + status against the server at
+// strategic moments (load, every 5min, visibilitychange) so an admin
+// demoting / deactivating someone propagates without a re-login.
+import { startPermissionWatcher } from '../lib/permission-watcher.js';
 // Shared support module — modal + submit; the admin support inbox
 // (list + detail + status change) lives in its own tab module below.
 import {
@@ -157,6 +161,11 @@ function _requireAuthOrRedirect() {
 }
 _requireAuthOrRedirect();
 window.addEventListener('pageshow', _requireAuthOrRedirect);
+// Start polling for server-side permission changes once we've passed
+// the initial auth guard. Whoami throws err.access.member_inactive
+// → watcher signs out + bounces. Access-level flip → save fresh
+// profile + reload.
+startPermissionWatcher();
 
 async function logout() {
   if (!confirm(t('common.confirm_logout'))) return;

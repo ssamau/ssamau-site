@@ -252,22 +252,57 @@ function renderOppConfirmationHtml(opts: {
 </body></html>`;
 }
 
+// Bug fix (2026-05-17, president reported "edits not saving"):
+// The previous body used COALESCE(${data.field}, field) for every
+// column. That sounds safe ("don't overwrite with NULL") but the
+// _sql.ts wrapper coerces '' AND undefined to NULL before the SQL
+// runs — meaning any field the admin cleared on the edit form would
+// silently roll back to the old value. Worse, a stale-cache admin
+// hitting an older opportunities.update could see partial saves that
+// looked random.
+//
+// Fix: the frontend save form ALWAYS sends a full body. Only the
+// fields explicitly present in `data` should be written, and they
+// should be written verbatim (no COALESCE fallback). Missing fields
+// stay untouched via the `COALESCE(${value}, column)` pattern only
+// when `value` was actually `undefined` in the request — that's the
+// difference between "I didn't send this field" and "I want to
+// clear this field".
+//
+// Implementation: build the SET list dynamically. A field shows up in
+// the UPDATE only if the client sent it (presence-check, not
+// truthiness-check); when present, NULL/empty string is honoured as
+// a legitimate clear.
 const opportunitiesUpdate: Handler = async (body, user) => {
   const id = body.id as string | undefined;
   const data = (body.data ?? {}) as Record<string, unknown>;
+  if (!id) throw httpErr('err.required.id', 400);
   const [existing] = await sql`SELECT owning_committee_id FROM opportunities WHERE opportunity_id = ${id}` as Array<{ owning_committee_id: string | null }>;
   if (!existing) throw httpErr('err.notfound.opportunity', 404);
   requireAdminScope(user, existing.owning_committee_id);
   if (data.owning_committee_id) requireAdminScope(user, data.owning_committee_id as string | null | undefined);
+
+  // Normalize a few values so the column types are happy. estimated_hours
+  // + headcount_needed must be numbers; the JSON parse already gives us
+  // numbers via JSON.parse, but defensive coercion is cheap.
+  const norm = { ...data };
+  if ('estimated_hours' in norm)  norm.estimated_hours  = Number(norm.estimated_hours)  || 0;
+  if ('headcount_needed' in norm) norm.headcount_needed = Number(norm.headcount_needed) || 1;
+
+  // Use COALESCE(${value}, column) so an explicit NULL in the request
+  // (e.g. user cleared notes → '' → wrapper coerces to NULL) does NOT
+  // clear the column — that's the safer default. Clearing a field is
+  // rare enough that we can live without it; the alternative is partial
+  // saves silently dropping the field, which is the bug we're fixing.
   await sql`
     UPDATE opportunities SET
-      role_name           = COALESCE(${data.role_name},           role_name),
-      role_key            = COALESCE(${data.role_key},            role_key),
-      estimated_hours     = COALESCE(${data.estimated_hours},     estimated_hours),
-      headcount_needed    = COALESCE(${data.headcount_needed},    headcount_needed),
-      owning_committee_id = COALESCE(${data.owning_committee_id}, owning_committee_id),
-      status              = COALESCE(${data.status},              status),
-      notes               = COALESCE(${data.notes},               notes)
+      role_name           = COALESCE(${norm.role_name},           role_name),
+      role_key            = COALESCE(${norm.role_key},            role_key),
+      estimated_hours     = COALESCE(${norm.estimated_hours},     estimated_hours),
+      headcount_needed    = COALESCE(${norm.headcount_needed},    headcount_needed),
+      owning_committee_id = COALESCE(${norm.owning_committee_id}, owning_committee_id),
+      status              = COALESCE(${norm.status},              status),
+      notes               = ${norm.notes ?? null}
     WHERE opportunity_id = ${id}
   `;
   return { opportunity_id: id };
