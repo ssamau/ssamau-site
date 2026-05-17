@@ -1540,6 +1540,9 @@ export default {
   'ap.prf.pick_member_placeholder': 'اختر عضواً',
   'ap.prf.empty_select_prompt': 'اختر عضواً لعرض ملفه الشخصي',
   'ap.prf.stat_hours':          'ساعة تطوعية',
+  // Profile hero CV chip — opens the member's uploaded CV in a new tab.
+  'ap.prf.cv_chip_label':       'السيرة الذاتية',
+  'ap.prf.open_cv':             'فتح السيرة الذاتية',
   'ap.prf.stat_projects':       'مشروع شارك',
   'ap.prf.stat_status':         'الحالة',
   'ap.prf.stat_join_date':      'تاريخ الانضمام',

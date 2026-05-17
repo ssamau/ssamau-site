@@ -1507,6 +1507,8 @@ export default {
   'ap.prf.pick_member_placeholder': 'Choose a member',
   'ap.prf.empty_select_prompt': 'Pick a member to view their profile.',
   'ap.prf.stat_hours':          'Volunteer hours',
+  'ap.prf.cv_chip_label':       'CV',
+  'ap.prf.open_cv':             'Open CV',
   'ap.prf.stat_projects':       'Projects',
   'ap.prf.stat_status':         'Status',
   'ap.prf.stat_join_date':      'Join date',

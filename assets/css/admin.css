@@ -285,9 +285,25 @@ tr:hover td { background:var(--bg-soft); }
   background:rgba(255,255,255,.15); border:3px solid rgba(255,255,255,.3);
   display:flex; align-items:center; justify-content:center;
   font-size:1.6rem; font-weight:800; color:#fff; flex-shrink:0;
+  overflow:hidden;  /* clips the <img> to the circular frame */
 }
+/* When the member has a real photo, an <img> replaces the letter
+ * initial. object-fit:cover keeps face crops natural for portrait
+ * sources without distortion. */
+.profile-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 .profile-name { font-size:1.15rem; font-weight:800; color:#fff; }
 .profile-role { font-size:.76rem; color:rgba(255,255,255,.6); margin-top:.2rem; }
+/* CV chip in the profile hero — sits next to the name block, only
+ * rendered when the member has uploaded a CV. Click fires
+ * storage.getMemberFile via the existing openMemberFile dispatch. */
+.profile-cv-btn {
+  background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3);
+  border-radius:50px; padding:.4rem .85rem;
+  color:#fff; font-family:inherit; font-size:.78rem; font-weight:700;
+  cursor:pointer; flex-shrink:0;
+  transition: background .15s, border-color .15s;
+}
+.profile-cv-btn:hover { background:rgba(255,255,255,.25); border-color:rgba(255,255,255,.5); }
 .profile-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin-bottom:1rem; }
 .profile-stat { background:var(--sf); border:1px solid var(--bd); border-radius:var(--rs); padding:.85rem; text-align:center; }
 .profile-stat .pn { font-size:1.5rem; font-weight:800; color:var(--g); line-height:1; }

@@ -47,8 +47,22 @@ export async function loadMemberProfile(memberId) {
   if (!member) return;
   const com = DB.committees.find(c => c.committee_id === member.committee_id);
 
-  // Load this member's hours
-  const hoursData = await api('getMemberHours', { member_id: memberId });
+  // Load this member's hours + their profile-photo signed URL in
+  // parallel. The photo URL needs a separate fetch because Storage is
+  // PRIVATE — we don't store public URLs on the row, just the path
+  // that storage.getMemberFile resolves to a 1h signed URL.
+  // Photo is only fetched when the row actually has one; missing files
+  // (deleted out-of-band) resolve to null and fall back to the letter
+  // avatar.
+  const photoPromise = member.profile_photo_url
+    ? api('storage.getMemberFile', { data: { member_id: memberId, kind: 'photo' } })
+        .then(r => (r && r.success && r.data?.url) ? r.data.url : null)
+        .catch(() => null)
+    : Promise.resolve(null);
+  const [hoursData, photoUrl] = await Promise.all([
+    api('getMemberHours', { member_id: memberId }),
+    photoPromise,
+  ]);
   const hours = hoursData?.data || [];
   const totalHours = hours.reduce((s, h) => s + (parseFloat(h.total_hours) || 0), 0);
   const projectsParticipated = new Set(hours.map(h => h.project_id)).size;
@@ -56,15 +70,32 @@ export async function loadMemberProfile(memberId) {
   const content = document.getElementById('profile-content');
   const roleLabel   = CLUB_ROLE_KEY[member.club_role] ? t(CLUB_ROLE_KEY[member.club_role]) : (member.club_role || '');
   const statusLabel = STATUS_KEY[member.status]       ? t(STATUS_KEY[member.status])       : (member.status     || '');
+  // Avatar: real photo when available, letter-fallback otherwise. The
+  // <img> inherits the avatar's circular frame via `.profile-avatar img`
+  // in admin.css (object-fit:cover keeps face crops natural even when
+  // the source isn't square).
+  const initial = (member.preferred_name || member.full_name).charAt(0);
+  const avatarInner = photoUrl
+    ? `<img src="${esc(photoUrl)}" alt="${esc(member.full_name)}" loading="lazy"/>`
+    : esc(initial);
+  // CV chip: shown in the hero alongside the name when the member has
+  // uploaded one. Clicking fires storage.getMemberFile (1h signed URL
+  // → new tab) — same flow the Members tab's 📄 icon uses.
+  const cvChip = member.cv_url
+    ? `<button class="profile-cv-btn" data-action="openMemberFile" data-id="${esc(member.member_id)}" data-kind="cv" title="${esc(t('ap.prf.open_cv'))}">
+         📄 ${esc(t('ap.prf.cv_chip_label'))}
+       </button>`
+    : '';
   content.innerHTML = `
     <div class="profile-hero">
-      <div class="profile-avatar">${(member.preferred_name || member.full_name).charAt(0)}</div>
-      <div>
+      <div class="profile-avatar">${avatarInner}</div>
+      <div style="flex:1;min-width:0">
         <div class="profile-name">${esc(member.preferred_name || member.full_name)}</div>
         <div style="font-size:.78rem;color:rgba(255,255,255,.7);margin-top:.15rem">${esc(member.full_name)}</div>
         <div class="profile-role">${esc(roleLabel)} ${com ? '· ' + esc(com.committee_name) : ''}</div>
         <div style="font-size:.72rem;color:rgba(255,255,255,.5);direction:ltr;margin-top:.2rem">${esc(member.email)}</div>
       </div>
+      ${cvChip}
     </div>
     <div class="profile-stats">
       <div class="profile-stat"><div class="pn">${totalHours.toFixed(1)}</div><div class="pl">${esc(t('ap.prf.stat_hours'))}</div></div>
