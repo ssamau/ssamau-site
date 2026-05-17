@@ -101,6 +101,14 @@ const assignmentsRemove: Handler = async (body, user) => {
   return { id };
 };
 
+// Sentinel note value used to identify hours rows that were auto-
+// created by a head/admin via the assignment modal's hours-override
+// field. Lets us re-mark attendance idempotently — DELETE any
+// existing auto row for this assignment, then INSERT the fresh one.
+// Plain logged hours (recorded via the hours form) don't carry this
+// marker, so they're never touched by the auto path.
+const HEAD_ATTENDANCE_HOURS_NOTE = 'auto:head-attendance';
+
 const assignmentsMarkAttendance: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   requireAuth(user);
@@ -108,15 +116,82 @@ const assignmentsMarkAttendance: Handler = async (body, user) => {
     throw httpErr('err.required.assignment_attendance', 400);
   }
   await ensureAssignmentScope(user, data.assignment_id);
+
+  const status = data.attendance_status as string;
+  // hours_override: optional number from the head's assign-modal input.
+  // null/undefined/empty-string = "no override, don't auto-create
+  // hours". A non-zero number creates a FinalApproved hours row for
+  // this assignment that overrides the opportunity's estimated_hours.
+  const rawOverride = data.hours_override;
+  const hoursOverride = (rawOverride === '' || rawOverride === null || rawOverride === undefined)
+    ? null
+    : Number(rawOverride);
+  if (hoursOverride !== null && (!Number.isFinite(hoursOverride) || hoursOverride < 0 || hoursOverride > 24)) {
+    throw httpErr('err.business.hours_range', 400);
+  }
+
   await sql`
     UPDATE assignments SET
-      attendance_status    = ${data.attendance_status},
+      attendance_status    = ${status},
       attendance_notes     = ${data.attendance_notes || null},
       attendance_marked_by = ${user.id},
       attendance_marked_at = NOW()
     WHERE assignment_id = ${data.assignment_id}
   `;
-  return { id: data.assignment_id };
+
+  // Two sub-paths for the auto-hours row, gated on attendance status:
+  //   Attended + override → DELETE prior auto row, INSERT new
+  //     FinalApproved row with the override value.
+  //   anything else → DELETE prior auto row (so changing from
+  //     Attended back to Absent/Excused doesn't leave orphaned
+  //     hours on the member's total).
+  const [meta] = await sql`
+    SELECT a.member_id, a.opportunity_id, o.project_id
+    FROM public.assignments a
+    JOIN public.opportunities o ON o.opportunity_id = a.opportunity_id
+    WHERE a.assignment_id = ${data.assignment_id}
+  ` as Array<{ member_id: string | null; opportunity_id: string; project_id: string | null }>;
+
+  if (meta) {
+    await sql`
+      DELETE FROM public.hours
+      WHERE assignment_id = ${data.assignment_id}
+        AND notes = ${HEAD_ATTENDANCE_HOURS_NOTE}
+    `;
+    if (status === 'Attended' && hoursOverride !== null && hoursOverride > 0 && meta.member_id) {
+      await sql`
+        INSERT INTO public.hours (
+          project_id, assignment_id, member_id, participant_type,
+          hours_before, hours_during, hours_after,
+          notes, recorded_by, approval_status,
+          primary_approver_id, primary_approved_at,
+          final_approver_id, final_approved_at
+        ) VALUES (
+          ${meta.project_id}, ${data.assignment_id}, ${meta.member_id}, 'Member',
+          0, ${hoursOverride}, 0,
+          ${HEAD_ATTENDANCE_HOURS_NOTE}, ${user.id}, 'FinalApproved',
+          ${user.id}, NOW(),
+          ${user.id}, NOW()
+        )
+      `;
+    }
+    // Always recompute — even if we only deleted, the member's total
+    // needs to drop accordingly.
+    if (meta.member_id) {
+      await sql`
+        UPDATE public.members SET total_hours = (
+          SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${meta.member_id} AND approval_status = 'FinalApproved'
+        ) + (
+          SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${meta.member_id} AND meeting_hours IS NOT NULL
+            AND attendance_status <> 'Deleted'
+        ) WHERE member_id = ${meta.member_id}
+      `;
+    }
+  }
+
+  return { id: data.assignment_id, hours_override: hoursOverride };
 };
 
 const assignmentsBulkMarkAttendance: Handler = async (body, user) => {

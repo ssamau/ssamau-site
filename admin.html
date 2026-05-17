@@ -1027,6 +1027,40 @@
       <button class="btn btn-ol" data-action="closeModal" data-modal="application" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
+
+<!-- ══════════ INVITE-AS-MEMBER MODAL ══════════ -->
+<!-- Volunteer → member conversion. Triggered from the 🎫 button on
+     volunteer rows in the applications tab. Asks for the committee
+     to assign, then converts via applications.inviteAsMember which
+     creates the member + fires the same auto-invite email chain. -->
+<div class="overlay" id="ov-invite-as-member">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h3 data-i18n="ap.apps.iam_title">🎫 دعوة كعضو</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="invite-as-member">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg-note" data-i18n="ap.apps.iam_lead" style="margin-bottom:.85rem">
+        سيُحوَّل المتطوع إلى عضو ضمن اللجنة المختارة وسيُرسل له بريد تفعيل لوحة الأعضاء.
+      </div>
+      <div class="fg">
+        <label data-i18n="ap.apps.iam_applicant">المتقدم</label>
+        <input id="iam-name" type="text" readonly style="background:var(--bg-soft)"/>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="ap.apps.iam_committee">اللجنة</span> <span class="required">*</span></label>
+        <select id="iam-committee"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select>
+      </div>
+      <div class="fg">
+        <label data-i18n="ap.apps.iam_note">ملاحظات (اختياري)</label>
+        <textarea id="iam-note" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="invite-as-member" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="submitInviteAsMember" data-i18n="ap.apps.iam_submit_btn">🎫 تحويل ودعوة</button>
+    </div>
+  </div>
 </div>
 
 <!-- OPPORTUNITY MODAL -->

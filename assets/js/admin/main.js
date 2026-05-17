@@ -84,6 +84,7 @@ import {
 import {
   loadApplications, openApplicationReview,
   appAssignCommittee, appAccept, appRequestInterview, appReject,
+  openInviteAsMember, submitInviteAsMember,
 } from './tabs/applications.js';
 import {
   loadProfileSelect, loadMemberProfile, viewProfile,
@@ -406,6 +407,7 @@ setHandlers({
   saveMember, saveOpportunity, saveParticipant, saveProject, saveThanks,
   addAssignmentMember, addAssignmentVolunteer,
   appAccept, appAssignCommittee, appReject, appRequestInterview,
+  submitInviteAsMember,
   issueCert, verifyCert,
   onHrsAssignmentChange, onHrsOpportunityChange, onOppRolePreset,
   toggleAttFields, toggleHrsFields, toggleParticipantFields,
@@ -468,6 +470,10 @@ setHandlers({
   uploadProjectPhoto:          uploadProjectPhotoFromForm,
   deleteProjectPhoto:          deleteProjectPhotoFromForm,
   openApplicationReview:       (el) => openApplicationReview(el.dataset.id),
+  // Volunteer → member conversion. 🎫 button on volunteer rows opens
+  // the committee-picker modal; submitInviteAsMember fires the server
+  // action that creates the member + auto-invite.
+  openInviteAsMember:          (el) => openInviteAsMember(el.dataset.id),
   openOpportunityAssignments:  (el) => openOpportunityAssignments(el.dataset.id),
   // Phase 2 of post-beta — opportunity notification flow
   openOpportunityNotify:       (el) => openOpportunityNotify(el),

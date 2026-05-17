@@ -26,6 +26,26 @@ const APPLICATION_NOTIF_TO = 'info@ssamau.com';
 // Public submission. Anyone on the website can hit this without auth.
 // Accepts the expanded apply-form-v2 payload — see migration 0005 for the
 // column list and apply.html for the canonical value sets.
+//
+// Seasonal applicant-type gate (added 2026-05-17, president's call):
+//   Jan 1 – May 31 → form accepts members + volunteers; body's
+//     `applicant_type` is honored. Defaults to 'Member' if not set
+//     (legacy form callers).
+//   Jun 1 – Dec 31 → server forces 'Volunteer' regardless of what the
+//     body claims. The form also hides member language client-side,
+//     but the server is the authority: a tampered POST during the
+//     volunteer window still lands as a volunteer.
+//
+// `gateApplicantType()` returns the effective applicant_type for the
+// current UTC date. Pulled into a helper so the date logic can be unit-
+// tested in isolation if we ever add tests.
+function gateApplicantType(requested: unknown): 'Member' | 'Volunteer' {
+  const m = new Date().getUTCMonth(); // 0=Jan ... 11=Dec
+  const inMemberWindow = m >= 0 && m <= 4; // Jan(0) – May(4)
+  if (!inMemberWindow) return 'Volunteer';
+  return requested === 'Volunteer' ? 'Volunteer' : 'Member';
+}
+
 const applicationsSubmit: Handler = async (body) => {
   const data = (body.data ?? body) as Record<string, unknown>;
 
@@ -39,6 +59,8 @@ const applicationsSubmit: Handler = async (body) => {
   if (data.confirmation_accepted !== true) {
     throw httpErr('err.required.confirmation', 400);
   }
+
+  const applicantType = gateApplicantType(data.applicant_type);
 
   const id = (data.application_id as string | undefined) || shortId('APP');
   const interests = Array.isArray(data.interests)
@@ -59,7 +81,7 @@ const applicationsSubmit: Handler = async (body) => {
       study_started_window, expected_graduation_window,
       cv_url, skills_hobbies, about_self,
       referral_source, referral_source_other, suggestions,
-      confirmation_accepted, status
+      confirmation_accepted, status, applicant_type
     ) VALUES (
       ${id}, ${displayName}, ${data.preferred_name || null},
       ${data.email || null}, ${data.phone || null},
@@ -76,7 +98,7 @@ const applicationsSubmit: Handler = async (body) => {
       ${data.referral_source || null}, ${data.referral_source_other || null},
       ${data.suggestions || null},
       ${data.confirmation_accepted === true},
-      'PendingTriage'
+      'PendingTriage', ${applicantType}
     )
   `;
 
@@ -597,6 +619,84 @@ const applicationsReject: Handler = async (body, user) => {
   return { application_id: id };
 };
 
+// Admin path for the seasonal volunteer-only intake. From Jun 1 the
+// public form only accepts Volunteer applications; the admin still
+// wants to be able to convert a promising volunteer into a Member.
+//
+// This is a parallel to applications.accept but: (a) only operates on
+// rows where applicant_type='Volunteer'; (b) takes a committee_id from
+// the body instead of relying on assigned_committee_id (volunteer
+// applications don't always go through the committee-assignment step);
+// (c) flips applicant_type → 'Member' on the application row so the
+// audit log shows the conversion happened. Same auto-invite tail as
+// accept.
+const applicationsInviteAsMember: Handler = async (body, user) => {
+  const id            = body.id as string | undefined;
+  const committee_id  = body.committee_id as string | undefined;
+  const note          = body.note as string | undefined;
+  if (!id)           throw httpErr('err.required.id', 400);
+  if (!committee_id) throw httpErr('err.required.committee_id', 400);
+  requireAdminScope(user, committee_id);
+
+  const [app] = await sql`
+    SELECT * FROM membership_applications WHERE application_id = ${id}
+  ` as Array<Record<string, unknown>>;
+  if (!app) throw httpErr('err.notfound.application', 404);
+  if (app.applicant_type !== 'Volunteer') {
+    throw httpErr('err.business.invite_only_volunteer', 409);
+  }
+  if (app.status === 'Accepted' || app.created_member_id) {
+    throw httpErr('err.business.application_already_accepted', 409);
+  }
+
+  const memberId    = shortId('MBR');
+  const displayName = app.name_ar || app.full_name;
+  const whatsappE164 = app.whatsapp
+    ? (app.whatsapp_country_code && !(app.whatsapp as string).startsWith('+')
+        ? `${app.whatsapp_country_code}${app.whatsapp}`
+        : app.whatsapp)
+    : null;
+
+  await sql`
+    INSERT INTO members
+      (member_id, full_name, preferred_name, email, phone, whatsapp,
+       gender, date_of_birth,
+       committee_id, club_role, status, join_date, national_id)
+    VALUES
+      (${memberId}, ${displayName}, ${app.preferred_name || null},
+       ${app.email || null}, ${app.phone || null}, ${whatsappE164},
+       ${app.gender || null}, ${app.date_of_birth || null},
+       ${committee_id}, 'Member', 'Active', CURRENT_DATE,
+       ${app.national_id || null})
+  `;
+  await sql`
+    UPDATE membership_applications SET
+      applicant_type        = 'Member',
+      assigned_committee_id = ${committee_id},
+      status                = 'Accepted',
+      decided_by_user_id    = ${user!.id},
+      decided_at            = NOW(),
+      decision_reason       = COALESCE(${note}, decision_reason),
+      created_member_id     = ${memberId}
+    WHERE application_id = ${id}
+  `;
+
+  if (app.email) {
+    autoInviteAcceptedMember(
+      memberId,
+      String(app.email),
+      String(displayName),
+      committee_id,
+    ).catch(err => {
+      console.error('[applications.inviteAsMember] auto-invite failed (conversion still succeeded):', err);
+    });
+  } else {
+    console.warn(`[applications.inviteAsMember] member ${memberId} created without email — no auto-invite. Use Members tab "Invite by PIN".`);
+  }
+
+  return { application_id: id, member_id: memberId };
+};
+
 export const applicationsActions: Record<string, Handler> = {
   'applications.submit':           applicationsSubmit,
   'applications.list':             applicationsList,
@@ -604,4 +704,5 @@ export const applicationsActions: Record<string, Handler> = {
   'applications.requestInterview': applicationsRequestInterview,
   'applications.accept':           applicationsAccept,
   'applications.reject':           applicationsReject,
+  'applications.inviteAsMember':   applicationsInviteAsMember,
 };

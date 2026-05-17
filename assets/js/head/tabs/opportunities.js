@@ -210,9 +210,13 @@ function _renderAssignments(items) {
   const tbody = document.getElementById('hd-opp-assign-tbody');
   if (!tbody) return;
   if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="3">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
     return;
   }
+  // Hours-override default = the opportunity's estimated_hours. The
+  // head's input replaces (not adds to) this value on save — president's
+  // 2026-05-17 spec.
+  const defaultHours = Number(_activeOpp?.estimated_hours || 0);
   tbody.innerHTML = items.map(a => {
     const memberRow = _committeeMembers.find(m => m.member_id === a.member_id);
     const name = a.member_id
@@ -221,9 +225,23 @@ function _renderAssignments(items) {
     const opts = ATTENDANCE_OPTIONS.map(s =>
       `<option value="${s}" ${a.attendance_status === s ? 'selected' : ''}>${esc(t(ATTENDANCE_KEY[s]))}</option>`
     ).join('');
+    // Hours cell — small number input keyed off the assignment_id. The
+    // change-event handler in main.js reads this when the attendance
+    // dropdown changes and ships the value to assignments.markAttendance.
+    // Pre-fills with the opportunity's estimated_hours so the default
+    // path is "head doesn't touch hours, member gets the estimated
+    // credit"; head can edit before flipping to Attended to override.
     return `<tr>
       <td>${name}</td>
       <td><select data-action="hd.opps.assign.markAttendance" data-id="${esc(a.assignment_id)}">${opts}</select></td>
+      <td>
+        <input type="number" min="0" max="24" step="0.5"
+               class="hd-opp-assign-hours"
+               data-assignment="${esc(a.assignment_id)}"
+               value="${defaultHours}"
+               style="width:5rem;font-size:.8rem"
+               title="${esc(t('hp.opps.assign_hours_title'))}"/>
+      </td>
       <td><button class="btn-icon del" data-action="hd.opps.assign.remove" data-id="${esc(a.assignment_id)}">🗑️</button></td>
     </tr>`;
   }).join('');
@@ -266,8 +284,20 @@ export async function addHeadAssignmentVolunteer() {
 }
 
 export async function markHeadAssignmentAttendance(assignmentId, status) {
+  // Read the per-row hours-override input. The value is pre-filled with
+  // the opportunity's estimated_hours so leaving it untouched means
+  // "use the default credit". Empty string → server treats as null →
+  // no auto hours row created. (Status != Attended also skips the auto
+  // hours row on the server side, but we still send the value so the
+  // server can DELETE any stale auto-row.)
+  const hoursInput = document.querySelector(`.hd-opp-assign-hours[data-assignment="${assignmentId}"]`);
+  const hoursOverride = hoursInput ? hoursInput.value : null;
   const res = await api('assignments.markAttendance', {
-    data: { assignment_id: assignmentId, attendance_status: status },
+    data: {
+      assignment_id:     assignmentId,
+      attendance_status: status,
+      hours_override:    hoursOverride,
+    },
   });
   if (res && res.success) {
     toast(t('ap.opp.assign.success_update'));

@@ -135,9 +135,28 @@ export function renderApplicationRow(a) {
   const statusLabel = APP_STATUS_KEY[a.status] ? t(APP_STATUS_KEY[a.status]) : a.status;
   const isFinal = a.status === 'Accepted' || a.status === 'Rejected';
   const actionTitle = isFinal ? t('ap.apps.row_view_title') : t('ap.apps.row_review_title');
+  // Applicant-type chip — Volunteer gets a yellow tag so the seasonal
+  // volunteer-only intake stands out at-a-glance in the queue. Member
+  // (the legacy/Jan–May default) is neutral. Pre-2026-05-17 rows have
+  // applicant_type backfilled to 'Member' by the migration.
+  const typeKey   = a.applicant_type === 'Volunteer' ? 'ap.apps.type_volunteer' : 'ap.apps.type_member';
+  const typeColor = a.applicant_type === 'Volunteer' ? 't-y' : 't-b';
+  const typeChip  = tag(t(typeKey), typeColor);
+  // "Invite as member" button — only shows on Volunteer rows that
+  // haven't been accepted/converted yet. Clicking opens a small modal
+  // asking which committee to drop them into. Implemented as a server
+  // path (applications.inviteAsMember) so the same auto-invite email
+  // chain fires that normal accept uses.
+  const canInvite = a.applicant_type === 'Volunteer' && !isFinal;
+  const inviteBtn = canInvite
+    ? `<button class="btn-icon" title="${esc(t('ap.apps.invite_as_member_title'))}" data-action="openInviteAsMember" data-id="${esc(a.application_id)}">🎫</button>`
+    : '';
   return `<tr>
     <td>
-      <div style="font-weight:700">${esc(a.preferred_name || a.full_name)}</div>
+      <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+        <div style="font-weight:700">${esc(a.preferred_name || a.full_name)}</div>
+        ${typeChip}
+      </div>
       ${a.preferred_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(a.full_name)}</div>` : ''}
     </td>
     <td style="font-size:.78rem;direction:ltr;text-align:right">${esc(contact)}</td>
@@ -148,6 +167,7 @@ export function renderApplicationRow(a) {
     <td>${fmtDate(a.created_at)}</td>
     <td>
       <button class="btn-icon" title="${esc(actionTitle)}" data-action="openApplicationReview" data-id="${esc(a.application_id)}">${isFinal ? '👁️' : '✏️'}</button>
+      ${inviteBtn}
     </td>
   </tr>`;
 }
@@ -304,5 +324,50 @@ export async function appReject() {
     toast(t('ap.apps.success_reject'));
     closeModal('application');
     loadApplications();
+  }
+}
+
+// ─── INVITE-AS-MEMBER (volunteer → member conversion) ─────────────────
+// Wires the 🎫 button on volunteer applications. Opens a small modal
+// asking the admin to pick a committee, then calls the server which
+// creates the members row, flips the application to Accepted +
+// applicant_type='Member', and fires the same auto-invite email chain
+// the normal accept flow uses.
+let _inviteAsMemberTarget = null;
+export function openInviteAsMember(applicationId) {
+  const a = (DB._applications || []).find(x => x.application_id === applicationId);
+  if (!a) return;
+  _inviteAsMemberTarget = a;
+  sv('iam-name', a.preferred_name || a.full_name || '—');
+  // Pre-fill committee from the application's first interest (volunteer
+  // typically only ticked one anyway). If interests is empty leave the
+  // select on the placeholder.
+  const sel = document.getElementById('iam-committee');
+  if (sel) {
+    sel.innerHTML = `<option value="">${esc(t('ap.prj.choose'))}</option>`
+      + DB.committees.map(c => `<option value="${esc(c.committee_id)}">${esc(c.committee_name)}</option>`).join('');
+    const first = (a.interests || []).find(id => DB.committees.some(c => c.committee_id === id));
+    if (first) sel.value = first;
+  }
+  sv('iam-note', '');
+  openModal('invite-as-member');
+}
+
+export async function submitInviteAsMember() {
+  if (!_inviteAsMemberTarget) return;
+  const committee_id = gv('iam-committee');
+  const note         = gv('iam-note');
+  if (!committee_id) { toast(t('ap.apps.iam_err_committee'), 'twarn'); return; }
+  const res = await api('applications.inviteAsMember', {
+    id: _inviteAsMemberTarget.application_id,
+    committee_id,
+    note: note || null,
+  });
+  if (res && res.success) {
+    toast(t('ap.apps.iam_success', { id: (res.data ? res.data.member_id : '') }));
+    closeModal('invite-as-member');
+    _inviteAsMemberTarget = null;
+    loadApplications();
+    loadMembers();
   }
 }

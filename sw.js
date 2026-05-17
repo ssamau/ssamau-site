@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v53-2026-05-17-project-cover-delete-upcoming';
+const CACHE_VERSION = 'v54-2026-05-17-apply-seasonal-opps-receipt-admin-heads-up';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -94,6 +94,7 @@ const SHELL_URLS = [
   '/assets/js/head/tabs/applications.js',
   '/assets/js/head/tabs/emails.js',
   '/assets/js/head/tabs/certificates.js',
+  '/assets/js/head/tabs/other-opportunities.js',
   // Icons
   '/assets/img/logo-200.png',
   '/assets/img/icon-192.png',

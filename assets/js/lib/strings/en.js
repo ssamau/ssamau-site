@@ -79,6 +79,11 @@ export default {
   // ─── apply.html (public membership application form) ──────────────
   'apply.page_title':           'Join the Saudi Students Association in Melbourne',
   'apply.intro':                'Please fill out the form carefully — the data is used to issue your membership and your end-of-year SACM certificate.',
+  // Seasonal volunteer-window copy (Jun 1 – Dec 31). The main intake
+  // window is Jan – May for full members; outside that window the
+  // form re-frames itself as a volunteer signup.
+  'apply.page_title_volunteer': 'Volunteer with the Saudi Students Association in Melbourne',
+  'apply.intro_volunteer':      'Member applications reopen at the start of next year. Until then, you can register as a volunteer — the same form gets you on the list for events the committees are running.',
 
   // Section 1: Identity
   'apply.s1.title':             'Identity',
@@ -398,6 +403,7 @@ export default {
   'hp.sb.dashboard':            'My dashboard',
   'hp.sb.members':              'Committee members',
   'hp.sb.opportunities':        'Opportunities',
+  'hp.sb.other_opportunities':  'Other opportunities',
   'hp.sb.hours':                'Hours',
   'hp.sb.applications':         'Applications',
   'hp.sb.emails':               'Thank-you emails',
@@ -406,6 +412,7 @@ export default {
   'hp.title.dashboard':         'My dashboard',
   'hp.title.members':           'Committee members',
   'hp.title.opportunities':     'Opportunities',
+  'hp.title.other_opportunities': 'Other opportunities',
   'hp.title.hours':             'Hours',
   'hp.title.applications':      'Applications',
   'hp.title.emails':            'Thank-you emails',
@@ -521,6 +528,13 @@ export default {
   'hp.opps.col_status':         'Status',
   'hp.opps.col_actions':        'Actions',
   'hp.opps.assign_title':       'Assign members + mark attendance',
+  'hp.opps.assign_col_hours':   'Hours',
+  'hp.opps.assign_hours_title': 'Hours to credit when attendance is marked. Defaults to the opportunity’s estimated hours; your value overrides it.',
+  // "Other opportunities" tab — head browses opps outside their own
+  // committee and expresses interest like a member.
+  'hp.other_opps.card_title':   '🌐 Opportunities from other committees',
+  'hp.other_opps.lead':         'Volunteer opportunities open across other committees or run by admin. You can register interest to participate.',
+  'hp.other_opps.empty':        'No opportunities outside your committee are open right now.',
   'hp.opps.err_load':           '⚠️ Couldn’t load opportunities.',
   'hp.opps.empty':              'No opportunities in your committee yet.',
   'hp.opps.status_open':        'Open',
@@ -823,6 +837,18 @@ export default {
   'ap.apps.col_actions':        'Actions',
   'ap.apps.row_view_title':     'View',
   'ap.apps.row_review_title':   'Review',
+  'ap.apps.type_member':        'Member',
+  'ap.apps.type_volunteer':     'Volunteer',
+  'ap.apps.invite_as_member_title': 'Invite as member',
+  // Volunteer → member conversion modal
+  'ap.apps.iam_title':          '🎫 Invite as member',
+  'ap.apps.iam_lead':           'This volunteer will be converted to a member under the chosen committee, and a portal sign-up email will be sent.',
+  'ap.apps.iam_applicant':      'Applicant',
+  'ap.apps.iam_committee':      'Committee',
+  'ap.apps.iam_note':           'Notes (optional)',
+  'ap.apps.iam_submit_btn':     '🎫 Convert and invite',
+  'ap.apps.iam_err_committee':  'Pick a committee.',
+  'ap.apps.iam_success':        '🎫 Member created ({id}). Invite email sent.',
   'ap.apps.modal_title':        '📥 Review membership application',
   'ap.apps.triage_label':       'Assign to a committee',
   'ap.apps.triage_choose':      '— Choose —',

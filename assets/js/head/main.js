@@ -34,6 +34,10 @@ import {
   markHeadAssignmentAttendance, removeHeadAssignment,
 } from './tabs/opportunities.js';
 import {
+  loadHeadOtherOpportunities,
+  expressOtherInterest, withdrawOtherInterest,
+} from './tabs/other-opportunities.js';
+import {
   loadHeadHours, primaryApproveHours, finalApproveHours, rejectHours,
 } from './tabs/hours.js';
 import {
@@ -98,15 +102,16 @@ async function logout() {
 // ROUTER WIRING
 // ════════════════════════════════════════════════════════════════════
 const loaderMap = {
-  dashboard:     loadDashboard,
-  members:       loadHeadMembers,
-  opportunities: loadHeadOpportunities,
-  hours:         loadHeadHours,
-  attendance:    loadHeadAttendance,
-  applications:  loadHeadApplications,
-  emails:        loadHeadEmails,
-  certificates:  loadHeadCertificates,
-  'my-profile':  loadProfile,
+  dashboard:           loadDashboard,
+  members:             loadHeadMembers,
+  opportunities:       loadHeadOpportunities,
+  'other-opportunities': loadHeadOtherOpportunities,
+  hours:               loadHeadHours,
+  attendance:          loadHeadAttendance,
+  applications:        loadHeadApplications,
+  emails:              loadHeadEmails,
+  certificates:        loadHeadCertificates,
+  'my-profile':        loadProfile,
 };
 setLoaders(loaderMap);
 
@@ -196,6 +201,12 @@ document.addEventListener('click', (e) => {
     case 'hd.opps.assign.addMember':    addHeadAssignmentMember(); break;
     case 'hd.opps.assign.addVolunteer': addHeadAssignmentVolunteer(); break;
     case 'hd.opps.assign.remove':       removeHeadAssignment(el.dataset.id); break;
+    // Other-committee opportunities tab — head behaves as a volunteer
+    // for events outside their own committee. Express/withdraw maps to
+    // the same interest.submit endpoint members use; the server now
+    // takes user.member_id from auth context so no spoofing path.
+    case 'hd.other.express':            expressOtherInterest(el); break;
+    case 'hd.other.withdraw':           withdrawOtherInterest(el); break;
     // Attendance tab (added 2026-05-16). open/close/save are click
     // handlers; modeChange + attendeeChange are change-event handlers
     // on the radio inputs, handled in the change-listener below.

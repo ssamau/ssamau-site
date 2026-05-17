@@ -10,6 +10,7 @@ export const PAGE_TITLES = {
   dashboard:     'hp.title.dashboard',
   members:       'hp.title.members',
   opportunities: 'hp.title.opportunities',
+  'other-opportunities': 'hp.title.other_opportunities',
   hours:         'hp.title.hours',
   attendance:    'hp.title.attendance',
   applications:  'hp.title.applications',

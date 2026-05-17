@@ -86,6 +86,10 @@ export default {
   // ─── apply.html (public membership application form) ──────────────
   'apply.page_title':           'الانضمام إلى نادي الطلبة السعوديين في ملبورن',
   'apply.intro':                'يرجى تعبئة النموذج بدقّة — ستخدم البيانات لإصدار العضوية وشهادات الملحقية الثقافية.',
+  // نسخة موسم التطوع (1 يونيو – 31 ديسمبر). تسجيل الأعضاء يُفتح في
+  // بداية العام؛ خارج تلك النافذة يتحوّل النموذج إلى تسجيل تطوّع.
+  'apply.page_title_volunteer': 'تطوّع مع نادي الطلبة السعوديين في ملبورن',
+  'apply.intro_volunteer':      'تسجيل العضوية سيُفتح مجدداً بداية العام القادم. حتى ذلك الحين يمكنك التسجيل كمتطوع — نفس النموذج يضمّك إلى قائمة الفعاليات التي تنظمها اللجان.',
 
   // Section 1: Identity
   'apply.s1.title':             'بطاقة الهوية',
@@ -414,6 +418,7 @@ export default {
   'hp.sb.dashboard':            'لوحتي',
   'hp.sb.members':              'أعضاء اللجنة',
   'hp.sb.opportunities':        'الفرص التطوعية',
+  'hp.sb.other_opportunities':  'فرص أخرى',
   'hp.sb.hours':                'الساعات',
   'hp.sb.applications':         'طلبات الانضمام',
   'hp.sb.emails':               'رسائل الشكر',
@@ -422,6 +427,7 @@ export default {
   'hp.title.dashboard':         'لوحتي',
   'hp.title.members':           'أعضاء اللجنة',
   'hp.title.opportunities':     'الفرص التطوعية',
+  'hp.title.other_opportunities': 'فرص من خارج لجنتي',
   'hp.title.hours':             'الساعات',
   'hp.title.applications':      'طلبات الانضمام',
   'hp.title.emails':            'رسائل الشكر',
@@ -537,6 +543,13 @@ export default {
   'hp.opps.col_status':         'الحالة',
   'hp.opps.col_actions':        'إجراءات',
   'hp.opps.assign_title':       'إسناد الأعضاء وتسجيل الحضور',
+  'hp.opps.assign_col_hours':   'الساعات',
+  'hp.opps.assign_hours_title': 'الساعات التي ستُحتسب عند تسجيل الحضور. القيمة الافتراضية هي الساعات التقديرية للفرصة؛ قيمتك تتجاوزها.',
+  // تبويب "فرص أخرى" — يتصفح رئيس اللجنة الفرص خارج لجنته ويسجّل
+  // اهتمامه كعضو عادي.
+  'hp.other_opps.card_title':   '🌐 فرص من لجان أخرى',
+  'hp.other_opps.lead':         'فرص تطوعية متاحة من لجان أخرى أو من الإدارة العامة. يمكنك التسجيل اهتماماً للمشاركة.',
+  'hp.other_opps.empty':        'لا توجد فرص خارج لجنتك متاحة حالياً.',
   'hp.opps.err_load':           '⚠️ تعذّر تحميل الفرص',
   'hp.opps.empty':              'لا توجد فرص في لجنتك بعد',
   'hp.opps.status_open':        'مفتوحة',
@@ -840,6 +853,18 @@ export default {
   'ap.apps.col_actions':        'إجراءات',
   'ap.apps.row_view_title':     'عرض',
   'ap.apps.row_review_title':   'مراجعة',
+  'ap.apps.type_member':        'عضو',
+  'ap.apps.type_volunteer':     'متطوع',
+  'ap.apps.invite_as_member_title': 'دعوة كعضو',
+  // نافذة تحويل المتطوع إلى عضو
+  'ap.apps.iam_title':          '🎫 دعوة كعضو',
+  'ap.apps.iam_lead':           'سيُحوَّل المتطوع إلى عضو ضمن اللجنة المختارة وسيُرسل له بريد تفعيل لوحة الأعضاء.',
+  'ap.apps.iam_applicant':      'المتقدم',
+  'ap.apps.iam_committee':      'اللجنة',
+  'ap.apps.iam_note':           'ملاحظات (اختياري)',
+  'ap.apps.iam_submit_btn':     '🎫 تحويل ودعوة',
+  'ap.apps.iam_err_committee':  'اختر اللجنة.',
+  'ap.apps.iam_success':        '🎫 تم إنشاء العضو ({id}). أُرسل بريد التفعيل.',
   'ap.apps.modal_title':        '📥 مراجعة طلب عضوية',
   'ap.apps.triage_label':       'أسند الطلب إلى لجنة',
   'ap.apps.triage_choose':      '— اختر —',

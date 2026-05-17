@@ -141,6 +141,17 @@ function radioVal(name) {
   return r.length ? r[0].value : '';
 }
 
+// Seasonal applicant-type gate, mirrored from the server's
+// gateApplicantType() in applications.ts. Used to (a) tag the submit
+// body, (b) flip a CSS class on <body> so member-specific copy can be
+// hidden in the volunteer window via the .volunteer-only / .member-only
+// utility classes. UTC month so the cutover is consistent regardless
+// of where the applicant's browser is.
+function currentApplicantType() {
+  const m = new Date().getUTCMonth(); // 0=Jan ... 11=Dec
+  return (m >= 0 && m <= 4) ? 'Member' : 'Volunteer';
+}
+
 async function doSubmit() {
   clearErr();
 
@@ -182,6 +193,12 @@ async function doSubmit() {
     suggestions:           gv('f-suggestions'),
     // Confirmation
     confirmation_accepted: $('#f-confirm').checked,
+    // Seasonal applicant type. Jan 1 – May 31 → 'Member' (the form
+    // shows the full member intake copy); Jun 1 – Dec 31 → 'Volunteer'
+    // (the form shows volunteer-flavoured copy). Server re-checks this
+    // against the current date and overrides if someone POSTs out-of-
+    // window — see gateApplicantType() in applications.ts.
+    applicant_type: currentApplicantType(),
   };
 
   // Required-field validation matches the form's spec.
@@ -256,6 +273,27 @@ $('#f-wa-same')   ?.addEventListener('change', toggleWaSame);
 $('#f-university')?.addEventListener('change', toggleUniOther);
 $('#f-confirm')   ?.addEventListener('change', updateSubmitState);
 $('#submit-btn')  ?.addEventListener('click',  doSubmit);
+
+// Tag <body> with the applicant-type so CSS can hide/show member-only
+// copy via the .volunteer-window / .member-window classes. Done on
+// first paint so there's no flash of the wrong copy.
+const _applicantType = currentApplicantType();
+document.body.classList.add(_applicantType === 'Volunteer' ? 'volunteer-window' : 'member-window');
+
+// Swap the page title + intro copy when we're in the volunteer window
+// so the form frames itself as "Volunteer application" instead of
+// "Membership application". Updates the data-i18n key + re-applies the
+// catalog so language toggles work in either window.
+if (_applicantType === 'Volunteer') {
+  const titleEl = document.querySelector('[data-i18n="apply.page_title"]');
+  if (titleEl) titleEl.setAttribute('data-i18n', 'apply.page_title_volunteer');
+  const introEl = document.querySelector('[data-i18n="apply.intro"]');
+  if (introEl) introEl.setAttribute('data-i18n', 'apply.intro_volunteer');
+  // i18n.js auto-runs on import; calling applyI18n after the attribute
+  // swap so the new keys resolve immediately rather than waiting for
+  // the next language toggle.
+  import('./lib/i18n.js').then(({ applyI18n }) => applyI18n && applyI18n());
+}
 
 $$('input[name=scholarship]').forEach((r) => r.addEventListener('change', () => {
   toggleOther('scholarship');
