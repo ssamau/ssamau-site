@@ -1537,6 +1537,7 @@ export default {
 
   // — Forbidden / access tiers —
   'err.access.forbidden':                'لا توجد صلاحية',
+  'err.access.member_inactive':          'حسابك غير نشط حالياً. يرجى التواصل مع الرئيس للتحقق من بياناتك.',
   'err.access.admin_only':               'هذه العملية مقتصرة على الإدارة',
   'err.access.dev_only':                 'هذه العملية مقتصرة على المطوّر',
   'err.access.head_or_dev_only':         'هذه العملية مقتصرة على رئيس اللجنة أو المطوّر',

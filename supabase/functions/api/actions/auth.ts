@@ -103,7 +103,7 @@ const auth: Handler = async (body) => {
 
   const rows = await sql`
     SELECT u.id, u.username, u.password_hash, u.access_level, u.member_id,
-           m.full_name, m.preferred_name, m.committee_id
+           m.full_name, m.preferred_name, m.committee_id, m.status AS member_status
     FROM users u
     LEFT JOIN members m ON m.member_id = u.member_id
     WHERE LOWER(u.username) = LOWER(${username})
@@ -112,6 +112,7 @@ const auth: Handler = async (body) => {
     id: number; username: string; password_hash: string; access_level: string;
     member_id: string | null;
     full_name: string | null; preferred_name: string | null; committee_id: string | null;
+    member_status: string | null;
   }>;
 
   const u = rows[0];
@@ -119,6 +120,14 @@ const auth: Handler = async (body) => {
 
   const okPw = await bcryptCompare(password, u.password_hash);
   if (!okPw) throw httpErr('err.auth.invalid_credentials', 401);
+
+  // Inactive-status gate (2026-05-17): users whose `members.status` was
+  // flipped to 'Inactive' by an admin must not be able to log in,
+  // regardless of whether their password still works. System / dev
+  // accounts have NULL member_id and are exempt from this check.
+  if (u.member_id && u.member_status === 'Inactive') {
+    throw httpErr('err.access.member_inactive', 403);
+  }
 
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
@@ -601,12 +610,20 @@ const authWhoami: Handler = async (_body, user) => {
   // Pull the member's preferred display name too — same join the
   // legacy `auth` handler does, so the admin UI greeting matches.
   const rows = await sql`
-    SELECT m.full_name, m.preferred_name
+    SELECT m.full_name, m.preferred_name, m.status
     FROM public.members m
     WHERE m.member_id = ${user.member_id}
     LIMIT 1
-  ` as Array<{ full_name: string | null; preferred_name: string | null }>;
+  ` as Array<{ full_name: string | null; preferred_name: string | null; status: string | null }>;
   const member = rows[0];
+  // Inactive-status gate (2026-05-17): mirrors the legacy `auth`
+  // handler — if the admin flipped the member to Inactive after the
+  // Supabase sign-in completed, whoami refuses to return a profile so
+  // the frontend bounces to login with a "contact the president" toast.
+  // System accounts (NULL member_id) skip this check.
+  if (user.member_id && member?.status === 'Inactive') {
+    throw httpErr('err.access.member_inactive', 403);
+  }
   return {
     id:           user.id,
     username:     user.username,

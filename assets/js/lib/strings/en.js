@@ -1504,6 +1504,7 @@ export default {
 
   // — Forbidden / access tiers —
   'err.access.forbidden':                'Forbidden.',
+  'err.access.member_inactive':          'You are currently inactive. Please contact the president to verify your information.',
   'err.access.admin_only':               'Admin access required.',
   'err.access.dev_only':                 'Dev (superadmin) access required.',
   'err.access.head_or_dev_only':         'Committee head or dev access required.',

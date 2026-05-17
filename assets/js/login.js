@@ -32,9 +32,9 @@ import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
 
 import { callApi, apiOrThrow } from './lib/api.js';
 import {
-  saveSession, saveSupabaseSession,
+  saveSession, saveSupabaseSession, clearSession,
   supabaseSignIn, getLastUsername, isLoggedIn,
-  getSession, landingPageForAccess,
+  getSession, landingPageForAccess, signOut,
 } from './lib/auth.js';
 import { $ } from './lib/dom.js';
 
@@ -122,7 +122,19 @@ async function doLogin() {
       // to save the Supabase session BEFORE the whoami call, then
       // augment with the profile after it returns.
       saveSupabaseSession(session, { username: identifier });
-      const whoami = await apiOrThrow('auth.whoami');
+      let whoami;
+      try {
+        whoami = await apiOrThrow('auth.whoami');
+      } catch (whoamiErr) {
+        // Inactive members + any other whoami failure must NOT leave a
+        // partial Supabase session in localStorage — otherwise reload
+        // would short-circuit straight to landing without re-checking.
+        // Sign out on both the Supabase + local side, then re-throw so
+        // the outer catch surfaces the localized message.
+        try { await signOut(); } catch { /* ignore */ }
+        clearSession();
+        throw whoamiErr;
+      }
       // Re-save with the full profile. saveSupabaseSession overwrites
       // the previous entry cleanly.
       saveSupabaseSession(session, whoami);
@@ -150,11 +162,15 @@ async function doLogin() {
     const m = String(e?.message || '');
     const isNetwork    = m === 'network';
     const isBadInvalid = m === 'invalid' || /credentials|invalid/i.test(m);
+    // Anything else came from apiOrThrow with a pre-localized message
+    // (e.g. the Inactive gate's "حسابك غير نشط حالياً..." or future
+    // server-side codes). Surface it verbatim instead of falling through
+    // to the generic catch-all — the user needs the specific reason.
     const msg = isNetwork
       ? t('common.network_error')
       : isBadInvalid
         ? t('login.error_invalid').replace(/^❌\s*/, '')  // showError adds the ❌ prefix
-        : t('common.generic_error');
+        : (m || t('common.generic_error'));
     showError(msg);
     // Shake animation. Restart by removing + reflow + adding.
     const card = $('.login-card');
