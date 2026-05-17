@@ -28,6 +28,7 @@ import {
   openHeadMemberFile, openHeadMemberProfile,
   openHeadInviteModal, headSendInviteByEmail, headSendInviteByPin,
   headCopyShownPin, headConfirmRevokeInvite,
+  filterHeadMembersByRole, filterHeadMembersByStatus, filterHeadMembersBySearch,
 } from './tabs/members.js';
 import {
   loadHeadOpportunities,
@@ -38,7 +39,8 @@ import {
 } from './tabs/opportunities.js';
 import {
   loadHeadOtherOpportunities,
-  expressOtherInterest, withdrawOtherInterest,
+  openHeadOtherPickRole, closeHeadOtherPickRole, submitHeadOtherPickRole,
+  withdrawOtherInterest,
 } from './tabs/other-opportunities.js';
 // Shared support-ticket module — available across every portal so a
 // member, head, or admin can fire a bug report from anywhere.
@@ -215,7 +217,11 @@ document.addEventListener('click', (e) => {
     // for events outside their own committee. Express/withdraw maps to
     // the same interest.submit endpoint members use; the server now
     // takes user.member_id from auth context so no spoofing path.
-    case 'hd.other.express':            expressOtherInterest(el); break;
+    // Multi-role (2026-05-18): "express" now opens a role-picker modal.
+    // The submit branch fires interest.submit with the chosen role_id.
+    case 'hd.other.openPick':           openHeadOtherPickRole(el); break;
+    case 'hd.other.closePick':          closeHeadOtherPickRole(); break;
+    case 'hd.other.submitPick':         submitHeadOtherPickRole(); break;
     case 'hd.other.withdraw':           withdrawOtherInterest(el); break;
     // Support / bug-report — sidebar entry + modal submit.
     case 'openSupportModal':            openSupportModal(); break;
@@ -234,6 +240,10 @@ document.addEventListener('click', (e) => {
     case 'hd.members.openFile':      openHeadMemberFile(el.dataset.id, el.dataset.kind); break;
     case 'hd.members.invite.open':   openHeadInviteModal(el.dataset.id); break;
     case 'hd.members.invite.revoke': headConfirmRevokeInvite(el.dataset.id, el.dataset.name); break;
+    // President's QOL filters 2026-05-18.
+    case 'hd.members.filterRole':    filterHeadMembersByRole(el.value); break;
+    case 'hd.members.filterStatus':  filterHeadMembersByStatus(el.value); break;
+    case 'hd.members.filterSearch':  filterHeadMembersBySearch(el.value); break;
     // Invite modal — three buttons inside the modal body. Use direct
     // ids on the shared admin-style markup so we don't need to fork it.
     case 'sendInviteByEmail':        headSendInviteByEmail(); break;

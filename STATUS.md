@@ -16,6 +16,68 @@ project's mental model without re-reading 30+ commits of context.
 
 Major feature work (newest first):
 
+- **QOL filters across every search-bar tab** (uncommitted) —
+  president's ask 2026-05-18: every tab with a search bar should have
+  filter dropdowns next to it, AND tabs that only had filter dropdowns
+  should get a search bar to compose with. Net effect: 12 tabs touched.
+  - **Admin Accounts** — permission level (member/head/admin/superadmin)
+    + last-login (never / inactive 30+ / active 30) filters. The
+    canonical example flagged by the president.
+  - **Admin Advisors** — status (Active/Inactive) + advisory-role
+    filters. Role options populated dynamically from the loaded data
+    so a new role appears in the dropdown without a code change.
+  - **Head Members** — role + status filters scoped to the head's
+    committee.
+  - **Member Opportunities** — date bucket filter (all/upcoming/today/
+    this week/past/no_date) + committee filter (my committee, open-to-
+    all, or both — the existing default). All in-memory against the
+    cached `_lastOpps` so typing in the search input doesn't hit the
+    network on every keystroke.
+  - **Search bars added** to Admin Applications, Participants, Hours,
+    Attendance, Emails, Certificates, Interest, and Opportunities —
+    each wired through `lib/ui.js` `filterTable()` so no per-tab JS
+    change was needed.
+  - i18n keys for every new placeholder + option label added to both
+    AR + EN catalogs. SW bumped to v66.
+
+- **Certificate viewing fixes** (uncommitted) — president flagged
+  three issues with the cert verification flow:
+  - On-screen cert pinned to A4 landscape (297×210) via fixed
+    `aspect-ratio` + `width: min(297mm, 95vw)` on `.cert-sheet`. Inner
+    typography switched to `cqi` (container-query inline) units so
+    fonts scale with the sheet, not the viewport — phone-sized cert
+    reads at the same visual proportions as desktop.
+  - Sticky `.cert-close-bar` (fixed, top, full-width) appears above
+    the cert with "✕ إغلاق الشهادة" + the verify code. Mobile (<640px)
+    also gets a floating ✕ FAB in the bottom-inline-end corner.
+    Resolves the "no way to close cert preview on mobile" bug — used
+    to require a full page refresh.
+  - Pre-verification lead copy added to `verify-cert.html` explaining
+    what the code does + what will appear after submitting.
+  - Admin preview (`previewCertCard`) swapped from `window.open(…,
+    540×600 popup)` to a real `_blank` tab that opens
+    `verify-cert.html?code=<cert_code>` — admin sees the same A4
+    rendering the recipient gets from the email link. No more
+    popup-blocker pain on mobile.
+
+- **Multi-role opportunities + interest emails** (uncommitted) — an
+  opportunity is now an EVENT-level row with N roles in a child table
+  (`opportunity_roles`). Admin modal swapped to a dynamic
+  "+ إضافة دور" list (each row: preset / name / hours / headcount /
+  notes). Members + heads see one row per opportunity; clicking
+  "اهتمام" opens a pick-role modal listing every role + a sticky
+  "أي دور" fallback (submits with `role_id=null` so the head decides
+  where to slot them). `interest_requests` gained `opportunity_id`
+  + `role_id`; the legacy project-level uniqueness is now a partial
+  unique index alongside a new opportunity-level partial index, so
+  both flows coexist. Recruitment + interest-notification emails
+  updated to list ALL roles. Migration
+  `20260518140001_opportunity_roles.sql` backfills one role per
+  existing opportunity. Separately, the previously-missing interest
+  registration → email notification (admins always + project's
+  committee head + opportunity's owning committee head) was built
+  out in `interest.ts`.
+
 - **Audit recovery** (c19c7ce) — Participants tab now persists
   `participation_status` / `availability_type` / `manager_notes` /
   `outstanding_flag`; Attendance tab now persists

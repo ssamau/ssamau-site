@@ -34,6 +34,14 @@ function fmtIsoDate(d: unknown): string {
 }
 
 // ─── OPPORTUNITIES (§4, §12) ─────────────────────────────────────────
+// Multi-role refactor 2026-05-18:
+// Returns roles as an aggregated JSON array per opportunity. The
+// legacy single-role columns (role_name, role_key, …) stay on the
+// row for backwards-compat with old call sites + email templates,
+// but the new frontend should read from `roles`. Empty `roles` []
+// means an opportunity exists but no role has been added yet —
+// shouldn't happen in practice since the migration backfilled one
+// role per legacy row.
 const opportunitiesList: Handler = async (body) => {
   const project_id = body.project_id as string | undefined;
   const committee_id = body.committee_id as string | undefined;
@@ -44,7 +52,21 @@ const opportunitiesList: Handler = async (body) => {
       c.committee_name AS owning_committee_name,
       (SELECT COUNT(*) FROM assignments a WHERE a.opportunity_id = o.opportunity_id) AS assigned_count,
       (SELECT COUNT(*) FROM assignments a
-        WHERE a.opportunity_id = o.opportunity_id AND a.attendance_status = 'Attended') AS attended_count
+        WHERE a.opportunity_id = o.opportunity_id AND a.attendance_status = 'Attended') AS attended_count,
+      COALESCE(
+        (SELECT json_agg(
+          json_build_object(
+            'id',              r.id,
+            'role_name',       r.role_name,
+            'role_key',        r.role_key,
+            'estimated_hours', r.estimated_hours,
+            'headcount_needed',r.headcount_needed,
+            'notes',           r.notes,
+            'sort_order',      r.sort_order
+          ) ORDER BY r.sort_order, r.id
+        ) FROM opportunity_roles r WHERE r.opportunity_id = o.opportunity_id),
+        '[]'::json
+      ) AS roles
     FROM opportunities o
     LEFT JOIN projects   p ON p.project_id   = o.project_id
     LEFT JOIN committees c ON c.committee_id = o.owning_committee_id
@@ -56,22 +78,58 @@ const opportunitiesList: Handler = async (body) => {
   `;
 };
 
+// Multi-role create — accepts a `roles: [{role_name, role_key,
+// estimated_hours, headcount_needed, notes}, …]` array. Legacy callers
+// that still send top-level role_name / etc. are auto-promoted to a
+// single-element roles array, so the old single-role path keeps working
+// during rollout. At least one role is required.
 const opportunitiesCreate: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
-  if (!data.project_id || !data.role_name) {
+  if (!data.project_id) {
+    throw httpErr('err.required.project_role', 400);
+  }
+  // Normalize the roles list. Two shapes accepted:
+  //   1. data.roles = [{ role_name, role_key, ... }, ...] (new flow)
+  //   2. data.role_name + data.role_key + ... (legacy single-role)
+  const rolesIn = Array.isArray(data.roles) && data.roles.length
+    ? (data.roles as Array<Record<string, unknown>>)
+    : [{
+        role_name:        data.role_name,
+        role_key:         data.role_key,
+        estimated_hours:  data.estimated_hours,
+        headcount_needed: data.headcount_needed,
+        notes:            data.role_notes ?? null,
+      }];
+  if (!rolesIn.length || !rolesIn[0].role_name) {
     throw httpErr('err.required.project_role', 400);
   }
   requireAdminScope(user, data.owning_committee_id as string | null | undefined);
   const id = (data.opportunity_id as string | undefined) || shortId('OPP');
+
+  // Keep the legacy single-role columns synced with the FIRST role so
+  // pre-multi-role call sites (admin list display, email templates)
+  // still get something meaningful.
+  const first = rolesIn[0];
   await sql`
     INSERT INTO opportunities (opportunity_id, project_id, role_name, role_key,
                                estimated_hours, headcount_needed, owning_committee_id,
                                status, notes, created_by)
-    VALUES (${id}, ${data.project_id}, ${data.role_name}, ${data.role_key || null},
-            ${data.estimated_hours || 0}, ${data.headcount_needed || 1},
+    VALUES (${id}, ${data.project_id}, ${first.role_name}, ${first.role_key || null},
+            ${Number(first.estimated_hours) || 0}, ${Number(first.headcount_needed) || 1},
             ${data.owning_committee_id || null}, ${data.status || 'Open'},
             ${data.notes || null}, ${user!.id})
   `;
+  for (let i = 0; i < rolesIn.length; i++) {
+    const r = rolesIn[i];
+    await sql`
+      INSERT INTO opportunity_roles
+        (opportunity_id, role_name, role_key, estimated_hours, headcount_needed, notes, sort_order)
+      VALUES
+        (${id}, ${r.role_name}, ${r.role_key || null},
+         ${Number(r.estimated_hours) || 0}, ${Number(r.headcount_needed) || 1},
+         ${r.notes || null}, ${i})
+    `;
+  }
 
   // Fire-and-forget confirmation receipt to whoever created the
   // opportunity (president's clarification 2026-05-17: "yes notify it
@@ -282,12 +340,30 @@ const opportunitiesUpdate: Handler = async (body, user) => {
   requireAdminScope(user, existing.owning_committee_id);
   if (data.owning_committee_id) requireAdminScope(user, data.owning_committee_id as string | null | undefined);
 
-  // Normalize a few values so the column types are happy. estimated_hours
-  // + headcount_needed must be numbers; the JSON parse already gives us
-  // numbers via JSON.parse, but defensive coercion is cheap.
+  // Normalize. If the client sent a roles array (multi-role flow), use
+  // its first entry to sync the legacy single-role columns so old call
+  // sites + email templates keep rendering. If they sent the legacy
+  // shape (top-level role_name/etc), leave the columns to the existing
+  // COALESCE path below — we still write to opportunity_roles too so
+  // both paths stay in sync.
   const norm = { ...data };
   if ('estimated_hours' in norm)  norm.estimated_hours  = Number(norm.estimated_hours)  || 0;
   if ('headcount_needed' in norm) norm.headcount_needed = Number(norm.headcount_needed) || 1;
+
+  const rolesIn = Array.isArray(data.roles) && (data.roles as unknown[]).length
+    ? (data.roles as Array<Record<string, unknown>>)
+    : null;
+  if (rolesIn) {
+    if (!rolesIn[0]?.role_name) throw httpErr('err.required.project_role', 400);
+    // Mirror the first role into the legacy single-role columns so
+    // pre-multi-role display paths (admin list, old email templates)
+    // still show something useful.
+    const first = rolesIn[0];
+    norm.role_name        = first.role_name;
+    norm.role_key         = first.role_key ?? null;
+    norm.estimated_hours  = Number(first.estimated_hours)  || 0;
+    norm.headcount_needed = Number(first.headcount_needed) || 1;
+  }
 
   // Use COALESCE(${value}, column) so an explicit NULL in the request
   // (e.g. user cleared notes → '' → wrapper coerces to NULL) does NOT
@@ -312,6 +388,27 @@ const opportunitiesUpdate: Handler = async (body, user) => {
       notes               = ${norm.notes               ?? null}
     WHERE opportunity_id = ${id}
   `;
+
+  // Atomic replace of opportunity_roles when the client sent the new
+  // roles array. Done as DELETE + INSERT (not UPSERT) so removed roles
+  // actually disappear; the row count is small (typically 1–5 roles).
+  // ON DELETE CASCADE on interest_requests.role_id → SET NULL preserves
+  // pending "any role" interests even if the role they picked goes
+  // away in the edit.
+  if (rolesIn) {
+    await sql`DELETE FROM opportunity_roles WHERE opportunity_id = ${id}`;
+    for (let i = 0; i < rolesIn.length; i++) {
+      const r = rolesIn[i];
+      await sql`
+        INSERT INTO opportunity_roles
+          (opportunity_id, role_name, role_key, estimated_hours, headcount_needed, notes, sort_order)
+        VALUES
+          (${id}, ${r.role_name}, ${r.role_key || null},
+           ${Number(r.estimated_hours) || 0}, ${Number(r.headcount_needed) || 1},
+           ${r.notes || null}, ${i})
+      `;
+    }
+  }
   return { opportunity_id: id };
 };
 
@@ -374,6 +471,19 @@ const opportunitiesNotify: Handler = async (body, user) => {
   // opportunities; admin/superadmin pass through.
   requireAdminScope(user, opp.owning_committee_id);
 
+  // Pull every role attached to this opportunity for the multi-role
+  // list in the email body. Empty array is fine — render falls back
+  // to the legacy single-role card.
+  const roles = await sql`
+    SELECT id, role_name, estimated_hours, headcount_needed, notes, sort_order
+    FROM   opportunity_roles
+    WHERE  opportunity_id = ${opportunity_id}
+    ORDER BY sort_order, id
+  ` as Array<{
+    id: number; role_name: string; estimated_hours: number;
+    headcount_needed: number; notes: string | null; sort_order: number;
+  }>;
+
   // ── Build email body ───────────────────────────────────────────────
   const eventDate = fmtIsoDate(opp.event_date);
   const html = renderOppNotificationHtml({
@@ -384,6 +494,7 @@ const opportunitiesNotify: Handler = async (body, user) => {
     location:         opp.location,
     estimated_hours:  opp.estimated_hours,
     headcount_needed: opp.headcount_needed,
+    roles,
     custom_message,
   });
   const subject = `🎯 فرصة تطوعية جديدة — ${opp.project_name}`;
@@ -446,6 +557,12 @@ function renderOppNotificationHtml(opts: {
   location: string | null;
   estimated_hours: number;
   headcount_needed: number;
+  // Multi-role list. Empty array → fall back to the legacy single-role
+  // card (kept so the email looks identical for single-role opportunities).
+  roles: Array<{
+    role_name: string; estimated_hours: number;
+    headcount_needed: number; notes: string | null;
+  }>;
   custom_message: string;
 }): string {
   const esc = (s: string) => String(s || '')
@@ -453,6 +570,30 @@ function renderOppNotificationHtml(opts: {
     .replace(/"/g, '&quot;');
   const customBlock = opts.custom_message
     ? `<div dir="rtl" style="background:#fffbeb;border-inline-start:4px solid #b8932a;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.92rem;line-height:1.7;text-align:right">${esc(opts.custom_message).replace(/\n/g, '<br/>')}</div>`
+    : '';
+  // Multi-role rendering. >1 role → list each as its own card so the
+  // recipient can scan options and pick. =1 role + legacy single-role
+  // opportunities → render the existing single card so the email stays
+  // pixel-identical for the common case.
+  const multi = (opts.roles || []).length > 1;
+  const totalHeadcount = (opts.roles || []).reduce(
+    (n, r) => n + (Number(r.headcount_needed) || 0), 0
+  ) || opts.headcount_needed || 1;
+  const totalHours = (opts.roles || []).reduce(
+    (n, r) => n + (Number(r.estimated_hours) || 0), 0
+  ) || opts.estimated_hours || 0;
+  const rolesList = multi
+    ? `<div dir="rtl" style="margin:.85rem 0">
+         <div style="font-size:.88rem;font-weight:800;color:#1A5C2E;margin-bottom:.5rem">🎯 الأدوار المتاحة (${opts.roles.length})</div>
+         ${opts.roles.map(r => `
+           <div dir="rtl" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:.7rem .9rem;margin-bottom:.5rem;text-align:right">
+             <div style="font-size:.92rem;font-weight:700;color:#1f2937;margin-bottom:.2rem">${esc(r.role_name)}</div>
+             <div style="font-size:.78rem;color:#6b7280">
+               👥 ${Number(r.headcount_needed) || 1} متطوع · ⏱️ ${Number(r.estimated_hours) || 0} ساعة
+               ${r.notes ? ` · <span style="color:#4b5563">${esc(r.notes)}</span>` : ''}
+             </div>
+           </div>`).join('')}
+       </div>`
     : '';
   // RTL hardening: dir="rtl" + text-align:right on every block so
   // phone-mail clients (which ignore the html-level dir) still render
@@ -471,18 +612,23 @@ function renderOppNotificationHtml(opts: {
       <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">يسرّنا الإعلان عن فرصة تطوعية جديدة في النادي، ندعوك للمشاركة:</p>
 
       <div dir="rtl" style="background:#f9fafb;border-radius:10px;padding:1.1rem;margin:1rem 0;text-align:right">
-        <div style="font-size:1.05rem;font-weight:800;color:#1A5C2E;margin-bottom:.5rem">${esc(opts.role_name)}</div>
-        <div style="font-size:.88rem;color:#4b5563;margin-bottom:.85rem">${esc(opts.project_name)}</div>
+        ${multi
+          ? `<div style="font-size:1.05rem;font-weight:800;color:#1A5C2E;margin-bottom:.5rem">${esc(opts.project_name)}</div>`
+          : `<div style="font-size:1.05rem;font-weight:800;color:#1A5C2E;margin-bottom:.5rem">${esc(opts.role_name)}</div>
+             <div style="font-size:.88rem;color:#4b5563;margin-bottom:.85rem">${esc(opts.project_name)}</div>`}
         <table dir="rtl" style="width:100%;font-size:.86rem;color:#374151;border-collapse:collapse">
           ${opts.event_date ? `<tr><td style="padding:.3rem 0;color:#6b7280;width:30%">📅 التاريخ</td><td style="padding:.3rem 0;direction:ltr">${esc(opts.event_date)}</td></tr>` : ''}
           ${opts.location ? `<tr><td style="padding:.3rem 0;color:#6b7280">📍 الموقع</td><td style="padding:.3rem 0">${esc(opts.location)}</td></tr>` : ''}
           ${opts.committee_name ? `<tr><td style="padding:.3rem 0;color:#6b7280">🏛️ اللجنة</td><td style="padding:.3rem 0">${esc(opts.committee_name)}</td></tr>` : ''}
-          <tr><td style="padding:.3rem 0;color:#6b7280">⏱️ ساعات تقديرية</td><td style="padding:.3rem 0">${opts.estimated_hours || 0} ساعة</td></tr>
-          <tr><td style="padding:.3rem 0;color:#6b7280">👥 المطلوب</td><td style="padding:.3rem 0">${opts.headcount_needed || 1} متطوع</td></tr>
+          <tr><td style="padding:.3rem 0;color:#6b7280">⏱️ ساعات تقديرية</td><td style="padding:.3rem 0">${totalHours} ساعة${multi ? ' (إجمالي)' : ''}</td></tr>
+          <tr><td style="padding:.3rem 0;color:#6b7280">👥 المطلوب</td><td style="padding:.3rem 0">${totalHeadcount} متطوع${multi ? ' (إجمالي)' : ''}</td></tr>
         </table>
+        ${rolesList}
       </div>
 
-      <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">إذا كنت مهتماً بالمشاركة، سجّل الدخول إلى بوابة العضو وانتقل إلى تبويب "الفرص التطوعية" واضغط "اهتمام" على هذه الفرصة. سيتواصل معك رئيس اللجنة لتأكيد المشاركة.</p>
+      <p dir="rtl" style="margin:0 0 1rem 0;text-align:right">${multi
+        ? 'إذا كنت مهتماً بالمشاركة، سجّل الدخول إلى بوابة العضو وانتقل إلى تبويب "الفرص التطوعية"، اضغط "اهتمام" على هذه الفرصة، ثم اختر الدور الذي يناسبك (أو اختر "أي دور" إذا كنت مستعداً للمساعدة حيث تحتاج اللجنة). سيتواصل معك رئيس اللجنة لتأكيد المشاركة.'
+        : 'إذا كنت مهتماً بالمشاركة، سجّل الدخول إلى بوابة العضو وانتقل إلى تبويب "الفرص التطوعية" واضغط "اهتمام" على هذه الفرصة. سيتواصل معك رئيس اللجنة لتأكيد المشاركة.'}</p>
 
       <div style="text-align:center;margin:1.4rem 0">
         <a href="https://ssamau.com/login.html" style="display:inline-block;background:#1A5C2E;color:#fff;text-decoration:none;padding:.75rem 1.6rem;border-radius:50px;font-weight:700;font-size:.85rem">

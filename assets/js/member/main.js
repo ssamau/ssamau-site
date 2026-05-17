@@ -48,7 +48,9 @@ import {
   openSupportModal, submitSupportTicket, onSupportFileChange,
 } from '../lib/support.js';
 import {
-  loadOpportunities, expressInterest, withdrawInterest,
+  loadOpportunities, withdrawInterest,
+  openPickRoleModal, closePickRoleModal, submitPickRole,
+  filterMemberOppsByDate, filterMemberOppsByCommittee, filterMemberOppsBySearch,
 } from './tabs/opportunities.js';
 import {
   loadAssignments,
@@ -242,13 +244,21 @@ setHandlers({
   },
 
   // ── Per-row "express interest" button on opportunities tab ─────────
-  // Passes el through so the handler can read data-project off the same
-  // button without a fragile re-lookup.
-  expressInterest:   (el) => expressInterest(el.dataset.opportunity, el.dataset.label, el),
-  // Pair with expressInterest — the rendered button swaps based on
-  // server-confirmed expressed state (interest.listOwn), so the user
-  // can mistake-correct without nuking the row.
+  // Multi-role (2026-05-18): clicking "اهتمام" opens the pick-role modal
+  // which lists every role + a sticky "any role" fallback. Submitting
+  // fires interest.submit with opportunity_id + role_id.
+  openPickRoleModal:  (el) => openPickRoleModal(el),
+  closePickRoleModal: closePickRoleModal,
+  submitPickRole:     submitPickRole,
+  // Withdraw stays a direct button on already-expressed rows. Server
+  // updates the same row's `interested = false` so the audit trail
+  // (which role they picked) is preserved.
   withdrawInterest:  (el) => withdrawInterest(el.dataset.opportunity, null, el),
+  // QOL filters (president's ask 2026-05-18). Each just kicks an
+  // in-memory re-render via _applyMemberOppFilters() in the tab module.
+  filterMemberOppsByDate:      (el) => filterMemberOppsByDate(el.value),
+  filterMemberOppsByCommittee: (el) => filterMemberOppsByCommittee(el.value),
+  filterMemberOppsBySearch:    (el) => filterMemberOppsBySearch(el.value),
 
   // ── Hours self-submission (assignments tab → log-hours modal) ──────
   openLogHours:        (el) => openLogHoursModal(

@@ -1,42 +1,57 @@
-// Opportunities tab — member portal (Phase 5c of Branch 4).
+// Opportunities tab — member portal.
 //
-// Browses open opportunities the member can sign up for. Client-side
-// filters the full list returned by `opportunities.list` to:
-//   - status === 'Open' (no point showing Filled/Done/Cancelled to a
-//     member who'd be wasting time clicking interested)
-//   - owning_committee_id === member's committee  OR  IS NULL (the
-//     "open to all" case). Members from other committees never see
-//     opportunities they couldn't help with anyway.
+// Multi-role refactor 2026-05-18 (president's spec):
+// Each opportunity is one row. Clicking "اهتمام" opens a pick-role
+// modal that lists every role the admin set up + a sticky "أي دور"
+// fallback. Submitting calls `interest.submit` with:
+//   - opportunity_id  → required for the new flow
+//   - role_id         → BIGINT pointing into opportunity_roles. NULL
+//                       means "any role — help where most needed"; the
+//                       head picks the assignment.
 //
-// "Express interest" submits via `interest.submit`, which is per-PROJECT
-// (the interest_requests table is keyed by project_id + member_id, not
-// opportunity). So a member tapping interested on a specific role gets
-// recorded as interested in the parent event; the head reviewing
-// interest then assigns them to the right opportunity. We pass the
-// opportunity role_name as the comment so the head knows which role
-// caught the member's eye.
+// Interest cache: keyed by opportunity_id (not project_id) so the
+// "✓ مُسجّل" badge stays correct when a member is interested in two
+// different opportunities under the same project — the legacy
+// project-keyed cache would have flipped both badges off-and-on
+// together. interest.listOwn returns one row per (opportunity, member)
+// (per the new partial unique index), so the map below holds one entry
+// per opportunity.
 
-import { api } from '../../lib/ui.js';
+import { api, toast, openModal, closeModal, filterTable } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
 import { getSession } from '../../lib/auth.js';
 import { t } from '../../lib/i18n.js';
 import { localizeError } from '../../lib/api.js';
 
-// Set of project_ids the member has already expressed interest in.
-// Populated FROM SERVER on every load via `interest.listOwn` so the
-// "✓ مُسجّل" pill survives reload / navigation / different device.
-// Without server backing, the pill was in-memory only — members would
-// refresh the page, see the button reset to "🙋 اهتمام", click again,
-// see it flip back, and reasonably assume the site is broken.
-const _interestedProjects = new Set();
+// opportunity_id → { role_id: number|null }. Lookup tells us if the
+// member has already registered + which role (or "any role") they picked.
+const _interestedOpportunities = new Map();
+// Legacy backward-compat (2026-05-18): pre-multi-role members
+// expressed interest at the PROJECT level — one interest_requests row
+// per (project, member) with opportunity_id IS NULL. Those rows don't
+// fit the new opportunity-keyed cache, but losing the visual "✓ مُسجّل"
+// marker on those would feel like the site forgot their click. So we
+// track them separately + show a "previously expressed" hint on every
+// opportunity belonging to a project they expressed legacy interest in.
+const _legacyInterestedProjects = new Set();
+
+// Cached last `opportunities.list` response. openPickRoleModal needs
+// the full row (incl. roles[]) for the clicked opportunity but the
+// table-row markup only carries IDs in dataset attrs — so we stash
+// the list each time loadOpportunities() runs and look it up on click
+// without a second fetch.
+let _lastOpps = [];
+
+// State for the pick-role modal — set in openPickRoleModal,
+// consumed by submitPickRole. Single modal at a time, so one ref.
+let _pickRoleCtx = null;
 
 export async function loadOpportunities() {
   const tbody = document.getElementById('opps-tbody');
   if (!tbody) return;
   tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
-  // Two parallel fetches: opportunities + own interest history. Both are
-  // small queries; loading them together avoids a waterfall.
+  // Two parallel fetches: opportunities + own interest history.
   const [oppsRes, interestRes] = await Promise.all([
     api('opportunities.list'),
     api('interest.listOwn'),
@@ -46,27 +61,82 @@ export async function loadOpportunities() {
     return;
   }
 
-  // Rebuild the interested-projects set from server data. Replacing the
-  // set (rather than merging) ensures a member who's no longer in the
-  // interest_requests table doesn't keep a stale "✓ مُسجّل" badge.
-  _interestedProjects.clear();
+  // Rebuild the interest cache. Only count rows tied to an
+  // opportunity_id (the new flow); legacy project-level interest rows
+  // are ignored here — they don't have a single opportunity to map back
+  // to. Withdrawal rows (`interested = false`) are skipped so the
+  // badge correctly reflects current state.
+  _interestedOpportunities.clear();
+  _legacyInterestedProjects.clear();
   if (interestRes && interestRes.success) {
     for (const i of (interestRes.data || [])) {
-      // Only count `interested = true` rows. A "no I'm not interested"
-      // row shouldn't flip the button to "registered".
       const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
-      if (yn) _interestedProjects.add(i.project_id);
+      if (!yn) continue;
+      if (i.opportunity_id) {
+        _interestedOpportunities.set(i.opportunity_id, {
+          role_id: i.role_id ?? null,
+        });
+      } else if (i.project_id) {
+        // Pre-multi-role interest — surface as a soft hint on every
+        // opportunity in this project so the member sees their prior
+        // click was acknowledged. Doesn't disable the "اهتمام" button —
+        // they can still pick a specific role to refine.
+        _legacyInterestedProjects.add(i.project_id);
+      }
     }
   }
 
   const all = oppsRes.data || [];
+  _lastOpps = all;
+  _applyMemberOppFilters();
+}
+
+// In-memory re-render against the cached `_lastOpps`. The filter
+// dropdowns + search input call this directly so a filter change
+// doesn't re-hit the network (members type fast — refetching on every
+// keystroke would be wasteful).
+function _applyMemberOppFilters() {
+  const tbody = document.getElementById('opps-tbody');
+  if (!tbody) return;
   const session = getSession();
   const myCom = session?.committee_id || null;
+  const { date: dateFilter, committee: committeeFilter, query } = _currentMemberOppFilters();
 
-  const rows = all.filter(o => {
+  // Compute "today" + "end of week" once for the date filter so we don't
+  // re-parse on every row. End-of-week here means end of Saturday by
+  // ISO 8601 (Mon=1 … Sun=7 → end_of_week = the next Sunday at 00:00).
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(today); todayEnd.setHours(23, 59, 59, 999);
+  const dow = (today.getDay() + 6) % 7;  // 0 (Mon) … 6 (Sun)
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + (6 - dow)); weekEnd.setHours(23, 59, 59, 999);
+
+  const rows = (_lastOpps || []).filter(o => {
     if (o.status !== 'Open') return false;
-    // Own committee OR open-to-all (null committee = available to any member)
-    return !o.owning_committee_id || o.owning_committee_id === myCom;
+    // Committee filter — three modes:
+    //   ''     → own committee + open-to-all (default, current behavior)
+    //   mine   → own committee only
+    //   open   → open-to-all only (committee IS NULL)
+    if (committeeFilter === 'mine') {
+      if (o.owning_committee_id !== myCom) return false;
+    } else if (committeeFilter === 'open') {
+      if (o.owning_committee_id) return false;
+    } else {
+      if (o.owning_committee_id && o.owning_committee_id !== myCom) return false;
+    }
+    // Date filter — uses the project's event_date when present.
+    if (dateFilter) {
+      const ts = o.event_date ? Date.parse(o.event_date) : NaN;
+      if (dateFilter === 'no_date') {
+        if (!Number.isNaN(ts)) return false;
+      } else {
+        if (Number.isNaN(ts)) return false;
+        if (dateFilter === 'upcoming' && ts < today.getTime())    return false;
+        if (dateFilter === 'past'     && ts >= today.getTime())   return false;
+        if (dateFilter === 'today'    && (ts < today.getTime() || ts > todayEnd.getTime())) return false;
+        if (dateFilter === 'this_week'&& (ts < today.getTime() || ts > weekEnd.getTime())) return false;
+      }
+    }
+    return true;
   });
 
   if (!rows.length) {
@@ -78,127 +148,242 @@ export async function loadOpportunities() {
   const hoursUnit          = esc(t('mp.hours.hours_unit'));
   const withdrawLabel      = esc(t('mp.opps.withdraw_btn'));
   const expressLabel       = esc(t('mp.opps.express_btn'));
+  const anyRoleBadge       = esc(t('mp.opps.any_role_badge') || 'أي دور');
   tbody.innerHTML = rows.map(o => {
-    // expressed=true → render the withdraw button (outline, not disabled).
-    // Members frequently mis-click and need a way back. Server is fine
-    // with interest.submit { interested: false } as the withdraw path —
-    // ON CONFLICT updates the same row's `interested` flag.
-    const expressed = _interestedProjects.has(o.project_id);
-    const actionBtn = expressed
-      ? `<button class="btn btn-ol btn-sm btn-interest expressed"
-                 data-action="withdrawInterest"
-                 data-opportunity="${esc(o.opportunity_id)}"
-                 data-project="${esc(o.project_id)}">
-           ${withdrawLabel}
-         </button>`
-      : `<button class="btn btn-g btn-sm btn-interest"
-                 data-action="expressInterest"
-                 data-opportunity="${esc(o.opportunity_id)}"
-                 data-project="${esc(o.project_id)}"
-                 data-label="${esc(o.role_name)}">
-           ${expressLabel}
-         </button>`;
+    const roles = Array.isArray(o.roles) ? o.roles : [];
+    // First column: the role(s). Multi-role → show count + the first
+    // role name; single-role → show the legacy role_name verbatim.
+    let roleCell;
+    if (roles.length > 1) {
+      roleCell = `<div style="font-weight:600">${esc(roles[0].role_name)}</div>
+                  <div style="font-size:.7rem;color:var(--tm)">${esc(t('ap.opp.plus_n_more', { n: roles.length - 1 }))}</div>`;
+    } else {
+      const firstName = (roles[0] && roles[0].role_name) || o.role_name || '—';
+      roleCell = `<strong>${esc(firstName)}</strong>`;
+    }
+    // Total estimated hours across roles for the hours column.
+    const totalHours = roles.length
+      ? roles.reduce((n, r) => n + (Number(r.estimated_hours) || 0), 0)
+      : (Number(o.estimated_hours) || 0);
+
+    // Expressed state. The cached entry holds the role_id the member
+    // last picked; show a small chip indicating which role (or "any role").
+    const expr = _interestedOpportunities.get(o.opportunity_id);
+    let actionCell;
+    if (expr) {
+      const pickedRole = expr.role_id ? roles.find(r => Number(r.id) === Number(expr.role_id)) : null;
+      const chip = pickedRole
+        ? `<span style="display:inline-block;background:#e8f5e9;color:#1A5C2E;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${esc(pickedRole.role_name)}</span>`
+        : `<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${anyRoleBadge}</span>`;
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+        ${chip}
+        <button class="btn btn-ol btn-sm btn-interest expressed"
+                data-action="withdrawInterest"
+                data-opportunity="${esc(o.opportunity_id)}"
+                data-project="${esc(o.project_id)}">
+          ${withdrawLabel}
+        </button>
+      </div>`;
+    } else {
+      // Legacy-interest hint: member expressed pre-multi-role interest
+      // in this project. Don't bypass the button (they still need to
+      // pick a role), but surface a soft pill so they see the system
+      // didn't forget their earlier click.
+      const legacyHint = _legacyInterestedProjects.has(o.project_id)
+        ? `<div style="font-size:.7rem;color:var(--tm);margin-bottom:.25rem">${esc(t('mp.opps.legacy_interest_hint') || 'سبق تسجيل اهتمام بالمشروع — اختر دوراً لتحديده')}</div>`
+        : '';
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem">
+        ${legacyHint}
+        <button class="btn btn-g btn-sm btn-interest"
+                data-action="openPickRoleModal"
+                data-opportunity="${esc(o.opportunity_id)}"
+                data-project="${esc(o.project_id)}">
+          ${expressLabel}
+        </button>
+      </div>`;
+    }
     return `
       <tr>
-        <td><strong>${esc(o.role_name) || '—'}</strong></td>
+        <td>${roleCell}</td>
         <td>${esc(o.project_name) || '—'}</td>
         <td>${esc(o.owning_committee_name) || committeeOpenLabel}</td>
         <td>${fmtDate(o.event_date) || '—'}</td>
-        <td>${o.estimated_hours || 0} ${hoursUnit}</td>
-        <td>${actionBtn}</td>
+        <td>${totalHours || 0} ${hoursUnit}</td>
+        <td>${actionCell}</td>
       </tr>
     `;
   }).join('');
+  // Compose with the text search — re-apply after the filter-driven
+  // re-render so a typed query still hides non-matches.
+  if (query) filterTable('opps-tbody', query);
 }
 
-// data-action="expressInterest" wiring. main.js's handler extracts
-// opportunity_id (we pass project + label through the dataset on the
-// button element itself so we have everything we need without a second
-// fetch). Submits to interest.submit and updates the per-session cache.
-export async function expressInterest(_opportunityId, _label, el) {
-  // The caller in main.js passes (opportunity_id, label) but the row's
-  // dataset also holds project_id which we need for interest.submit.
-  // Re-resolve from the clicked button instead of plumbing it through
-  // a third arg — keeps the dispatcher map signature stable.
-  // (main.js passes el as the third argument-equivalent via lookup.)
-  const btn = el || document.querySelector(`button[data-opportunity="${_opportunityId}"]`);
-  if (!btn) return;
-  const projectId = btn.dataset.project;
-  const label     = btn.dataset.label || _label || '';
+// Filter state lives in the DOM (no module variable). Date filter
+// understands the calendar buckets the member is most likely to need
+// (upcoming, today, this week, past, no_date). Committee filter slices
+// the default scope (own committee + open-to-all) into either of the
+// two components.
+function _currentMemberOppFilters() {
+  const date      = document.querySelector('[data-action="filterMemberOppsByDate"]')?.value      || '';
+  const committee = document.querySelector('[data-action="filterMemberOppsByCommittee"]')?.value || '';
+  const query     = document.querySelector('[data-action="filterMemberOppsBySearch"]')?.value?.trim() || '';
+  return { date, committee, query };
+}
+
+export function filterMemberOppsByDate(_v)      { _applyMemberOppFilters(); }
+export function filterMemberOppsByCommittee(_v) { _applyMemberOppFilters(); }
+export function filterMemberOppsBySearch(_v)    { _applyMemberOppFilters(); }
+
+// Click handler for the "اهتمام" button. Opens the pick-role modal,
+// populates it with the opportunity's roles + a sticky "any role"
+// option, and stashes context for submitPickRole to consume.
+export function openPickRoleModal(el) {
+  const opportunityId = el.dataset.opportunity;
+  const projectId     = el.dataset.project;
+  // Single source of truth for the opportunity data: opportunities.list's
+  // last response. We don't re-fetch — the rows are already in the DOM,
+  // and the roles[] array is attached to each row. Lookup by walking
+  // the DOM table isn't ideal; pull from the per-button dataset instead.
+  // Simpler approach: refetch the opportunity by id from the cached
+  // window-level last list. The member tab keeps it in a module
+  // variable below.
+  const opp = _lastOpps.find(o => o.opportunity_id === opportunityId);
+  if (!opp) {
+    toast(t('mp.opps.err_load'), 'twarn');
+    return;
+  }
+  _pickRoleCtx = {
+    opportunity_id: opportunityId,
+    project_id:     projectId,
+    roles:          Array.isArray(opp.roles) ? opp.roles : [],
+  };
+  // Header — project name as the subtitle so the member sees which event.
+  const header = document.getElementById('pickrole-project');
+  if (header) header.textContent = opp.project_name || '—';
+
+  const list = document.getElementById('pickrole-list');
+  if (list) {
+    const hoursUnit = esc(t('mp.hours.hours_unit'));
+    // Radio rows per role + one trailing "any role" row. First role is
+    // pre-checked so the submit button has something valid to send if
+    // the member clicks straight through without changing.
+    const rowsHtml = _pickRoleCtx.roles.map((r, i) => `
+      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid var(--c-soft);border-radius:8px;cursor:pointer">
+        <input type="radio" name="pickrole-choice" value="${esc(String(r.id))}" ${i === 0 ? 'checked' : ''}/>
+        <div style="flex:1">
+          <div style="font-weight:600">${esc(r.role_name)}</div>
+          <div style="font-size:.72rem;color:var(--tm);margin-top:.15rem">
+            👥 ${Number(r.headcount_needed) || 1} · ⏱️ ${Number(r.estimated_hours) || 0} ${hoursUnit}
+            ${r.notes ? ` · ${esc(r.notes)}` : ''}
+          </div>
+        </div>
+      </label>
+    `).join('');
+    const anyRoleRow = `
+      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px dashed var(--c-soft);border-radius:8px;cursor:pointer;background:#fffbeb">
+        <input type="radio" name="pickrole-choice" value="__any__" ${_pickRoleCtx.roles.length === 0 ? 'checked' : ''}/>
+        <div style="flex:1">
+          <div style="font-weight:600">🤝 ${esc(t('mp.opps.any_role_title') || 'أي دور')}</div>
+          <div style="font-size:.72rem;color:var(--tm);margin-top:.15rem">${esc(t('mp.opps.any_role_lead') || 'مساعدة حيث تحتاج اللجنة — رئيس اللجنة يحدد المكان المناسب.')}</div>
+        </div>
+      </label>
+    `;
+    list.innerHTML = rowsHtml + anyRoleRow;
+  }
+  openModal('pick-role');
+}
+
+export function closePickRoleModal() {
+  closeModal('pick-role');
+  _pickRoleCtx = null;
+}
+
+export async function submitPickRole() {
+  if (!_pickRoleCtx) return;
   const session = getSession();
   if (!session?.member_id) {
-    const { toast } = await import('../../lib/ui.js');
     toast(t('mp.opps.err_no_session'), 'twarn');
     return;
   }
+  const picked = document.querySelector('input[name="pickrole-choice"]:checked');
+  if (!picked) {
+    toast(t('mp.opps.err_pick_role') || 'اختر دوراً قبل المتابعة', 'twarn');
+    return;
+  }
+  const role_id = picked.value === '__any__' ? null : Number(picked.value);
 
-  btn.disabled = true;
-  btn.textContent = t('mp.opps.registering');
+  const btn = document.getElementById('pickrole-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = t('mp.opps.registering'); }
+
   try {
     const res = await api('interest.submit', {
       data: {
-        project_id: projectId,
-        member_id:  session.member_id,
-        interested: true,
-        comment:    `${t('mp.opps.interest_role_prefix')} ${label}`,
+        project_id:     _pickRoleCtx.project_id,
+        opportunity_id: _pickRoleCtx.opportunity_id,
+        role_id,
+        interested:     true,
+        // Comment kept for backwards-compat — heads who don't see the
+        // new role chip in the admin interest tab still get the role
+        // name in plain text via the comment field.
+        comment:        role_id
+          ? `${t('mp.opps.interest_role_prefix')} ${
+              (_pickRoleCtx.roles.find(r => Number(r.id) === role_id) || {}).role_name || ''
+            }`
+          : (t('mp.opps.interest_any_role_comment') || 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة'),
       },
     });
-    const { toast } = await import('../../lib/ui.js');
     if (!res || !res.success) {
       toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_submit'), 'twarn');
-      btn.disabled = false;
-      btn.textContent = t('mp.opps.express_btn');
       return;
     }
-    _interestedProjects.add(projectId);
+    _interestedOpportunities.set(_pickRoleCtx.opportunity_id, { role_id });
     toast(t('mp.opps.success'), 'tok');
-    // Re-render the table so the row's button swaps from "express" to
-    // "withdraw" without us needing to mutate the existing button in
-    // place. Cheap: just touches a few <tr>s.
+    closePickRoleModal();
     loadOpportunities();
   } catch (err) {
-    console.error('[expressInterest]', err);
-    btn.disabled = false;
-    btn.textContent = t('mp.opps.express_btn');
+    console.error('[submitPickRole]', err);
+    toast(t('mp.opps.err_submit'), 'twarn');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('mp.opps.pick_role_submit'); }
   }
 }
 
-// Withdraw a previously-expressed interest. Same server endpoint
-// (`interest.submit`) with `interested: false` — the row is unique on
-// (project_id, member_id) so the ON CONFLICT clause flips the flag
-// in place. After success we re-render so the button swaps back to
-// the "express" state. Server now uses user.member_id from the auth
-// context (locked 2026-05-17), so a member can only withdraw their
+// Withdraw a previously-expressed interest. Server treats role_id NULL
+// in the update path as "clear role on withdraw"; the underlying row
+// stays so we keep an audit trail of opt-in then opt-out. Server uses
+// user.member_id from auth context, so members can only withdraw their
 // own interest no matter what data-* attrs the page exposes.
 export async function withdrawInterest(_opportunityId, _label, el) {
   const btn = el || document.querySelector(`button[data-opportunity="${_opportunityId}"]`);
   if (!btn) return;
-  const projectId = btn.dataset.project;
+  const projectId      = btn.dataset.project;
+  const opportunity_id = btn.dataset.opportunity;
   const session = getSession();
   if (!session?.member_id) {
-    const { toast } = await import('../../lib/ui.js');
     toast(t('mp.opps.err_no_session'), 'twarn');
     return;
   }
-
   btn.disabled = true;
   btn.textContent = t('mp.opps.withdrawing');
   try {
     const res = await api('interest.submit', {
       data: {
-        project_id: projectId,
-        interested: false,
-        comment:    null,
+        project_id:     projectId,
+        opportunity_id,
+        // role_id intentionally NOT sent — server preserves whatever
+        // role they last picked so the audit trail isn't lost. The
+        // `interested: false` flag is what actually withdraws.
+        interested:     false,
+        comment:        null,
       },
     });
-    const { toast } = await import('../../lib/ui.js');
     if (!res || !res.success) {
       toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_withdraw'), 'twarn');
       btn.disabled = false;
       btn.textContent = t('mp.opps.withdraw_btn');
       return;
     }
-    _interestedProjects.delete(projectId);
+    _interestedOpportunities.delete(opportunity_id);
     toast(t('mp.opps.success_withdraw'), 'tok');
     loadOpportunities();
   } catch (err) {
@@ -207,3 +392,4 @@ export async function withdrawInterest(_opportunityId, _label, el) {
     btn.textContent = t('mp.opps.withdraw_btn');
   }
 }
+

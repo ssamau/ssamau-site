@@ -372,6 +372,32 @@ export default {
   'mp.opps.withdrawing':        'جاري السحب...',
   'mp.opps.success_withdraw':   'تم سحب اهتمامك.',
   'mp.opps.err_withdraw':       'تعذّر سحب الاهتمام.',
+  // Multi-role pick-role modal (2026-05-18).
+  'mp.opps.pick_role_title':    '🎯 اختر الدور',
+  'mp.opps.pick_role_lead':     'اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".',
+  'mp.opps.pick_role_submit':   '✓ تسجيل الاهتمام',
+  'mp.opps.pick_role_cancel':   'إلغاء',
+  'mp.opps.any_role_title':     'أي دور',
+  'mp.opps.any_role_lead':      'مساعدة حيث تحتاج اللجنة — رئيس اللجنة يحدد المكان المناسب.',
+  'mp.opps.any_role_badge':     'أي دور',
+  'mp.opps.interest_any_role_comment': 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة',
+  'mp.opps.err_pick_role':      'اختر دوراً قبل المتابعة',
+  // Backward-compat hint shown on opportunities where the member
+  // previously expressed project-level interest (pre-2026-05-18). The
+  // refactor moved interest from per-project to per-(opportunity,role);
+  // older clicks survive as legacy rows but don't tie to a role until
+  // the member re-clicks and picks one.
+  'mp.opps.legacy_interest_hint': 'سبق تسجيل اهتمام بالمشروع — اختر دوراً لتحديده',
+  // President's QOL filters 2026-05-18 — member opportunities tab.
+  'mp.opps.filter_date_all':       'كل التواريخ',
+  'mp.opps.filter_date_upcoming':  'القادمة فقط',
+  'mp.opps.filter_date_today':     'اليوم',
+  'mp.opps.filter_date_this_week': 'هذا الأسبوع',
+  'mp.opps.filter_date_past':      'السابقة فقط',
+  'mp.opps.filter_date_no_date':   'بدون تاريخ',
+  'mp.opps.filter_committee_all':  'لجنتي + المفتوحة للجميع',
+  'mp.opps.filter_committee_mine': 'لجنتي فقط',
+  'mp.opps.filter_committee_open': 'المفتوحة للجميع',
 
   // Assignments tab
   'mp.asn.upcoming_title':      '📋 مهامي القادمة',
@@ -460,6 +486,8 @@ export default {
   // Members tab (head's roster)
   'hp.members.card_title':      '👥 أعضاء اللجنة',
   'hp.members.search_placeholder': 'بحث بالاسم...',
+  'hp.members.filter_role_all':    'كل الأدوار',
+  'hp.members.filter_status_all':  'كل الحالات',
   'hp.members.col_name':        'الاسم',
   'hp.members.col_contact':     'التواصل',
   'hp.members.col_role':        'الدور',
@@ -838,6 +866,7 @@ export default {
   // ─── Admin portal: applications tab + review modal (5b) ───────────
   'ap.apps.empty':              'لا توجد طلبات',
   'ap.apps.filter_all_statuses':'كل الحالات',
+  'ap.apps.search_placeholder': 'بحث بالاسم أو البريد...',
   'ap.apps.status_pending_triage':       'قيد الفرز',
   'ap.apps.status_assigned':             'معيّنة للجنة',
   'ap.apps.status_interview_requested':  'مقابلة مطلوبة',
@@ -917,6 +946,13 @@ export default {
   'ap.acc.card_title_head':     '🔑 حسابات أعضاء لجنتي — إعادة تعيين كلمات المرور',
   'ap.acc.search_placeholder':  'بحث باسم المستخدم...',
   'ap.acc.add_btn':             '+ إضافة حساب',
+  // President's QOL filters 2026-05-18 — surface stale accounts +
+  // permission-level slices on the accounts list without scrolling.
+  'ap.acc.filter_access_all':      'كل الصلاحيات',
+  'ap.acc.filter_login_all':       'كل حالات الدخول',
+  'ap.acc.filter_login_never':     'لم يسجل دخوله بعد',
+  'ap.acc.filter_login_inactive_30': 'غير نشط أكثر من 30 يوم',
+  'ap.acc.filter_login_active_30': 'نشط آخر 30 يوم',
   'ap.acc.empty':               'لا توجد حسابات بعد',
   'ap.acc.col_username':        'اسم المستخدم',
   'ap.acc.col_access':          'الصلاحية',
@@ -974,6 +1010,8 @@ export default {
   // ─── Admin portal: advisors tab + modal (5b) ──────────────────────
   'ap.adv.empty':               'لا يوجد مستشارون',
   'ap.adv.search_placeholder':  'بحث...',
+  'ap.adv.filter_status_all':   'كل الحالات',
+  'ap.adv.filter_role_all':     'كل الأدوار الاستشارية',
   'ap.adv.add_btn':             '+ إضافة مستشار',
   'ap.adv.col_name':            'الاسم',
   'ap.adv.col_advisory_role':   'الدور الاستشاري',
@@ -1111,6 +1149,7 @@ export default {
   // ─── Admin portal: participants tab + modal (5c) ──────────────────
   'ap.par.empty':               'لا يوجد مشاركون بعد',
   'ap.par.filter_all_projects': 'كل المشاريع',
+  'ap.par.search_placeholder':  'بحث بالاسم أو البريد...',
   'ap.par.add_btn':             '+ إضافة مشارك',
   'ap.par.col_name':            'الاسم / البريد',
   'ap.par.col_project':         'المشروع / الفعالية',
@@ -1144,6 +1183,7 @@ export default {
   // ─── Admin portal: opportunities tab + 3 modals (5c) ──────────────
   'ap.opp.empty':               'لا توجد فرص بعد',
   'ap.opp.filter_all_projects': 'كل المشاريع',
+  'ap.opp.search_placeholder':  'بحث بالدور أو المشروع...',
   'ap.opp.filter_all_statuses': 'كل الحالات',
   'ap.opp.add_btn':             '+ إضافة فرصة',
   'ap.opp.col_project':         'المشروع / الفعالية',
@@ -1171,6 +1211,18 @@ export default {
   'ap.opp.ph_role_name':        'مثل: منسق استقبال',
   'ap.opp.lbl_est_hours':       'الساعات المقدّرة',
   'ap.opp.lbl_headcount':       'عدد المتطوعين المطلوب',
+  // Multi-role create/edit (2026-05-18). The "+ إضافة دور" button lets
+  // admins add as many role rows as the opportunity needs; the rows
+  // collapse into the opportunity_roles child table on save.
+  'ap.opp.lbl_roles':           'الأدوار',
+  'ap.opp.add_role':            '+ إضافة دور',
+  'ap.opp.roles_hint':          'يمكن للأعضاء اختيار دور معين أو "أي دور" عند تسجيل الاهتمام.',
+  'ap.opp.role_n':              'الدور {n}',
+  'ap.opp.remove_role':         'حذف الدور',
+  'ap.opp.lbl_role_notes':      'ملاحظات الدور',
+  'ap.opp.ph_role_notes':       'اختياري — تفاصيل تخص هذا الدور',
+  'ap.opp.err_min_one_role':    'أضف دوراً واحداً على الأقل',
+  'ap.opp.plus_n_more':         '+ {n} دور آخر',
   'ap.opp.lbl_committee':       'اللجنة المستفيدة',
   'ap.opp.committee_all':       '🌍 كل اللجان (للجميع)',
   'ap.opp.committee_hint':      'اختر "كل اللجان" لإطلاق الفرصة لكل الأعضاء.',
@@ -1241,6 +1293,7 @@ export default {
   // ─── Admin portal: attendance tab + modal + bulk modal (5d) ───────
   'ap.att.empty':               'لا يوجد حضور مسجّل بعد',
   'ap.att.filter_all_projects': 'كل المشاريع',
+  'ap.att.search_placeholder':  'بحث بالاسم...',
   'ap.att.add_btn':             '+ تسجيل حضور',
   'ap.att.bulk_btn':            '⚡ جماعي',
   'ap.att.col_name':            'العضو / المتطوع',
@@ -1278,6 +1331,7 @@ export default {
   // ─── Admin portal: hours tab + modal (5d) ─────────────────────────
   'ap.hrs.empty':               'لا توجد ساعات مسجّلة',
   'ap.hrs.filter_all_projects': 'كل المشاريع',
+  'ap.hrs.search_placeholder':  'بحث بالاسم...',
   'ap.hrs.add_btn':             '+ تسجيل ساعات',
   'ap.hrs.col_name':            'العضو / المتطوع',
   'ap.hrs.col_project':         'المشروع / الدور',
@@ -1332,6 +1386,7 @@ export default {
   'ap.int.empty':               'لا توجد طلبات',
   'ap.int.show_reviewed':       'عرض المُراجَعة',
   'ap.int.filter_all_projects': 'كل المشاريع',
+  'ap.int.search_placeholder':  'بحث بالاسم أو المشروع...',
   'ap.int.add_btn':             '+ تسجيل اهتمام',
   'ap.int.sum_total':           'إجمالي',
   'ap.int.sum_yes':             'مهتمون',
@@ -1391,6 +1446,7 @@ export default {
   // ─── Admin portal: emails tab + thanks modals (5e) ────────────────
   'ap.eml.empty':               'لا توجد رسائل',
   'ap.eml.filter_all_projects': 'كل المشاريع',
+  'ap.eml.search_placeholder':  'بحث بالمستلم أو الموضوع...',
   'ap.eml.bulk_btn':            '📧 إرسال جماعي',
   'ap.eml.single_btn':          '+ فردي',
   'ap.eml.sum_total':           'إجمالي',
@@ -1444,6 +1500,7 @@ export default {
   'ap.cert.list_card_title':    '🏅 الشهادات الصادرة',
   'ap.cert.bulk_btn':           '⚡ إصدار جماعي',
   'ap.cert.filter_all_projects':'كل المشاريع',
+  'ap.cert.search_placeholder': 'بحث بالمشارك أو الرمز...',
   'ap.cert.col_recipient':      'المشارك',
   'ap.cert.col_project':        'المشروع',
   'ap.cert.col_role':           'الدور',

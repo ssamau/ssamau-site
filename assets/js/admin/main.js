@@ -60,7 +60,10 @@ import {
   copyShownPin, confirmRevokeInvite,
   openMemberFile,
 } from './tabs/members.js';
-import { loadAdvisors, saveAdvisor, editAdvisor } from './tabs/advisors.js';
+import {
+  loadAdvisors, saveAdvisor, editAdvisor,
+  filterAdvisorsByStatus, filterAdvisorsByRole, filterAdvisorsBySearch,
+} from './tabs/advisors.js';
 import { loadCommittees, saveCommittee, editCommittee } from './tabs/committees.js';
 import {
   loadProjects, saveProject, editProject,
@@ -73,6 +76,7 @@ import {
 import {
   loadOpportunities, saveOpportunity, editOpportunity, confirmDeleteOpportunity,
   populateRolePresets, onOppRolePreset,
+  addOppRoleRow, removeOppRoleRow, onOppRoleRowPreset,
   openOpportunityAssignments, addAssignmentMember, addAssignmentVolunteer,
   markAttendance, removeAssignment,
   openOpportunityNotify, toggleNotifyMode, sendOpportunityNotify,
@@ -90,6 +94,7 @@ import {
   loadAccounts, openAccountModal, openAccountModalForMember, editAccount,
   generateAccountPw, saveAccount, resetAccountPassword, sendPasswordResetEmail,
   copyShownPw, confirmDeleteAccount,
+  filterAccountsByAccess, filterAccountsByLogin, filterAccountsBySearch,
 } from './tabs/accounts.js';
 import {
   loadApplications, openApplicationReview,
@@ -445,6 +450,9 @@ setHandlers({
   submitInviteAsMember,
   issueCert, verifyCert,
   onHrsAssignmentChange, onHrsOpportunityChange, onOppRolePreset,
+  // Multi-role opportunity row management — bare references because each
+  // takes (el, event) directly from the dispatcher.
+  addOppRoleRow, removeOppRoleRow, onOppRoleRowPreset,
   toggleAttFields, toggleHrsFields, toggleParticipantFields,
   loadApplications, loadOpportunities,
   sendInviteByEmail, sendInviteByPin,
@@ -494,6 +502,14 @@ setHandlers({
   // ── this.value (on inputs / selects) ────────────────────────────
   filterMembersByRole:    (el) => filterMembersByRole(el.value),
   filterMembersByStatus:  (el) => filterMembersByStatus(el.value),
+  // President's QOL 2026-05-18 — accounts tab filters.
+  filterAccountsByAccess: (el) => filterAccountsByAccess(el.value),
+  filterAccountsByLogin:  (el) => filterAccountsByLogin(el.value),
+  filterAccountsBySearch: (el) => filterAccountsBySearch(el.value),
+  // Advisors tab filters (2026-05-18).
+  filterAdvisorsByStatus: (el) => filterAdvisorsByStatus(el.value),
+  filterAdvisorsByRole:   (el) => filterAdvisorsByRole(el.value),
+  filterAdvisorsBySearch: (el) => filterAdvisorsBySearch(el.value),
   filterProjectsByStatus: (el) => filterProjectsByStatus(el.value),
   loadAttendance:         (el) => loadAttendance(el.value),
   loadBulkAttGrid:        (el) => loadBulkAttGrid(el.value),

@@ -160,7 +160,26 @@
         <div class="card-head">
           <h3 data-i18n="mp.opps.card_title">🎯 الفرص التطوعية المتاحة</h3>
           <div class="card-head-right">
-            <input class="search-input" data-i18n-placeholder="mp.opps.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="opps-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="mp.opps.search_placeholder" placeholder="بحث بالاسم..." data-action="filterMemberOppsBySearch" data-target="opps-tbody" data-event="input"/>
+            <!-- Date + committee scope filters (president's QOL ask
+                 2026-05-18). "My committee" = the member's own
+                 committee; "Open to all" = committee NULL (admin-only
+                 broadcasts). "Upcoming" excludes past events; "Past"
+                 includes them (members may want to revisit closed ones
+                 for hours-logging context). -->
+            <select data-action="filterMemberOppsByDate" data-event="change">
+              <option value=""         data-i18n="mp.opps.filter_date_all">كل التواريخ</option>
+              <option value="upcoming" data-i18n="mp.opps.filter_date_upcoming">القادمة فقط</option>
+              <option value="today"    data-i18n="mp.opps.filter_date_today">اليوم</option>
+              <option value="this_week" data-i18n="mp.opps.filter_date_this_week">هذا الأسبوع</option>
+              <option value="past"     data-i18n="mp.opps.filter_date_past">السابقة فقط</option>
+              <option value="no_date"  data-i18n="mp.opps.filter_date_no_date">بدون تاريخ</option>
+            </select>
+            <select data-action="filterMemberOppsByCommittee" data-event="change">
+              <option value=""      data-i18n="mp.opps.filter_committee_all">لجنتي + المفتوحة للجميع</option>
+              <option value="mine"  data-i18n="mp.opps.filter_committee_mine">لجنتي فقط</option>
+              <option value="open"  data-i18n="mp.opps.filter_committee_open">المفتوحة للجميع</option>
+            </select>
           </div>
         </div>
         <p style="font-size:.78rem;color:var(--tl);margin:0 0 .8rem 0" data-i18n="mp.opps.lead">
@@ -283,6 +302,35 @@
         <button class="btn btn-ol btn-sm" type="button" data-action="closeLogHoursModal" data-i18n="mp.logh.cancel">إلغاء</button>
         <button class="btn btn-g btn-sm" type="button" data-action="submitLogHours" id="logh-submit-btn" data-i18n="mp.logh.submit">إرسال للموافقة</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PICK-ROLE MODAL (multi-role opportunity interest) ══════════ -->
+<!-- Opened from the "اهتمام" button on the opportunities tab. Lists every
+     role defined on the opportunity (server returns them via
+     opportunities.list → roles[]), plus a sticky "أي دور" option that
+     submits the interest with role_id = null so the head can assign
+     wherever they need. Submitting calls interest.submit with the
+     opportunity_id + chosen role_id. -->
+<div class="overlay" id="ov-pick-role" role="dialog" aria-modal="true" aria-labelledby="pickrole-title">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3 id="pickrole-title" data-i18n="mp.opps.pick_role_title">🎯 اختر الدور</h3>
+      <button class="modal-close" type="button" data-action="closePickRoleModal" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--tm);margin:0 0 .85rem 0">
+        <strong id="pickrole-project">—</strong>
+      </p>
+      <p style="font-size:.78rem;color:var(--tm);margin:0 0 .85rem 0" data-i18n="mp.opps.pick_role_lead">
+        اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".
+      </p>
+      <div id="pickrole-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closePickRoleModal" data-i18n="mp.opps.pick_role_cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="submitPickRole" id="pickrole-submit-btn" data-i18n="mp.opps.pick_role_submit">✓ تسجيل الاهتمام</button>
     </div>
   </div>
 </div>

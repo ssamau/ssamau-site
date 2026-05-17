@@ -240,7 +240,28 @@
                static default for the more common admin view. -->
           <h3 id="accounts-head-title" data-i18n="ap.acc.card_title_admin">🔑 حسابات المستخدمين</h3>
           <div class="card-head-right">
-            <input class="search-input" data-i18n-placeholder="ap.acc.search_placeholder" placeholder="بحث باسم المستخدم..." data-action="filterTable" data-target="accounts-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="ap.acc.search_placeholder" placeholder="بحث باسم المستخدم..." data-action="filterAccountsBySearch" data-target="accounts-tbody" data-event="input"/>
+            <!-- Access-level filter — president flagged 2026-05-18: with
+                 50+ accounts the admin needed a quick way to see only
+                 heads, only members, etc. Empty value = all. -->
+            <select data-action="filterAccountsByAccess" data-event="change">
+              <option value="" data-i18n="ap.acc.filter_access_all">كل الصلاحيات</option>
+              <option value="superadmin" data-i18n="ap.role.superadmin">superadmin</option>
+              <option value="admin"      data-i18n="ap.role.admin">admin</option>
+              <option value="head"       data-i18n="ap.role.head">head</option>
+              <option value="member"     data-i18n="ap.role.member">member</option>
+              <option value="volunteer"  data-i18n="ap.role.volunteer">volunteer</option>
+            </select>
+            <!-- Last-login filter — companion to the access filter for
+                 finding stale accounts. "never" = never_logged_in_at IS
+                 NULL, "inactive_30" = haven't logged in for 30+ days,
+                 "active_30" = logged in within the last 30 days. -->
+            <select data-action="filterAccountsByLogin" data-event="change">
+              <option value=""             data-i18n="ap.acc.filter_login_all">كل الحالات</option>
+              <option value="never"        data-i18n="ap.acc.filter_login_never">لم يسجل دخوله بعد</option>
+              <option value="inactive_30"  data-i18n="ap.acc.filter_login_inactive_30">غير نشط أكثر من 30 يوم</option>
+              <option value="active_30"    data-i18n="ap.acc.filter_login_active_30">نشط آخر 30 يوم</option>
+            </select>
             <button class="btn btn-g" id="accounts-add-btn" data-action="openAccountModal" data-i18n="ap.acc.add_btn">+ إضافة حساب</button>
           </div>
         </div>
@@ -267,6 +288,7 @@
         <div class="card-head">
           <h3 data-i18n="ap.title.applications">📥 طلبات العضوية</h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.apps.search_placeholder" placeholder="بحث بالاسم أو البريد..." data-action="filterTable" data-target="applications-tbody" data-event="input"/>
             <select class="filter-select" id="applications-status-filter" data-action="loadApplications">
               <option value="" data-i18n="ap.apps.filter_all_statuses">كل الحالات</option>
               <option value="PendingTriage"       data-i18n="ap.apps.status_pending_triage">قيد الفرز</option>
@@ -301,7 +323,21 @@
         <div class="card-head">
           <h3>🎓 <span data-i18n="ap.sb.tab_advisors">المستشارون</span></h3>
           <div class="card-head-right">
-            <input class="search-input" data-i18n-placeholder="ap.adv.search_placeholder" placeholder="بحث..." data-action="filterTable" data-target="advisors-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="ap.adv.search_placeholder" placeholder="بحث..." data-action="filterAdvisorsBySearch" data-target="advisors-tbody" data-event="input"/>
+            <!-- Status + advisory-role filters (president's QOL ask
+                 2026-05-18). Active = currently advising; Inactive =
+                 alumni / on break. Advisory role is a free-text column
+                 in the DB; we populate options dynamically from the
+                 loaded data so admin doesn't have to remember exact
+                 spelling. -->
+            <select data-action="filterAdvisorsByStatus" data-event="change">
+              <option value=""         data-i18n="ap.adv.filter_status_all">كل الحالات</option>
+              <option value="Active"   data-i18n="ap.status.active">Active</option>
+              <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
+            </select>
+            <select id="adv-filter-role" data-action="filterAdvisorsByRole" data-event="change">
+              <option value="" data-i18n="ap.adv.filter_role_all">كل الأدوار</option>
+            </select>
             <button class="btn btn-g" data-action="openModal" data-modal="advisor" data-i18n="ap.adv.add_btn">+ إضافة مستشار</button>
           </div>
         </div>
@@ -390,6 +426,7 @@
         <div class="card-head">
           <h3>🙋 <span data-i18n="ap.sb.tab_participants">المشاركون في المشاريع</span></h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.par.search_placeholder" placeholder="بحث بالاسم أو البريد..." data-action="filterTable" data-target="participants-tbody" data-event="input"/>
             <select class="filter-select" id="participants-project-filter" data-action="loadParticipants">
               <option value="" data-i18n="ap.par.filter_all_projects">كل المشاريع</option>
             </select>
@@ -419,6 +456,7 @@
         <div class="card-head">
           <h3 data-i18n="ap.title.opportunities">🎯 الفرص التطوعية</h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.opp.search_placeholder" placeholder="بحث بالدور أو المشروع..." data-action="filterTable" data-target="opportunities-tbody" data-event="input"/>
             <select class="filter-select" id="opportunities-project-filter" data-action="loadOpportunities">
               <option value="" data-i18n="ap.opp.filter_all_projects">كل المشاريع</option>
             </select>
@@ -457,6 +495,7 @@
         <div class="card-head">
           <h3>✅ <span data-i18n="ap.sb.tab_attendance">الحضور</span></h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.att.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="attendance-tbody" data-event="input"/>
             <select class="filter-select" id="attendance-project-filter" data-action="loadAttendance">
               <option value="" data-i18n="ap.att.filter_all_projects">كل المشاريع</option>
             </select>
@@ -487,6 +526,7 @@
         <div class="card-head">
           <h3>⏱️ <span data-i18n="ap.sb.tab_hours">الساعات التطوعية</span></h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.hrs.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="hours-tbody" data-event="input"/>
             <select class="filter-select" id="hours-project-filter" data-action="loadHours">
               <option value="" data-i18n="ap.hrs.filter_all_projects">كل المشاريع</option>
             </select>
@@ -558,6 +598,7 @@
         <div class="card-head">
           <h3 data-i18n="ap.title.interest">🙋 طلبات المشاركة</h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.int.search_placeholder" placeholder="بحث بالاسم أو المشروع..." data-action="filterTable" data-target="tb-interest" data-event="input"/>
             <label class="fg-check" style="font-size:.74rem;color:var(--tl)">
               <input type="checkbox" id="flt-int-show-reviewed" data-action="toggleReviewedVisibility"/>
               <span data-i18n="ap.int.show_reviewed">عرض المُراجَعة</span>
@@ -595,6 +636,7 @@
         <div class="card-head">
           <h3 data-i18n="ap.title.emails">💌 الإيميلات ورسائل الشكر</h3>
           <div class="card-head-right">
+            <input class="search-input" data-i18n-placeholder="ap.eml.search_placeholder" placeholder="بحث بالمستلم أو الموضوع..." data-action="filterTable" data-target="tb-thanks" data-event="input"/>
             <select class="filter-select" id="flt-thx-prj" data-action="loadThanks"><option value="" data-i18n="ap.eml.filter_all_projects">كل المشاريع</option></select>
             <button class="btn btn-g" data-action="openModal" data-modal="bulk-thanks" data-i18n="ap.eml.bulk_btn">📧 إرسال جماعي</button>
             <button class="btn btn-ol" data-action="openModal" data-modal="thanks" data-i18n="ap.eml.single_btn">+ فردي</button>
@@ -629,6 +671,7 @@
         <div class="card">
           <div class="card-head"><h3 data-i18n="ap.cert.list_card_title">🏅 الشهادات الصادرة</h3>
             <div class="card-head-right">
+              <input class="search-input" data-i18n-placeholder="ap.cert.search_placeholder" placeholder="بحث بالمشارك أو الرمز..." data-action="filterTable" data-target="tb-certs" data-event="input"/>
               <select class="filter-select" id="flt-cert-prj" data-action="loadCerts"><option value="" data-i18n="ap.cert.filter_all_projects">كل المشاريع</option></select>
               <button class="btn btn-g" data-action="openModal" data-modal="bulk-certs" data-i18n="ap.cert.bulk_btn">⚡ إصدار جماعي</button>
             </div>
@@ -1136,17 +1179,19 @@
     <div class="modal-body">
       <input type="hidden" id="opp-edit-id"/>
       <div class="fg"><label><span data-i18n="ap.opp.lbl_project">المشروع / الفعالية</span> <span class="required">*</span></label><select id="opp-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
-      <div class="fg-row">
-        <div class="fg"><label><span data-i18n="ap.opp.lbl_role_preset">الدور</span> <span class="required">*</span></label>
-          <select id="opp-role-key" data-action="onOppRolePreset">
-            <option value="" data-i18n="ap.opp.role_preset_choose">— اختر دور قياسي —</option>
-          </select>
-        </div>
-        <div class="fg"><label><span data-i18n="ap.opp.lbl_role_name">اسم الدور</span> <span class="required">*</span></label><input id="opp-role-name" data-i18n-placeholder="ap.opp.ph_role_name" placeholder="مثل: منسق استقبال"/></div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label data-i18n="ap.opp.lbl_est_hours">الساعات المقدّرة</label><input id="opp-est-hours" type="number" step="0.5" min="0" value="2"/></div>
-        <div class="fg"><label data-i18n="ap.opp.lbl_headcount">عدد المتطوعين المطلوب</label><input id="opp-headcount" type="number" min="1" value="1"/></div>
+      <!-- Multi-role section (president's spec 2026-05-18). Each row is a
+           distinct role — admin can add as many as the event needs. JS
+           builds rows dynamically from STANDARD_ROLES and the saved
+           opportunity_roles array; the HTML here is just the container
+           + "+ add" button. The empty `opp-roles-list` div is filled by
+           addOppRoleRow() in admin/tabs/opportunities.js on modal open. -->
+      <div class="fg">
+        <label><span data-i18n="ap.opp.lbl_roles">الأدوار</span> <span class="required">*</span></label>
+        <div id="opp-roles-list"></div>
+        <button type="button" class="btn btn-ol" data-action="addOppRoleRow" style="margin-top:.5rem;font-size:.85rem">
+          <span data-i18n="ap.opp.add_role">+ إضافة دور</span>
+        </button>
+        <div class="hint" data-i18n="ap.opp.roles_hint" style="font-size:.72rem;color:var(--tm);margin-top:.4rem">يمكن للأعضاء اختيار دور معين أو "أي دور" عند تسجيل الاهتمام.</div>
       </div>
       <div class="fg-row">
         <div class="fg">

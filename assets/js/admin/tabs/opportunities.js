@@ -68,16 +68,32 @@ export function renderOpportunities(items) {
       ? `<div style="font-weight:600">${esc(project.project_name)}</div>
          <div style="font-size:.7rem;color:var(--tm)">${fmtDate(project.event_date)}</div>`
       : esc(o.project_id);
+    // Multi-role display. With one role → render the role name verbatim
+    // (identical to the pre-multi-role layout). With ≥2 roles → render
+    // "FirstRole (+N more)" so the list stays scannable; the full list
+    // is one click away in the edit modal. Totals (hours + headcount)
+    // sum across roles so the fill-bar reflects the whole opportunity.
+    const roles = Array.isArray(o.roles) ? o.roles : [];
+    const totalNeed = roles.length
+      ? roles.reduce((n, r) => n + (Number(r.headcount_needed) || 0), 0)
+      : (o.headcount_needed || 1);
+    const totalHours = roles.length
+      ? roles.reduce((n, r) => n + (Number(r.estimated_hours) || 0), 0)
+      : (o.estimated_hours || 0);
     const filled = (o.assigned_count || 0);
-    const need   = o.headcount_needed || 1;
+    const need   = totalNeed || 1;
     const fillBar = `${filled} / ${need}` + (filled >= need ? ' ✅' : '');
     const att = t('ap.opp.attended_count', { n: o.attended_count || 0 });
     const statusLabel = OPP_STATUS_KEY[o.status] ? t(OPP_STATUS_KEY[o.status]) : o.status;
+    const roleCell = roles.length > 1
+      ? `<div><strong>${esc(roles[0].role_name)}</strong></div>
+         <div style="font-size:.7rem;color:var(--tm)">${esc(t('ap.opp.plus_n_more', { n: roles.length - 1 }))}</div>`
+      : `<strong>${esc((roles[0] && roles[0].role_name) || o.role_name)}</strong>`;
     return `<tr>
       <td>${projectCell}</td>
-      <td><strong>${esc(o.role_name)}</strong></td>
+      <td>${roleCell}</td>
       <td>${com ? esc(com.committee_name) : '<span style="color:var(--tm)">—</span>'}</td>
-      <td>${o.estimated_hours} ${esc(hoursShort)}</td>
+      <td>${totalHours} ${esc(hoursShort)}</td>
       <td>${fillBar}</td>
       <td style="font-size:.8rem">${esc(att)}</td>
       <td>${tag(statusLabel, STATUS_COLORS[o.status] || 't-gr')}</td>
@@ -91,9 +107,43 @@ export function renderOpportunities(items) {
   }).join('');
 }
 
-export function populateRolePresets() {
-  const sel = document.getElementById('opp-role-key');
-  if (!sel || sel.options.length > 1) return;
+// Multi-role role-row management (president's spec 2026-05-18).
+// addOppRoleRow() is wired to the "+ إضافة دور" button and also called
+// from openOpportunityForCreate / editOpportunity to seed initial rows.
+// Rows are class-based (`.opp-role-row`) so collectOppRoles() can iterate
+// without needing per-row IDs.
+export function addOppRoleRow(seed) {
+  const list = document.getElementById('opp-roles-list');
+  if (!list) return;
+  const idx = list.children.length;
+  const wrap = document.createElement('div');
+  wrap.className = 'opp-role-row';
+  wrap.style.cssText = 'border:1px solid var(--c-soft);border-radius:8px;padding:.7rem;margin-bottom:.5rem;background:#fafafa';
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+      <div style="font-size:.78rem;color:var(--tm)" class="opp-role-row-label">${esc(t('ap.opp.role_n', { n: idx + 1 }))}</div>
+      <button type="button" class="btn-icon del" data-action="removeOppRoleRow" title="${esc(t('ap.opp.remove_role') || 'حذف الدور')}">🗑️</button>
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label><span data-i18n="ap.opp.lbl_role_preset">الدور</span></label>
+        <select class="opp-role-key" data-action="onOppRoleRowPreset">
+          <option value="" data-i18n="ap.opp.role_preset_choose">— اختر دور قياسي —</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="ap.opp.lbl_role_name">اسم الدور</span> <span class="required">*</span></label>
+        <input class="opp-role-name" data-i18n-placeholder="ap.opp.ph_role_name" placeholder="مثل: منسق استقبال"/>
+      </div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label data-i18n="ap.opp.lbl_est_hours">الساعات المقدّرة</label><input class="opp-est-hours" type="number" step="0.5" min="0" value="2"/></div>
+      <div class="fg"><label data-i18n="ap.opp.lbl_headcount">عدد المتطوعين المطلوب</label><input class="opp-headcount" type="number" min="1" value="1"/></div>
+    </div>
+    <div class="fg"><label data-i18n="ap.opp.lbl_role_notes">ملاحظات الدور</label><input class="opp-role-notes" data-i18n-placeholder="ap.opp.ph_role_notes" placeholder="اختياري — تفاصيل تخص هذا الدور"/></div>`;
+  list.appendChild(wrap);
+  // Populate preset dropdown for this row from STANDARD_ROLES.
+  const sel = wrap.querySelector('.opp-role-key');
   for (const r of STANDARD_ROLES) {
     const opt = document.createElement('option');
     opt.value = r.key;
@@ -102,34 +152,107 @@ export function populateRolePresets() {
       : t('ap.opp.role_preset_label_dash', { name: r.name });
     sel.appendChild(opt);
   }
+  // Seed from passed-in data (used by editOpportunity to pre-fill).
+  if (seed) {
+    if (seed.role_key) sel.value = seed.role_key;
+    wrap.querySelector('.opp-role-name').value  = seed.role_name || '';
+    wrap.querySelector('.opp-est-hours').value  = seed.estimated_hours ?? 2;
+    wrap.querySelector('.opp-headcount').value  = seed.headcount_needed ?? 1;
+    wrap.querySelector('.opp-role-notes').value = seed.notes || '';
+  }
+  refreshRoleRowLabels();
 }
 
-export function onOppRolePreset() {
-  const key = gv('opp-role-key');
+export function removeOppRoleRow(el) {
+  const list = document.getElementById('opp-roles-list');
+  if (!list) return;
+  const row  = el?.closest('.opp-role-row');
+  if (!row) return;
+  // A safety net: never let the admin save zero roles. Server enforces
+  // it anyway but a UI guard avoids the round-trip + toast spam.
+  if (list.children.length <= 1) {
+    toast(t('ap.opp.err_min_one_role') || 'لا يمكن حذف آخر دور — يجب وجود دور واحد على الأقل', 'twarn');
+    return;
+  }
+  row.remove();
+  refreshRoleRowLabels();
+}
+
+function refreshRoleRowLabels() {
+  const rows = document.querySelectorAll('#opp-roles-list .opp-role-row');
+  rows.forEach((row, i) => {
+    const lbl = row.querySelector('.opp-role-row-label');
+    if (lbl) lbl.textContent = t('ap.opp.role_n', { n: i + 1 });
+  });
+}
+
+export function onOppRoleRowPreset(el) {
+  const sel = el;
+  const key = sel.value;
   if (!key) return;
   const r = STANDARD_ROLES.find(x => x.key === key);
   if (!r) return;
-  // Only fill when the user hasn't typed anything custom yet — don't clobber.
-  if (!gv('opp-role-name')) sv('opp-role-name', r.name);
-  if (r.hours && parseFloat(gv('opp-est-hours') || 0) === 2) sv('opp-est-hours', r.hours);
+  const row = sel.closest('.opp-role-row');
+  if (!row) return;
+  const nameEl  = row.querySelector('.opp-role-name');
+  const hoursEl = row.querySelector('.opp-est-hours');
+  // Only fill empty / default values — don't clobber what the admin typed.
+  if (nameEl && !nameEl.value) nameEl.value = r.name;
+  if (hoursEl && r.hours && parseFloat(hoursEl.value || 0) === 2) hoursEl.value = r.hours;
+}
+
+// Reset roles list to a single empty row (for the create flow). Called
+// from admin/main.js openModal hook when the form is being opened for
+// a brand-new opportunity.
+export function resetOppRolesList() {
+  const list = document.getElementById('opp-roles-list');
+  if (!list) return;
+  list.innerHTML = '';
+  addOppRoleRow();
+}
+
+function collectOppRoles() {
+  const rows = document.querySelectorAll('#opp-roles-list .opp-role-row');
+  const out = [];
+  for (const row of rows) {
+    const role_name = (row.querySelector('.opp-role-name')?.value || '').trim();
+    if (!role_name) continue;       // skip rows the admin didn't fill
+    out.push({
+      role_name,
+      role_key:         row.querySelector('.opp-role-key')?.value || null,
+      estimated_hours:  parseFloat(row.querySelector('.opp-est-hours')?.value) || 0,
+      headcount_needed: parseInt(row.querySelector('.opp-headcount')?.value, 10) || 1,
+      notes:            (row.querySelector('.opp-role-notes')?.value || '').trim() || null,
+    });
+  }
+  return out;
 }
 
 export async function saveOpportunity() {
   const id = gv('opp-edit-id');
   const notifyAfterSave = !!document.getElementById('opp-notify-after-save')?.checked;
+  const roles = collectOppRoles();
+  if (!gv('opp-project')) {
+    toast(t('ap.opp.err_required'), 'twarn'); return;
+  }
+  if (!roles.length) {
+    toast(t('ap.opp.err_min_one_role') || 'أضف دوراً واحداً على الأقل', 'twarn');
+    return;
+  }
   const body = {
     project_id:          gv('opp-project'),
-    role_name:           gv('opp-role-name'),
-    role_key:            gv('opp-role-key') || null,
-    estimated_hours:     parseFloat(gv('opp-est-hours')) || 0,
-    headcount_needed:    parseInt(gv('opp-headcount'), 10) || 1,
+    // Mirror the first role into the legacy single-role fields so older
+    // server paths (and any old subscribers reading the row directly)
+    // see something coherent. The server keeps these in sync too.
+    role_name:           roles[0].role_name,
+    role_key:            roles[0].role_key,
+    estimated_hours:     roles[0].estimated_hours,
+    headcount_needed:    roles[0].headcount_needed,
+    roles,
     owning_committee_id: gv('opp-committee') || null,
     status:              gv('opp-status'),
     notes:               gv('opp-notes'),
   };
-  if (!body.project_id || !body.role_name) {
-    toast(t('ap.opp.err_required'), 'twarn'); return;
-  }
   const res = id
     ? await api('opportunities.update', { id, data: body })
     : await api('opportunities.create', body);
@@ -162,13 +285,25 @@ export function editOpportunity(id) {
   if (!o) return;
   sv('opp-edit-id', id);
   sv('opp-project', o.project_id);
-  sv('opp-role-key', o.role_key || '');
-  sv('opp-role-name', o.role_name || '');
-  sv('opp-est-hours', o.estimated_hours || 0);
-  sv('opp-headcount', o.headcount_needed || 1);
   sv('opp-committee', o.owning_committee_id || '');
   sv('opp-status', o.status || 'Open');
   sv('opp-notes', o.notes || '');
+  // Rebuild the roles list from the saved opportunity_roles array. Fall
+  // back to a single seeded row built from the legacy single-role
+  // columns so very old opportunities (pre-backfill) still load
+  // gracefully — the backfill should have covered everything but
+  // belt-and-braces.
+  const list = document.getElementById('opp-roles-list');
+  if (list) list.innerHTML = '';
+  const rolesSeed = (Array.isArray(o.roles) && o.roles.length)
+    ? o.roles
+    : [{
+        role_name:        o.role_name,
+        role_key:         o.role_key,
+        estimated_hours:  o.estimated_hours,
+        headcount_needed: o.headcount_needed,
+      }];
+  rolesSeed.forEach(r => addOppRoleRow(r));
   // Don't re-broadcast an existing opportunity by default when the admin
   // is just tweaking notes / role / hours. They can still tick the box
   // explicitly if they do want to re-blast.
@@ -176,6 +311,25 @@ export function editOpportunity(id) {
   if (notify) notify.checked = false;
   openModal('opportunity');
 }
+
+// Called by openModal('opportunity') via setModalHooks. When opening
+// for create (no edit-id), reset the roles list to a single empty row
+// so a stale roles list from the previous open doesn't leak in. The
+// edit flow's editOpportunity() pre-populates rows BEFORE opening the
+// modal, so the edit-id check below correctly skips the reset.
+export function populateRolePresets() {
+  const editId = gv('opp-edit-id');
+  if (editId) return;
+  const list = document.getElementById('opp-roles-list');
+  if (!list) return;
+  list.innerHTML = '';
+  addOppRoleRow();
+}
+
+// Backwards-compat shim for the old single-role preset flow. Old
+// callers (no remaining ones in the codebase, but admin/main.js still
+// imports it) get a no-op so the import doesn't fail at startup.
+export function onOppRolePreset() {}
 
 export function confirmDeleteOpportunity(id, name) {
   document.getElementById('confirm-msg').textContent = t('ap.opp.delete_confirm', { name });

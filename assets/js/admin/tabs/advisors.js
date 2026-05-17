@@ -6,7 +6,7 @@
 
 import { DB, STATUS_COLORS } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson } from '../../lib/format.js';
-import { api, apiGet, toast, openModal, closeModal, clearForm } from '../../lib/ui.js';
+import { api, apiGet, toast, openModal, closeModal, clearForm, filterTable } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
 
 // Status enum (Active / Inactive) → translation key. Tag color comes
@@ -23,12 +23,18 @@ export async function loadAdvisors() {
   const data = await apiGet('getAdvisors');
   if (!data || !data.success) return;
   DB.advisors = data.data || [];
+  _populateAdvisorRoleOptions();
+  applyAdvisorFilters();
+}
+
+function _renderAdvisors(items) {
   const tbody = document.getElementById('advisors-tbody');
-  if (!DB.advisors.length) {
+  if (!tbody) return;
+  if (!items.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.adv.empty'))}</td></tr>`;
     return;
   }
-  tbody.innerHTML = DB.advisors.map(a => {
+  tbody.innerHTML = items.map(a => {
     const statusLabel = STATUS_KEY[a.status] ? t(STATUS_KEY[a.status]) : (a.status || '—');
     return `<tr>
       <td><strong>${esc(a.full_name)}</strong></td>
@@ -44,6 +50,44 @@ export async function loadAdvisors() {
     </tr>`;
   }).join('');
 }
+
+// Advisory role is a free-text column in the DB — populate the filter
+// dropdown from the actual distinct values rather than a hardcoded list
+// so a newly-typed role shows up automatically without needing a code
+// change. Preserves the currently-selected value across reloads.
+function _populateAdvisorRoleOptions() {
+  const sel = document.getElementById('adv-filter-role');
+  if (!sel) return;
+  const current = sel.value;
+  const roles = Array.from(new Set(
+    (DB.advisors || [])
+      .map(a => (a.advisory_role || '').trim())
+      .filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, 'ar'));
+  sel.innerHTML = `<option value="" data-i18n="ap.adv.filter_role_all">${esc(t('ap.adv.filter_role_all'))}</option>`
+    + roles.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  if (current && roles.includes(current)) sel.value = current;
+}
+
+function _currentAdvisorFilters() {
+  const status = document.querySelector('[data-action="filterAdvisorsByStatus"]')?.value || '';
+  const role   = document.querySelector('[data-action="filterAdvisorsByRole"]')?.value   || '';
+  const query  = document.querySelector('[data-action="filterAdvisorsBySearch"]')?.value?.trim() || '';
+  return { status, role, query };
+}
+
+function applyAdvisorFilters() {
+  const { status, role, query } = _currentAdvisorFilters();
+  let filtered = (DB.advisors || []).slice();
+  if (status) filtered = filtered.filter(a => a.status === status);
+  if (role)   filtered = filtered.filter(a => (a.advisory_role || '') === role);
+  _renderAdvisors(filtered);
+  if (query) filterTable('advisors-tbody', query);
+}
+
+export function filterAdvisorsByStatus(_v) { applyAdvisorFilters(); }
+export function filterAdvisorsByRole(_v)   { applyAdvisorFilters(); }
+export function filterAdvisorsBySearch(_v) { applyAdvisorFilters(); }
 
 export async function saveAdvisor() {
   const id = gv('adv-edit-id');

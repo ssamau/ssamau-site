@@ -247,7 +247,12 @@ export function clearForm(type) {
     participant: ['par-vol-name','par-vol-email','par-vol-phone','par-notes'],
     attendance:  ['att-vol-email','att-notes'],
     hours:       ['hrs-vol-email','hrs-notes'],
-    opportunity: ['opp-edit-id','opp-role-name','opp-notes'],
+    // Multi-role refactor 2026-05-18: per-role fields live on class
+     // selectors inside #opp-roles-list, not on top-level IDs anymore.
+     // The roles list is rebuilt from scratch by populateRolePresets()
+     // on the next openModal('opportunity') (which fires whenever the
+     // admin clicks "+ إضافة فرصة") — no need to clear it here.
+    opportunity: ['opp-edit-id','opp-notes'],
   };
   (fields[type] || []).forEach(id => sv(id, ''));
   // Reset number inputs

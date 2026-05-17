@@ -14,7 +14,7 @@
 
 import { DB } from '../../lib/state.js';
 import { esc, gv, sv, tag, attrJson, fmtDate, fmtDateTime } from '../../lib/format.js';
-import { api, toast, openModal, closeModal } from '../../lib/ui.js';
+import { api, toast, openModal, closeModal, filterTable } from '../../lib/ui.js';
 import { RBAC } from '../../lib/rbac.js';
 import { t } from '../../lib/i18n.js';
 
@@ -70,15 +70,64 @@ export async function loadAccounts() {
   if (!data || !data.success) return;
   const items = data.data || [];
   DB._accounts = items;
-  const tbody = document.getElementById('accounts-tbody');
-  if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.acc.empty'))}</td></tr>`;
-  } else {
-    tbody.innerHTML = items.map(a => renderAccountRow(a)).join('');
-  }
+  applyAccountFilters();
   const badge = document.getElementById('b-accounts');
   if (badge) badge.textContent = items.length;
 }
+
+// President's QOL ask 2026-05-18: filter accounts by access level + last
+// login. Composes with the existing text search so admin can drill down
+// on e.g. "all stale member accounts" with a couple clicks. State lives
+// in the DOM (each <select>) so we don't track it in a module variable —
+// matches the members-tab pattern.
+function _currentAccountFilters() {
+  const access = document.querySelector('[data-action="filterAccountsByAccess"]')?.value || '';
+  const login  = document.querySelector('[data-action="filterAccountsByLogin"]')?.value  || '';
+  const query  = document.querySelector('[data-action="filterAccountsBySearch"]')?.value?.trim() || '';
+  return { access, login, query };
+}
+
+function applyAccountFilters() {
+  const { access, login, query } = _currentAccountFilters();
+  const items = (DB._accounts || []).slice();
+  // Access filter — exact match on access_level. Rows without an account
+  // (a.id == null) have no access_level so they only show when filter is
+  // empty; treat the filter as "real accounts only" otherwise.
+  let filtered = items.filter(a => {
+    if (access && a.access_level !== access) return false;
+    if (login) {
+      const hasAccount = !!a.id;
+      if (!hasAccount) return false;  // no-account rows can't satisfy a login filter
+      const ts = a.last_login_at ? Date.parse(a.last_login_at) : NaN;
+      const now = Date.now();
+      const day30 = 30 * 24 * 60 * 60 * 1000;
+      if (login === 'never'       && !Number.isNaN(ts)) return false;
+      if (login === 'inactive_30' && (Number.isNaN(ts) || now - ts < day30)) return false;
+      if (login === 'active_30'   && (Number.isNaN(ts) || now - ts > day30)) return false;
+    }
+    return true;
+  });
+  const tbody = document.getElementById('accounts-tbody');
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.acc.empty'))}</td></tr>`;
+  } else {
+    tbody.innerHTML = filtered.map(a => renderAccountRow(a)).join('');
+  }
+  // Re-apply the text-search query on the freshly-rendered rows. The
+  // select-driven re-render replaces tbody, which would otherwise wipe
+  // whatever filterTable() had hidden.
+  if (query) filterTable('accounts-tbody', query);
+}
+
+// Public-facing filter handlers — dispatcher calls these with `el.value`
+// but the source of truth is the DOM, so we ignore the arg.
+export function filterAccountsByAccess(_v) { applyAccountFilters(); }
+export function filterAccountsByLogin(_v)  { applyAccountFilters(); }
+// Text-search variant: when the user types in the search input,
+// applyAccountFilters() re-renders + re-applies filterTable so the
+// search + dropdown filters compose correctly.
+export function filterAccountsBySearch(_v) { applyAccountFilters(); }
 
 export function renderAccountRow(a) {
   // For heads, some rows are members WITHOUT an account yet — `a.id` is null

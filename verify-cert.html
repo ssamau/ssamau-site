@@ -37,6 +37,14 @@
   </div>
 
   <div class="lc-body">
+    <!-- Lead copy clarifies what the page does BEFORE the user types
+         anything — Abu Juman's flag 2026-05-18: previously the form
+         just sat there with no explanation, so first-time visitors
+         (employers verifying a recipient's cert) didn't know what
+         would happen after they pressed تحقق. -->
+    <p style="font-size:.85rem;color:var(--tm,#6b7280);line-height:1.7;margin:0 0 1rem 0;text-align:center">
+      أدخل رمز التحقق المطبوع على الشهادة (يبدأ بـ <code style="direction:ltr;font-family:monospace;background:rgba(184,147,42,.1);padding:.05rem .35rem;border-radius:4px">CRT_</code>) وستظهر لك الشهادة بكامل تفاصيلها.
+    </p>
     <div class="fg">
       <label for="cert-code">رمز الشهادة</label>
       <input id="cert-code" type="text" placeholder="CRT_XXXXXXXX" dir="ltr" style="font-family:monospace;letter-spacing:.08em;text-align:center"/>

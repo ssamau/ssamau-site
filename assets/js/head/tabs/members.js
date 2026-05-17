@@ -17,7 +17,7 @@
 //     would see, except the contact channels).
 
 import { esc, fmtDate, tag, attrJson } from '../../lib/format.js';
-import { api, apiGet, toast, openModal, closeModal } from '../../lib/ui.js';
+import { api, apiGet, toast, openModal, closeModal, filterTable } from '../../lib/ui.js';
 import { t, getLang } from '../../lib/i18n.js';
 import { localizeError } from '../../lib/api.js';
 
@@ -65,19 +65,36 @@ export async function loadHeadMembers() {
   _renderMembers();
 }
 
-function _scopedMembers() {
+// Always scope to the head's committee. Status default is Active —
+// the status filter can override to show inactive (or both).
+function _scopedMembers(includeInactive) {
   const myCommittee = window.CURRENT_USER?.committee_id;
   return _members
-    .filter(m => m.status !== 'Inactive')
+    .filter(m => includeInactive ? true : m.status !== 'Inactive')
     .filter(m => myCommittee ? m.committee_id === myCommittee : true);
+}
+
+function _currentHeadMemberFilters() {
+  const role   = document.querySelector('[data-action="hd.members.filterRole"]')?.value   || '';
+  const status = document.querySelector('[data-action="hd.members.filterStatus"]')?.value || '';
+  const query  = document.querySelector('[data-action="hd.members.filterSearch"]')?.value?.trim() || '';
+  return { role, status, query };
 }
 
 function _renderMembers() {
   const tbody = document.getElementById('hd-members-tbody');
   if (!tbody) return;
-  const members = _scopedMembers();
+  const { role, status, query } = _currentHeadMemberFilters();
+  // When the status filter is set to "Inactive" or to "" but the admin
+  // explicitly wants to see one specific status, include inactive in
+  // the pool — otherwise default to active-only as before.
+  const includeInactive = status === 'Inactive';
+  let members = _scopedMembers(includeInactive);
+  if (role)   members = members.filter(m => m.club_role === role);
+  if (status) members = members.filter(m => m.status === status);
   if (!members.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('hp.members.empty'))}</td></tr>`;
+    if (query) filterTable('hd-members-tbody', query);
     return;
   }
   // Sort: leadership first, then by name in the active language so
@@ -94,7 +111,14 @@ function _renderMembers() {
     return ra !== rb ? ra - rb : (a.full_name || '').localeCompare(b.full_name || '', sortLang);
   });
   tbody.innerHTML = members.map(_renderRow).join('');
+  // Compose with the text search — re-apply after the filter-driven
+  // re-render so typed-and-then-filtered queries still hide non-matches.
+  if (query) filterTable('hd-members-tbody', query);
 }
+
+export function filterHeadMembersByRole(_v)   { _renderMembers(); }
+export function filterHeadMembersByStatus(_v) { _renderMembers(); }
+export function filterHeadMembersBySearch(_v) { _renderMembers(); }
 
 function _renderRow(m) {
   // Contact cell — email / 📱 phone / 💬 whatsapp stacked + LTR'd so

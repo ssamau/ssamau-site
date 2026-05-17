@@ -115,7 +115,16 @@ function showCertificate(cert) {
   const signerName  = 'عبدالمحسن محمد صالح سادس';
   const signerTitle = 'رئيس النادي';
 
+  // Sticky top close bar + floating mobile ✕ button — president flag
+  // 2026-05-18: on mobile, after the cert renders there was no clean
+  // way to dismiss the page short of refreshing. Both elements link
+  // back to the empty verify-cert.html so the user lands on the form
+  // again (clean state). Hidden in @media print.
   document.body.innerHTML = `
+    <div class="cert-close-bar">
+      <a href="verify-cert.html" class="cert-close-btn">✕ إغلاق الشهادة</a>
+      <span class="cert-close-label">رمز التحقق: <code style="direction:ltr">${escapeHtml(code)}</code></span>
+    </div>
     <div class="cert-stage">
       <div class="cert-sheet">
         <img class="cert-logo" src="assets/img/logo-200.png" alt="SSAM"/>
@@ -156,7 +165,8 @@ function showCertificate(cert) {
         <button type="button" id="cert-print-btn">🖨️ طباعة / حفظ PDF</button>
         <a href="index.html" class="cert-back-link">← العودة للصفحة الرئيسية</a>
       </div>
-    </div>`;
+    </div>
+    <a href="verify-cert.html" class="cert-close-floating" aria-label="إغلاق الشهادة">✕</a>`;
   // CSP blocks inline event handlers (script-src-attr 'self' without
   // 'unsafe-inline'). Bind via JS instead of an inline onclick=.
   document.getElementById('cert-print-btn')?.addEventListener('click', () => window.print());

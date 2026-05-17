@@ -143,24 +143,26 @@ export function buildCertHTML(c) {
 }
 
 export function previewCertCard(c) {
-  const w = window.open('','_blank','width=540,height=600');
-  if (!w) { toast(t('ap.cert.popup_blocked'), 'twarn'); return; }
-  // No <style> block here — CSP `style-src 'self'` (inherited by the
-  // about:blank popup in Chromium) blocks inline <style> contents. All
-  // styles live as `style=` attrs on individual elements, which fall
-  // under `style-src-attr 'unsafe-inline'` and render correctly.
+  // President's spec 2026-05-18: open in a fresh browser tab, NOT a
+  // popup window. Popups (window.open with size args) get blocked on
+  // most mobile browsers + don't render at A4 proportions. A real tab
+  // opens at full viewport size — combined with the A4-pinned
+  // `.cert-sheet` in cert.css, the admin sees exactly the same A4
+  // landscape rendering the cert recipient gets from the email link.
   //
-  // The popup chrome (lang/dir/title) follows the admin UI language so
-  // the browser tab + scrollbar direction match the rest of the app;
-  // the certificate body itself stays bilingual (Arabic + English brand)
-  // by design — see the buildCertHTML comment for the rationale.
-  const lang = (document.documentElement.lang === 'en') ? 'en' : 'ar';
-  const dir  = lang === 'en' ? 'ltr' : 'rtl';
-  const title = esc(t('ap.cert.preview_window_title'));
-  w.document.write(`<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="UTF-8"><title>${title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
-    </head><body style="margin:0;padding:2rem;background:#111;font-family:Almarai,Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center">${buildCertHTML(c)}</body></html>`);
-  w.document.close();
+  // We route through `verify-cert.html?code=<cert_code>` so the admin
+  // preview reuses the full diploma-style sheet from verify-cert.js
+  // (the public page) rather than the compact card from buildCertHTML.
+  // verify-cert.js auto-verifies when ?code= is present, so the tab
+  // opens, hits the public `certs.verify` action, and renders the
+  // full sheet. Same code path as the recipient's experience — no
+  // divergence between "admin preview" and "what the recipient sees".
+  const code = c?.cert_code;
+  if (!code) {
+    toast(t('ap.cert.preview_no_code') || 'لا يمكن المعاينة قبل إصدار الشهادة', 'twarn');
+    return;
+  }
+  window.open(`/verify-cert.html?code=${encodeURIComponent(code)}`, '_blank', 'noopener');
 }
 
 export async function verifyCert() {

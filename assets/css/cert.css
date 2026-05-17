@@ -4,35 +4,51 @@
    * everything except .cert-sheet so "Save as PDF" produces a one-page,
    * ornament-clean output the recipient can hand over to a verifier. */
 
-  /* On-screen wrapper around the cert. Centers + pads the sheet. */
+  /* On-screen wrapper around the cert. Centers + pads the sheet.
+   * Top padding accounts for the fixed `.cert-close-bar` so the cert
+   * sheet doesn't sit underneath it. */
   .cert-stage {
     background: linear-gradient(135deg, rgba(26,92,46,.04) 0%, rgba(184,147,42,.06) 100%);
     min-height: 100vh;
-    padding: 2rem 1rem;
+    padding: 5rem 1rem 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1rem;
   }
 
-  /* The certificate itself. Two gold borders + a green inner border —
-   * gives it a "diploma" feel without being gauche. On-screen we let
-   * the height grow naturally to fit the Arabic text (which often
-   * runs taller than English equivalents); the print stylesheet
-   * pins it to A4 landscape for a clean PDF output. */
+  /* The certificate itself — pinned to A4 landscape (297mm × 210mm)
+   * on-screen so what the verifier sees matches what the recipient
+   * gets in the printed PDF + the email link (president's spec
+   * 2026-05-18: "تصير فعليا حجم A4"). Previous version used
+   * `max-width: 900px` + naturally-grown height; the shape was
+   * arbitrary and the printed/screen views diverged.
+   *
+   * Scaling on smaller viewports:
+   *   - The sheet itself ALWAYS keeps the 297:210 ratio.
+   *   - On viewports narrower than 297mm we shrink the whole sheet
+   *     proportionally using `width: min(297mm, 95vw)` so the cert
+   *     stays inside the viewport without horizontal scroll. The
+   *     `aspect-ratio` keeps it landscape.
+   *   - Internal typography uses cqi (container-query inline) units
+   *     so font sizes scale with the cert width, not the viewport —
+   *     a phone-sized cert reads at the same VISUAL proportion as a
+   *     desktop one, just smaller. */
   .cert-sheet {
-    width: 100%;
-    max-width: 900px;
+    width: min(297mm, 95vw);
+    aspect-ratio: 297 / 210;
     background: #fffdf5;
     border: 2px solid #b8932a;
     box-shadow: 0 14px 38px rgba(0,0,0,.12);
-    padding: 3rem 2.5rem;
+    padding: 4cqi 5cqi;
+    container-type: inline-size;
     position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
+    overflow: hidden;
   }
   .cert-sheet::before {
     content: "";
@@ -51,48 +67,53 @@
     border-radius: 4px;
   }
 
-  /* Header — logo + Arabic + English title */
+  /* Header — logo + Arabic + English title.
+   * cqi sizing (relative to cert-sheet width) keeps the layout
+   * proportional across viewports — same look on phone + desktop,
+   * just scaled. 1cqi = 1% of the sheet's inline (horizontal) size,
+   * so a 297mm-wide A4 cert at 100% gives ~2.97mm per cqi. */
   .cert-logo {
-    width: 72px; height: 72px;
-    margin-bottom: .6rem;
+    width: 7cqi; height: 7cqi;
+    min-width: 48px; min-height: 48px;
+    margin-bottom: 1cqi;
     z-index: 1;
   }
   .cert-title-ar {
-    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    font-size: 4.5cqi;
     font-weight: 800;
     color: #1A5C2E;
     letter-spacing: .03em;
-    margin: .25rem 0 .45rem;
+    margin: .5cqi 0 1cqi;
     z-index: 1;
   }
   .cert-divider {
     width: 70%;
     height: 2px;
     background: linear-gradient(90deg, transparent 0%, #b8932a 50%, transparent 100%);
-    margin: .85rem auto 1.1rem;
+    margin: 1.5cqi auto 2cqi;
     z-index: 1;
   }
   .cert-intro {
-    font-size: clamp(.85rem, 1.6vw, 1.05rem);
+    font-size: 1.9cqi;
     color: #4b5563;
-    margin-bottom: .65rem;
+    margin-bottom: 1cqi;
     z-index: 1;
   }
   .cert-recipient {
-    font-size: clamp(1.8rem, 5vw, 3.1rem);
+    font-size: 6cqi;
     font-weight: 800;
     color: #0e3a1c;
-    margin: .35rem 0 .55rem;
+    margin: 1cqi 0 1.5cqi;
     line-height: 1.2;
     border-bottom: 2px solid #b8932a;
-    padding: 0 1rem .35rem;
+    padding: 0 2cqi 1cqi;
     z-index: 1;
   }
   .cert-body-text {
-    font-size: clamp(.85rem, 1.6vw, 1.05rem);
+    font-size: 2.1cqi;
     color: #1f2937;
     line-height: 1.85;
-    margin: .85rem 0;
+    margin: 1.5cqi 0;
     max-width: 85%;
     z-index: 1;
   }
@@ -103,8 +124,8 @@
   }
   .cert-stats {
     display: flex;
-    gap: 1.5rem;
-    margin: 1rem 0 .5rem;
+    gap: 2cqi;
+    margin: 1.5cqi 0 1cqi;
     z-index: 1;
     flex-wrap: wrap;
     justify-content: center;
@@ -113,8 +134,8 @@
     background: rgba(184,147,42,.1);
     border: 1px solid rgba(184,147,42,.35);
     border-radius: 999px;
-    padding: .35rem 1rem;
-    font-size: .9rem;
+    padding: .6cqi 2cqi;
+    font-size: 1.9cqi;
     color: #1A5C2E;
     font-weight: 700;
   }
@@ -126,8 +147,8 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding-top: 1.2rem;
-    font-size: .76rem;
+    padding-top: 2cqi;
+    font-size: 1.7cqi;
     color: #6b7280;
     z-index: 1;
   }
@@ -158,32 +179,32 @@
     min-width: 0;
   }
   .cert-sig {
-    max-height: 60px;
-    max-width: 180px;
+    max-height: 7cqi;
+    max-width: 20cqi;
     width: auto;
     height: auto;
     object-fit: contain;
     display: block;
-    margin: 0 auto .2rem;
+    margin: 0 auto .4cqi;
     /* No border / background — signature reads as an actual ink mark. */
   }
   .cert-signer-name {
     font-weight: 800;
-    font-size: .88rem;
+    font-size: 1.9cqi;
     color: #0e3a1c;
     border-top: 1px solid #b8932a;
-    padding-top: .2rem;
-    min-width: 140px;
+    padding-top: .4cqi;
+    min-width: 15cqi;
   }
   .cert-signer-title {
-    font-size: .72rem;
+    font-size: 1.5cqi;
     color: #6b7280;
     font-weight: 600;
-    margin-top: .1rem;
+    margin-top: .2cqi;
   }
   .cert-code {
     font-family: ui-monospace, monospace;
-    font-size: .78rem;
+    font-size: 1.7cqi;
     color: #b8932a;
     letter-spacing: .12em;
     direction: ltr;
@@ -192,6 +213,7 @@
     font-weight: 600;
     color: #4b5563;
     direction: ltr;
+    font-size: 1.7cqi;
   }
 
   /* Print button below the sheet (hidden in print) */
@@ -229,25 +251,101 @@
   }
   .cert-back-link:hover { background: #1A5C2E; color: #fff; }
 
+  /* Fixed top close bar — mobile fix (2026-05-18). After verification,
+   * the cert sheet replaces the body content; without a persistent
+   * escape hatch the user has to refresh the page or scroll all the
+   * way down to find the back link. Fixed positioning so it stays
+   * visible regardless of scroll position; .cert-stage gets a top
+   * padding to clear it. */
+  .cert-close-bar {
+    position: fixed;
+    top: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(26,92,46,.15);
+    padding: .55rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .cert-close-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: #1A5C2E;
+    color: #fff;
+    border: none;
+    padding: .45rem .9rem;
+    border-radius: 50px;
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .cert-close-btn:hover { background: #0e3a1c; }
+  .cert-close-bar .cert-close-label {
+    font-size: .8rem;
+    color: #4b5563;
+    font-weight: 600;
+  }
+
+  /* Floating sticky ✕ button — mobile-only. Sits in the bottom-right
+   * (or bottom-left in RTL) corner so the user always has a one-tap
+   * close path regardless of scroll position. Hidden on tablet+
+   * because the top close bar is already visible there. */
+  .cert-close-floating {
+    display: none;
+  }
+  @media (max-width: 640px) {
+    .cert-close-floating {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      bottom: 1.2rem;
+      inset-inline-end: 1.2rem;
+      width: 3.2rem;
+      height: 3.2rem;
+      background: #1A5C2E;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      cursor: pointer;
+      z-index: 20;
+      text-decoration: none;
+    }
+    .cert-close-floating:active { background: #0e3a1c; }
+  }
+
   /* Print styles — produce a clean one-page A4 landscape PDF when
-   * the user hits Cmd+P / "Save as PDF".
-   *
-   * Earlier version forced `max-width: 100%` + `height: calc(210mm
-   * - 12mm)` on the sheet, which stretched it to fill the entire
-   * A4 landscape printable area (~285×198mm = 1.44:1 aspect).
-   * Combined with the on-screen padding + clamp() font sizes, that
-   * produced a noticeably stretched look in the printed PDF
-   * (president flagged this on his laptop test). Now we just hide
-   * the page chrome (login-card / cert-actions) + drop the shadow
-   * and let the cert sheet print at its natural width (900px max)
-   * centered on the page — same shape as the demo PDF the
-   * president already approved. */
+   * the user hits Cmd+P / "Save as PDF". The on-screen sheet is
+   * already A4-proportioned (297×210 aspect), so print mostly just
+   * needs to drop the shadow + force the gold accents into colour
+   * output. The width is pinned to 100% of the printable area so
+   * the sheet fills the page (the 6mm @page margin gives the
+   * physical edge breathing room). */
   @media print {
     @page { size: A4 landscape; margin: 6mm; }
     body { background: #fff; margin: 0; }
     .cert-stage { padding: 0; min-height: auto; background: #fff; }
-    .cert-actions, .login-card { display: none !important; }
+    .cert-actions, .login-card, .cert-close-bar, .cert-close-floating { display: none !important; }
     .cert-sheet {
+      /* Lock to A4 landscape minus the @page margin (297×210 → 285×198
+       * with a 6mm margin all sides). Both dimensions set explicitly
+       * so the sheet exactly fills the printable area instead of
+       * being computed off `aspect-ratio` (which at 297/210 would
+       * overshoot the 198mm height ceiling). */
+      width: 285mm;
+      height: 198mm;
       box-shadow: none;
       page-break-after: avoid;
     }

@@ -4,20 +4,30 @@
 // here. The existing "Opportunities" tab stays as the head's own
 // management view.
 //
-// Mirrors member/tabs/opportunities.js for the express/withdraw flow.
-// Reuses interest.submit on the server (which now uses user.member_id
-// from auth context, so a head can only express on behalf of
-// themselves — no member_id field is sent from the client).
+// Multi-role refactor 2026-05-18: same pick-role modal flow as the
+// member portal. Each opportunity is a single row; "اهتمام" opens the
+// role picker (every role + a sticky "أي دور"). Interest is keyed by
+// opportunity_id (not project_id) so the head's badge state reflects
+// per-opportunity status, not per-project — important when two
+// opportunities under the same project should look independent.
 
-import { api } from '../../lib/ui.js';
+import { api, openModal, closeModal } from '../../lib/ui.js';
 import { esc, fmtDate } from '../../lib/format.js';
 import { t } from '../../lib/i18n.js';
 import { localizeError } from '../../lib/api.js';
 
-// Per-load cache of project_ids the head has expressed interest in.
-// Populated from server via interest.listOwn so the button state
-// survives page refresh + cross-device.
-const _interestedProjects = new Set();
+// opportunity_id → { role_id: number|null }
+const _interestedOpportunities = new Map();
+// Pre-multi-role legacy interest (project-level only). Tracked
+// separately so the visual "previously expressed" hint still shows on
+// opportunities in projects the head registered interest in before
+// the schema migration.
+const _legacyInterestedProjects = new Set();
+// Cached last opportunities.list response so the pick-role modal can
+// look up roles[] for the clicked opportunity without a second fetch.
+let _lastOpps = [];
+// Modal context. Single modal, one ref.
+let _pickRoleCtx = null;
 
 export async function loadHeadOtherOpportunities() {
   const tbody = document.getElementById('hd-other-opps-tbody');
@@ -33,11 +43,19 @@ export async function loadHeadOtherOpportunities() {
     return;
   }
 
-  _interestedProjects.clear();
+  _interestedOpportunities.clear();
+  _legacyInterestedProjects.clear();
   if (interestRes && interestRes.success) {
     for (const i of (interestRes.data || [])) {
       const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
-      if (yn) _interestedProjects.add(i.project_id);
+      if (!yn) continue;
+      if (i.opportunity_id) {
+        _interestedOpportunities.set(i.opportunity_id, {
+          role_id: i.role_id ?? null,
+        });
+      } else if (i.project_id) {
+        _legacyInterestedProjects.add(i.project_id);
+      }
     }
   }
 
@@ -50,6 +68,7 @@ export async function loadHeadOtherOpportunities() {
     if (o.status !== 'Open') return false;
     return !o.owning_committee_id || o.owning_committee_id !== myCom;
   });
+  _lastOpps = rows;
 
   if (!rows.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--tm)">${esc(t('hp.other_opps.empty'))}</td></tr>`;
@@ -60,80 +79,169 @@ export async function loadHeadOtherOpportunities() {
   const hoursUnit          = esc(t('mp.hours.hours_unit'));
   const expressLabel       = esc(t('mp.opps.express_btn'));
   const withdrawLabel      = esc(t('mp.opps.withdraw_btn'));
+  const anyRoleBadge       = esc(t('mp.opps.any_role_badge') || 'أي دور');
   tbody.innerHTML = rows.map(o => {
-    const expressed = _interestedProjects.has(o.project_id);
-    const actionBtn = expressed
-      ? `<button class="btn btn-ol btn-sm btn-interest expressed"
-                 data-action="hd.other.withdraw"
-                 data-opportunity="${esc(o.opportunity_id)}"
-                 data-project="${esc(o.project_id)}">
-           ${withdrawLabel}
-         </button>`
-      : `<button class="btn btn-g btn-sm btn-interest"
-                 data-action="hd.other.express"
-                 data-opportunity="${esc(o.opportunity_id)}"
-                 data-project="${esc(o.project_id)}"
-                 data-label="${esc(o.role_name)}">
-           ${expressLabel}
-         </button>`;
+    const roles = Array.isArray(o.roles) ? o.roles : [];
+    let roleCell;
+    if (roles.length > 1) {
+      roleCell = `<div style="font-weight:600">${esc(roles[0].role_name)}</div>
+                  <div style="font-size:.7rem;color:var(--tm)">${esc(t('ap.opp.plus_n_more', { n: roles.length - 1 }))}</div>`;
+    } else {
+      const firstName = (roles[0] && roles[0].role_name) || o.role_name || '—';
+      roleCell = `<strong>${esc(firstName)}</strong>`;
+    }
+    const totalHours = roles.length
+      ? roles.reduce((n, r) => n + (Number(r.estimated_hours) || 0), 0)
+      : (Number(o.estimated_hours) || 0);
+
+    const expr = _interestedOpportunities.get(o.opportunity_id);
+    let actionCell;
+    if (expr) {
+      const pickedRole = expr.role_id ? roles.find(r => Number(r.id) === Number(expr.role_id)) : null;
+      const chip = pickedRole
+        ? `<span style="display:inline-block;background:#e8f5e9;color:#1A5C2E;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${esc(pickedRole.role_name)}</span>`
+        : `<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${anyRoleBadge}</span>`;
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+        ${chip}
+        <button class="btn btn-ol btn-sm btn-interest expressed"
+                data-action="hd.other.withdraw"
+                data-opportunity="${esc(o.opportunity_id)}"
+                data-project="${esc(o.project_id)}">${withdrawLabel}</button>
+      </div>`;
+    } else {
+      const legacyHint = _legacyInterestedProjects.has(o.project_id)
+        ? `<div style="font-size:.7rem;color:var(--tm);margin-bottom:.25rem">${esc(t('mp.opps.legacy_interest_hint') || 'سبق تسجيل اهتمام بالمشروع — اختر دوراً لتحديده')}</div>`
+        : '';
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem">
+        ${legacyHint}
+        <button class="btn btn-g btn-sm btn-interest"
+          data-action="hd.other.openPick"
+          data-opportunity="${esc(o.opportunity_id)}"
+          data-project="${esc(o.project_id)}">${expressLabel}</button>
+      </div>`;
+    }
     return `<tr>
-      <td><strong>${esc(o.role_name) || '—'}</strong></td>
+      <td>${roleCell}</td>
       <td>${esc(o.project_name) || '—'}</td>
       <td>${esc(o.owning_committee_name) || committeeOpenLabel}</td>
       <td>${fmtDate(o.event_date) || '—'}</td>
-      <td>${o.estimated_hours || 0} ${hoursUnit}</td>
-      <td>${actionBtn}</td>
+      <td>${totalHours || 0} ${hoursUnit}</td>
+      <td>${actionCell}</td>
     </tr>`;
   }).join('');
 }
 
-// Same handler shape as the member-portal versions but scoped to the
-// head's "other opportunities" tab and using the hd.other.* action
-// names so the dispatcher routes correctly without colliding with
-// the member portal's expressInterest handler.
-async function _submitInterest(el, interested, busyLabelKey, successLabelKey, errorLabelKey, fallbackLabelKey, comment) {
-  if (!el) return;
-  const projectId = el.dataset.project;
-  el.disabled = true;
-  el.textContent = t(busyLabelKey);
+export function openHeadOtherPickRole(el) {
+  const opportunityId = el.dataset.opportunity;
+  const projectId     = el.dataset.project;
+  const opp = _lastOpps.find(o => o.opportunity_id === opportunityId);
+  if (!opp) return;
+  _pickRoleCtx = {
+    opportunity_id: opportunityId,
+    project_id:     projectId,
+    roles:          Array.isArray(opp.roles) ? opp.roles : [],
+  };
+  const header = document.getElementById('hd-pickrole-project');
+  if (header) header.textContent = opp.project_name || '—';
+  const list = document.getElementById('hd-pickrole-list');
+  if (list) {
+    const hoursUnit = esc(t('mp.hours.hours_unit'));
+    const rowsHtml = _pickRoleCtx.roles.map((r, i) => `
+      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid var(--c-soft);border-radius:8px;cursor:pointer">
+        <input type="radio" name="hd-pickrole-choice" value="${esc(String(r.id))}" ${i === 0 ? 'checked' : ''}/>
+        <div style="flex:1">
+          <div style="font-weight:600">${esc(r.role_name)}</div>
+          <div style="font-size:.72rem;color:var(--tm);margin-top:.15rem">
+            👥 ${Number(r.headcount_needed) || 1} · ⏱️ ${Number(r.estimated_hours) || 0} ${hoursUnit}
+            ${r.notes ? ` · ${esc(r.notes)}` : ''}
+          </div>
+        </div>
+      </label>
+    `).join('');
+    const anyRoleRow = `
+      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px dashed var(--c-soft);border-radius:8px;cursor:pointer;background:#fffbeb">
+        <input type="radio" name="hd-pickrole-choice" value="__any__" ${_pickRoleCtx.roles.length === 0 ? 'checked' : ''}/>
+        <div style="flex:1">
+          <div style="font-weight:600">🤝 ${esc(t('mp.opps.any_role_title') || 'أي دور')}</div>
+          <div style="font-size:.72rem;color:var(--tm);margin-top:.15rem">${esc(t('mp.opps.any_role_lead') || 'مساعدة حيث تحتاج اللجنة — رئيس اللجنة يحدد المكان المناسب.')}</div>
+        </div>
+      </label>
+    `;
+    list.innerHTML = rowsHtml + anyRoleRow;
+  }
+  openModal('pick-role');
+}
+
+export function closeHeadOtherPickRole() {
+  closeModal('pick-role');
+  _pickRoleCtx = null;
+}
+
+export async function submitHeadOtherPickRole() {
+  if (!_pickRoleCtx) return;
+  const picked = document.querySelector('input[name="hd-pickrole-choice"]:checked');
+  if (!picked) return;
+  const role_id = picked.value === '__any__' ? null : Number(picked.value);
+  const btn = document.getElementById('hd-pickrole-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = t('mp.opps.registering'); }
   try {
     const res = await api('interest.submit', {
       data: {
-        project_id: projectId,
-        interested,
-        comment: comment || null,
+        project_id:     _pickRoleCtx.project_id,
+        opportunity_id: _pickRoleCtx.opportunity_id,
+        role_id,
+        interested:     true,
+        comment:        role_id
+          ? `${t('mp.opps.interest_role_prefix')} ${
+              (_pickRoleCtx.roles.find(r => Number(r.id) === role_id) || {}).role_name || ''
+            }`
+          : (t('mp.opps.interest_any_role_comment') || 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة'),
       },
     });
     const { toast } = await import('../../lib/ui.js');
     if (!res || !res.success) {
-      toast(localizeError(res?.error, res?.errorParams) || t(errorLabelKey), 'twarn');
-      el.disabled = false;
-      el.textContent = t(fallbackLabelKey);
+      toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_submit'), 'twarn');
       return;
     }
-    if (interested) _interestedProjects.add(projectId); else _interestedProjects.delete(projectId);
-    toast(t(successLabelKey), 'tok');
+    _interestedOpportunities.set(_pickRoleCtx.opportunity_id, { role_id });
+    toast(t('mp.opps.success'), 'tok');
+    closeHeadOtherPickRole();
     loadHeadOtherOpportunities();
   } catch (err) {
-    console.error('[head.otherOpps] submit failed:', err);
-    el.disabled = false;
-    el.textContent = t(fallbackLabelKey);
+    console.error('[head.otherOpps.submitPick]', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('mp.opps.pick_role_submit'); }
   }
 }
 
-export function expressOtherInterest(el) {
-  const label = el?.dataset?.label || '';
-  return _submitInterest(
-    el, true,
-    'mp.opps.registering', 'mp.opps.success', 'mp.opps.err_submit', 'mp.opps.express_btn',
-    label ? `${t('mp.opps.interest_role_prefix')} ${label}` : null,
-  );
-}
-
-export function withdrawOtherInterest(el) {
-  return _submitInterest(
-    el, false,
-    'mp.opps.withdrawing', 'mp.opps.success_withdraw', 'mp.opps.err_withdraw', 'mp.opps.withdraw_btn',
-    null,
-  );
+export async function withdrawOtherInterest(el) {
+  if (!el) return;
+  const projectId      = el.dataset.project;
+  const opportunity_id = el.dataset.opportunity;
+  el.disabled = true;
+  el.textContent = t('mp.opps.withdrawing');
+  try {
+    const res = await api('interest.submit', {
+      data: {
+        project_id:     projectId,
+        opportunity_id,
+        interested:     false,
+        comment:        null,
+      },
+    });
+    const { toast } = await import('../../lib/ui.js');
+    if (!res || !res.success) {
+      toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_withdraw'), 'twarn');
+      el.disabled = false;
+      el.textContent = t('mp.opps.withdraw_btn');
+      return;
+    }
+    _interestedOpportunities.delete(opportunity_id);
+    toast(t('mp.opps.success_withdraw'), 'tok');
+    loadHeadOtherOpportunities();
+  } catch (err) {
+    console.error('[head.otherOpps.withdraw]', err);
+    el.disabled = false;
+    el.textContent = t('mp.opps.withdraw_btn');
+  }
 }

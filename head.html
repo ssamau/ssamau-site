@@ -211,7 +211,23 @@
         <div class="card-head">
           <h3 data-i18n="hp.members.card_title">👥 أعضاء اللجنة</h3>
           <div class="card-head-right">
-            <input class="search-input" data-i18n-placeholder="hp.members.search_placeholder" placeholder="بحث بالاسم..." data-action="filterTable" data-target="hd-members-tbody" data-event="input"/>
+            <input class="search-input" data-i18n-placeholder="hp.members.search_placeholder" placeholder="بحث بالاسم..." data-action="hd.members.filterSearch" data-target="hd-members-tbody" data-event="input"/>
+            <!-- Role + status filters scoped to the head's committee
+                 (president's QOL ask 2026-05-18). Role options match
+                 the canonical CLUB_ROLE enum; status is Active/Inactive. -->
+            <select data-action="hd.members.filterRole" data-event="change">
+              <option value=""                     data-i18n="hp.members.filter_role_all">كل الأدوار</option>
+              <option value="Committee Head"       data-i18n="ap.role.committee_head">Committee Head</option>
+              <option value="Committee Vice Head"  data-i18n="ap.role.committee_vice_head">Committee Vice Head</option>
+              <option value="Deputy Vice Head"     data-i18n="ap.role.deputy_vice_head">Deputy Vice Head</option>
+              <option value="Member"               data-i18n="ap.role.member">Member</option>
+              <option value="Volunteer"            data-i18n="ap.role.volunteer">Volunteer</option>
+            </select>
+            <select data-action="hd.members.filterStatus" data-event="change">
+              <option value=""         data-i18n="hp.members.filter_status_all">كل الحالات</option>
+              <option value="Active"   data-i18n="ap.status.active">Active</option>
+              <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
+            </select>
           </div>
         </div>
         <div class="table-wrap">
@@ -540,6 +556,32 @@
      attendee=volunteer → name + optional email.
      The hours-wrap section only shows in meeting mode; project-linked
      attendance gets its hours via the opportunity+hours flow. -->
+<!-- ══════════ PICK-ROLE MODAL — head other-opportunities flow ══════════ -->
+<!-- Mirrors the member portal modal. Opened from the "اهتمام" button on
+     the "Other opportunities" tab. Each role is a radio row; the last
+     row is the "أي دور" fallback that submits with role_id=null. -->
+<div class="overlay" id="ov-pick-role" role="dialog" aria-modal="true" aria-labelledby="hd-pickrole-title">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3 id="hd-pickrole-title" data-i18n="mp.opps.pick_role_title">🎯 اختر الدور</h3>
+      <button class="modal-close" type="button" data-action="hd.other.closePick" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--tm);margin:0 0 .85rem 0">
+        <strong id="hd-pickrole-project">—</strong>
+      </p>
+      <p style="font-size:.78rem;color:var(--tm);margin:0 0 .85rem 0" data-i18n="mp.opps.pick_role_lead">
+        اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".
+      </p>
+      <div id="hd-pickrole-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="hd.other.closePick" data-i18n="mp.opps.pick_role_cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="hd.other.submitPick" id="hd-pickrole-submit-btn" data-i18n="mp.opps.pick_role_submit">✓ تسجيل الاهتمام</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-hd-att">
   <div class="modal">
     <div class="modal-head">
