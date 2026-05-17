@@ -186,7 +186,15 @@ const usersList: Handler = async (_body, user) => {
         m.full_name
     `;
   }
-  if (user.access !== 'superadmin') throw httpErr('err.access.forbidden', 403);
+  // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+  // which 403'd admin (presidency) callers even though the frontend
+  // RBAC.canSeePage lets them into the Accounts tab. President reported
+  // the "لا توجد صلاحية" toast on /admin/accounts as a result. Admins
+  // and superadmins both see the full list now; lower roles still get
+  // forbidden.
+  if (user.access !== 'admin' && user.access !== 'superadmin') {
+    throw httpErr('err.access.forbidden', 403);
+  }
 
   return sql`
     SELECT u.id, u.username, u.access_level, u.auth_user_id, u.created_at,
@@ -435,7 +443,10 @@ const usersResetPassword: Handler = async (body, user) => {
     if (target.access_level === 'superadmin') {
       throw httpErr('err.access.dev_only_reset_super', 403);
     }
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
+    // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+    // which forbade admin (presidency) — the comment above said
+    // presidency could perform this action, but the code blocked it.
     throw httpErr('err.access.forbidden', 403);
   }
 
@@ -495,7 +506,10 @@ const usersSendPasswordReset: Handler = async (body, user) => {
     if (target.member_committee_id !== user!.committee_id) {
       throw httpErr('err.access.member_committee_scope', 403);
     }
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
+    // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+    // which forbade admin (presidency) — the comment above said
+    // presidency could perform this action, but the code blocked it.
     throw httpErr('err.access.forbidden', 403);
   }
 
@@ -681,7 +695,10 @@ const authInviteByEmail: Handler = async (body, user) => {
     if (member.committee_id !== user!.committee_id) {
       throw httpErr('err.access.member_committee_scope', 403);
     }
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
+    // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+    // which forbade admin (presidency) — the comment above said
+    // presidency could perform this action, but the code blocked it.
     throw httpErr('err.access.forbidden', 403);
   }
 
@@ -788,7 +805,10 @@ const authInviteByPin: Handler = async (body, user) => {
     if (member.committee_id !== user!.committee_id) {
       throw httpErr('err.access.member_committee_scope', 403);
     }
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
+    // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+    // which forbade admin (presidency) — the comment above said
+    // presidency could perform this action, but the code blocked it.
     throw httpErr('err.access.forbidden', 403);
   }
 
@@ -879,7 +899,10 @@ const authInviteRevoke: Handler = async (body, user) => {
     if (existing.committee_id !== user!.committee_id) {
       throw httpErr('err.access.member_committee_scope', 403);
     }
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
+    // Bug fix (2026-05-17): the previous gate was `!== 'superadmin'`,
+    // which forbade admin (presidency) — the comment above said
+    // presidency could perform this action, but the code blocked it.
     throw httpErr('err.access.forbidden', 403);
   }
 

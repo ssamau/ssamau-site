@@ -597,12 +597,17 @@ const applicationsReject: Handler = async (body, user) => {
   }>;
   if (!app) throw httpErr('err.notfound.application', 404);
   // Heads can reject only within their committee's scope, but only after
-  // triage. Presidency can reject anything (including PendingTriage) for
-  // obvious-spam cases.
+  // triage. Presidency (admin) + dev (superadmin) can reject anything
+  // (including PendingTriage) for obvious-spam cases.
+  //
+  // Bug fix (2026-05-17): the previous `!== 'superadmin'` check
+  // accidentally blocked admin (presidency) — only the dev could
+  // reject applications. The comment said "presidency can reject
+  // anything" but the code didn't match.
   if (user!.access === 'head') {
     if (!app.assigned_committee_id) throw httpErr('err.business.app_not_triaged', 409);
     requireAdminScope(user, app.assigned_committee_id);
-  } else if (user!.access !== 'superadmin') {
+  } else if (user!.access !== 'admin' && user!.access !== 'superadmin') {
     throw httpErr('err.access.forbidden', 403);
   }
   if (app.status === 'Accepted' || app.status === 'Rejected') {
