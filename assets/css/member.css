@@ -11,23 +11,45 @@
  */
 
 /* ─── Profile: read-only header strip ─────────────────────────────────── */
+/* Renders as a tile grid of label/value pairs. Each row is a small
+ * card so they stand out individually even in dark mode where a
+ * subtle background tint would be invisible. The 2026-05-18 layout
+ * refactor (president flagged the previous flowing-text look) tightens
+ * the visual hierarchy: the label is small + uppercase-feel, the
+ * value sits below in larger weight. */
 .profile-readonly-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: .5rem .8rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: .6rem;
   background: var(--gl, #e8f5e9);
-  border-radius: 10px;
-  padding: .85rem 1rem;
-  margin-bottom: .65rem;
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: .85rem;
 }
 .prs-row {
   display: flex;
-  align-items: center;
-  gap: .4rem;
-  font-size: .8rem;
+  flex-direction: column;
+  gap: .2rem;
+  font-size: .82rem;
+  background: var(--bg, #fff);
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  min-width: 0;
 }
-.prs-label { color: var(--tl, #4b5563); font-weight: 600; white-space: nowrap; }
-.prs-value { color: var(--tx, #111827); font-weight: 700; }
+.prs-label {
+  color: var(--tm, #6b7280);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.prs-value {
+  color: var(--tx, #111827);
+  font-weight: 700;
+  font-size: .9rem;
+  word-break: break-word;
+}
 .prs-note {
   margin: 0 0 1.1rem 0;
   font-size: .72rem;
@@ -36,27 +58,53 @@
 }
 
 /* ─── Profile: edit form ─────────────────────────────────────────────── */
+/* Layout sits inside the card-body container — no extra padding here.
+ * .pf-section rows are styled to look like proper section headings
+ * with both a top accent border and a leading icon glyph dropped in
+ * via the markup (kept inline so the section copy stays unilingual). */
 .profile-edit-form { padding: 0; }
 .fg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: .5rem .8rem;
+  gap: .65rem .85rem;
 }
 .pf-section {
-  font-size: .82rem;
+  font-size: .9rem;
   font-weight: 800;
   color: var(--g, #1A5C2E);
-  margin: 1.2rem 0 .55rem 0;
-  padding-bottom: .35rem;
-  border-bottom: 1px solid var(--bd, #e5e7eb);
+  margin: 1.4rem 0 .65rem 0;
+  padding: .4rem 0 .35rem 0;
+  border-bottom: 2px solid var(--g, #1A5C2E);
+  /* First section sits flush to the strip above. */
+}
+.profile-edit-form .pf-section:first-of-type {
+  margin-top: .25rem;
 }
 
-/* Inputs in the profile form need bidi auto-detect (numbers/URLs render
- * LTR even inside the RTL form) — same trick we use on login.html. */
+/* Inputs + selects in the profile form need bidi auto-detect
+ * (numbers/URLs render LTR even inside the RTL form) — same trick we
+ * use on login.html. Selects pick up the same border/background as
+ * inputs (otherwise the system default render leaks through in
+ * dark mode and looks like an unstyled OS control). */
 .profile-edit-form .fg input,
 .profile-edit-form .fg textarea {
   unicode-bidi: plaintext;
   text-align: start;
+}
+.profile-edit-form .fg select {
+  background: var(--sf, #f9fafb);
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-family: inherit;
+  font-size: .88rem;
+  color: var(--tx, #111827);
+  width: 100%;
+  cursor: pointer;
+}
+.profile-edit-form .fg select:focus {
+  outline: none;
+  border-color: var(--g, #1A5C2E);
 }
 
 /* ─── Hours: total pill ────────────────────────────────────────────── */

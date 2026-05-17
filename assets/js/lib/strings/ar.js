@@ -295,9 +295,14 @@ export default {
   'mp.profile.lbl_photo':       'الصورة الشخصية',
   'mp.profile.lbl_cv':          'السيرة الذاتية (PDF)',
   // Section headers
+  'mp.profile.sec_personal':    'البيانات الشخصية',
   'mp.profile.sec_study':       'الدراسة والابتعاث',
   'mp.profile.sec_about':       'عن نفسك',
   'mp.profile.sec_files':       'الملفات',
+  // Placeholder used by select dropdowns when no value is saved yet.
+  // Members can also re-pick this option to clear a previously-set
+  // enum (saveProfile() sends '' → null to the server).
+  'mp.profile.opt_unspecified': '— غير محدد —',
   // Uploaders
   'mp.profile.upl_no_file':     'لا يوجد ملف بعد',
   'mp.profile.upl_no_photo':    'لا توجد صورة بعد',
