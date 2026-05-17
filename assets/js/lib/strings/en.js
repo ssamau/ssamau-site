@@ -1655,6 +1655,7 @@ export default {
   'support.err_file_too_large': 'File is larger than 4 MB.',
   'support.err_file_invalid':   'Pick a valid screenshot first.',
   'support.err_file_read':      'Couldn’t read the file.',
+  'support.err_stale_cache':    'Updating to the latest version — please try again in a moment.',
   // Inbox tab (superadmin-only)
   'support.inbox_title':        '📨 Support inbox',
   'support.inbox_lead':         'Support tickets submitted from every portal. Each ticket is also emailed to the developer when created.',

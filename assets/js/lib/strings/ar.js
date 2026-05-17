@@ -1688,6 +1688,7 @@ export default {
   'support.err_file_too_large': 'الملف أكبر من 4 ميجابايت.',
   'support.err_file_invalid':   'اختر صورة شاشة صحيحة أولاً.',
   'support.err_file_read':      'تعذّرت قراءة الملف.',
+  'support.err_stale_cache':    'جاري التحديث للنسخة الأحدث — أعد المحاولة بعد لحظة.',
   // تبويب الصندوق (للسوبر أدمن فقط)
   'support.inbox_title':        '📨 صندوق الدعم',
   'support.inbox_lead':         'تذاكر الدعم المُرسلة من جميع المستخدمين. كل تذكرة تُرسل تلقائياً إلى بريد المطور أيضاً.',

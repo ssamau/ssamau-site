@@ -21,6 +21,27 @@ const ALLOWED_MIMES  = ['image/jpeg', 'image/png', 'image/webp'];
 let _pageCtx = null;
 
 export function openSupportModal() {
+  // Defensive: if the modal element isn't on the page, openModal()
+  // would throw on null.classList.add — a stale-SW user could end up
+  // here with the button rendered but the modal markup missing.
+  // Toast + log instead of crashing.
+  const modalEl = document.getElementById('ov-support');
+  if (!modalEl) {
+    console.warn('[support] #ov-support modal missing — likely a stale service-worker cache. Forcing a fresh load.');
+    toast(t('support.err_stale_cache'), 'twarn');
+    // Drop the SW + reload so the user actually picks up the new HTML.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(rs => {
+        Promise.all(rs.map(r => r.unregister())).then(() => {
+          window.location.reload();
+        });
+      });
+    } else {
+      window.location.reload();
+    }
+    return;
+  }
+
   // Reset all form fields. Category defaults to Bug since that's the
   // most common drop-in reason; user can change it before submitting.
   sv('sup-category',    'Bug');
