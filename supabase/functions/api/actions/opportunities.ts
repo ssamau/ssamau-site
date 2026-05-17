@@ -294,15 +294,22 @@ const opportunitiesUpdate: Handler = async (body, user) => {
   // clear the column — that's the safer default. Clearing a field is
   // rare enough that we can live without it; the alternative is partial
   // saves silently dropping the field, which is the bug we're fixing.
+  // COALESCE pattern is kept only for required / never-null fields
+  // (role_name, status, estimated_hours, headcount_needed). The
+  // nullable fields — role_key, owning_committee_id, notes — bypass
+  // COALESCE so the admin can actually clear them. Bug 2026-05-18:
+  // the previous COALESCE on owning_committee_id meant "move this
+  // opportunity to all-committees" silently did nothing because
+  // _sql.ts coerces null → null and COALESCE(null, existing) wins.
   await sql`
     UPDATE opportunities SET
       role_name           = COALESCE(${norm.role_name},           role_name),
-      role_key            = COALESCE(${norm.role_key},            role_key),
+      role_key            = ${norm.role_key            ?? null},
       estimated_hours     = COALESCE(${norm.estimated_hours},     estimated_hours),
       headcount_needed    = COALESCE(${norm.headcount_needed},    headcount_needed),
-      owning_committee_id = COALESCE(${norm.owning_committee_id}, owning_committee_id),
+      owning_committee_id = ${norm.owning_committee_id ?? null},
       status              = COALESCE(${norm.status},              status),
-      notes               = ${norm.notes ?? null}
+      notes               = ${norm.notes               ?? null}
     WHERE opportunity_id = ${id}
   `;
   return { opportunity_id: id };
