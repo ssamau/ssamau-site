@@ -167,7 +167,7 @@
                  broadcasts). "Upcoming" excludes past events; "Past"
                  includes them (members may want to revisit closed ones
                  for hours-logging context). -->
-            <select data-action="filterMemberOppsByDate" data-event="change">
+            <select class="filter-select" data-action="filterMemberOppsByDate" data-event="change">
               <option value=""         data-i18n="mp.opps.filter_date_all">كل التواريخ</option>
               <option value="upcoming" data-i18n="mp.opps.filter_date_upcoming">القادمة فقط</option>
               <option value="today"    data-i18n="mp.opps.filter_date_today">اليوم</option>
@@ -175,7 +175,7 @@
               <option value="past"     data-i18n="mp.opps.filter_date_past">السابقة فقط</option>
               <option value="no_date"  data-i18n="mp.opps.filter_date_no_date">بدون تاريخ</option>
             </select>
-            <select data-action="filterMemberOppsByCommittee" data-event="change">
+            <select class="filter-select" data-action="filterMemberOppsByCommittee" data-event="change">
               <option value=""      data-i18n="mp.opps.filter_committee_all">لجنتي + المفتوحة للجميع</option>
               <option value="mine"  data-i18n="mp.opps.filter_committee_mine">لجنتي فقط</option>
               <option value="open"  data-i18n="mp.opps.filter_committee_open">المفتوحة للجميع</option>
@@ -327,6 +327,17 @@
         اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".
       </p>
       <div id="pickrole-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+      <!-- President's ask 2026-05-18: a free-text field where the
+           member explains why they're interested + what they can
+           offer. Surfaced to the admin/head in the interest tab and
+           in the notification email so they have context before
+           assigning. Optional — submission allowed without it. -->
+      <div class="fg" style="margin-top:1rem">
+        <label for="pickrole-motivation" data-i18n="mp.opps.motivation_label">لماذا أنت مهتم وما الذي يمكن أن تقدمه؟ (اختياري)</label>
+        <textarea id="pickrole-motivation" rows="3" maxlength="500"
+                  data-i18n-placeholder="mp.opps.motivation_placeholder"
+                  placeholder="اشرح باختصار سبب اهتمامك بهذه الفرصة + ما الذي يمكنك إضافته (مهارات، خبرات سابقة، توفّر معدّات...)"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ol" data-action="closePickRoleModal" data-i18n="mp.opps.pick_role_cancel">إلغاء</button>

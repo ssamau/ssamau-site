@@ -244,7 +244,7 @@
             <!-- Access-level filter — president flagged 2026-05-18: with
                  50+ accounts the admin needed a quick way to see only
                  heads, only members, etc. Empty value = all. -->
-            <select data-action="filterAccountsByAccess" data-event="change">
+            <select class="filter-select" data-action="filterAccountsByAccess" data-event="change">
               <option value="" data-i18n="ap.acc.filter_access_all">كل الصلاحيات</option>
               <option value="superadmin" data-i18n="ap.role.superadmin">superadmin</option>
               <option value="admin"      data-i18n="ap.role.admin">admin</option>
@@ -256,7 +256,7 @@
                  finding stale accounts. "never" = never_logged_in_at IS
                  NULL, "inactive_30" = haven't logged in for 30+ days,
                  "active_30" = logged in within the last 30 days. -->
-            <select data-action="filterAccountsByLogin" data-event="change">
+            <select class="filter-select" data-action="filterAccountsByLogin" data-event="change">
               <option value=""             data-i18n="ap.acc.filter_login_all">كل الحالات</option>
               <option value="never"        data-i18n="ap.acc.filter_login_never">لم يسجل دخوله بعد</option>
               <option value="inactive_30"  data-i18n="ap.acc.filter_login_inactive_30">غير نشط أكثر من 30 يوم</option>
@@ -303,6 +303,7 @@
           <table>
             <thead><tr>
               <th data-i18n="ap.apps.col_name">الاسم</th>
+              <th data-i18n="ap.apps.col_nid">رقم الهوية</th>
               <th data-i18n="ap.apps.col_contact">التواصل</th>
               <th data-i18n="ap.apps.col_uni">الجامعة / التخصص</th>
               <th data-i18n="ap.apps.col_interests">الاهتمامات</th>
@@ -311,7 +312,7 @@
               <th data-i18n="ap.apps.col_date">تاريخ الطلب</th>
               <th data-i18n="ap.apps.col_actions">إجراءات</th>
             </tr></thead>
-            <tbody id="applications-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
+            <tbody id="applications-tbody"><tr class="empty-row"><td colspan="9" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -330,12 +331,12 @@
                  in the DB; we populate options dynamically from the
                  loaded data so admin doesn't have to remember exact
                  spelling. -->
-            <select data-action="filterAdvisorsByStatus" data-event="change">
+            <select class="filter-select" data-action="filterAdvisorsByStatus" data-event="change">
               <option value=""         data-i18n="ap.adv.filter_status_all">كل الحالات</option>
               <option value="Active"   data-i18n="ap.status.active">Active</option>
               <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
             </select>
-            <select id="adv-filter-role" data-action="filterAdvisorsByRole" data-event="change">
+            <select class="filter-select" id="adv-filter-role" data-action="filterAdvisorsByRole" data-event="change">
               <option value="" data-i18n="ap.adv.filter_role_all">كل الأدوار</option>
             </select>
             <button class="btn btn-g" data-action="openModal" data-modal="advisor" data-i18n="ap.adv.add_btn">+ إضافة مستشار</button>
@@ -619,6 +620,7 @@
         </div>
         <div class="table-wrap"><table><thead><tr>
           <th data-i18n="ap.int.col_member">العضو</th>
+          <th data-i18n="ap.int.col_member_committee">لجنة العضو</th>
           <th data-i18n="ap.int.col_project">المشروع</th>
           <th data-i18n="ap.int.col_interested">مهتم</th>
           <th data-i18n="ap.int.col_avail">التوفر</th>
@@ -626,7 +628,7 @@
           <th data-i18n="ap.int.col_date">التاريخ</th>
           <th data-i18n="ap.int.col_actions">إجراء</th>
         </tr></thead>
-        <tbody id="tb-interest"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
+        <tbody id="tb-interest"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
       </div>
     </div>
 

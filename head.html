@@ -215,7 +215,7 @@
             <!-- Role + status filters scoped to the head's committee
                  (president's QOL ask 2026-05-18). Role options match
                  the canonical CLUB_ROLE enum; status is Active/Inactive. -->
-            <select data-action="hd.members.filterRole" data-event="change">
+            <select class="filter-select" data-action="hd.members.filterRole" data-event="change">
               <option value=""                     data-i18n="hp.members.filter_role_all">كل الأدوار</option>
               <option value="Committee Head"       data-i18n="ap.role.committee_head">Committee Head</option>
               <option value="Committee Vice Head"  data-i18n="ap.role.committee_vice_head">Committee Vice Head</option>
@@ -223,7 +223,7 @@
               <option value="Member"               data-i18n="ap.role.member">Member</option>
               <option value="Volunteer"            data-i18n="ap.role.volunteer">Volunteer</option>
             </select>
-            <select data-action="hd.members.filterStatus" data-event="change">
+            <select class="filter-select" data-action="hd.members.filterStatus" data-event="change">
               <option value=""         data-i18n="hp.members.filter_status_all">كل الحالات</option>
               <option value="Active"   data-i18n="ap.status.active">Active</option>
               <option value="Inactive" data-i18n="ap.status.inactive">Inactive</option>
@@ -574,6 +574,15 @@
         اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".
       </p>
       <div id="hd-pickrole-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+      <!-- Motivation textarea — mirrors the member modal (member.html).
+           Optional free-text where the head explains why interested
+           + what they can offer; surfaced in the admin interest tab. -->
+      <div class="fg" style="margin-top:1rem">
+        <label for="hd-pickrole-motivation" data-i18n="mp.opps.motivation_label">لماذا أنت مهتم وما الذي يمكن أن تقدمه؟ (اختياري)</label>
+        <textarea id="hd-pickrole-motivation" rows="3" maxlength="500"
+                  data-i18n-placeholder="mp.opps.motivation_placeholder"
+                  placeholder="اشرح باختصار سبب اهتمامك بهذه الفرصة + ما الذي يمكنك إضافته (مهارات، خبرات سابقة، توفّر معدّات...)"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ol" data-action="hd.other.closePick" data-i18n="mp.opps.pick_role_cancel">إلغاء</button>

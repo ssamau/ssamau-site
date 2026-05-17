@@ -290,6 +290,10 @@ export function openPickRoleModal(el) {
     `;
     list.innerHTML = rowsHtml + anyRoleRow;
   }
+  // Reset the motivation textarea so a previous submission doesn't
+  // leak across opens (especially on the same opportunity).
+  const motivationEl = document.getElementById('pickrole-motivation');
+  if (motivationEl) motivationEl.value = '';
   openModal('pick-role');
 }
 
@@ -311,6 +315,13 @@ export async function submitPickRole() {
     return;
   }
   const role_id = picked.value === '__any__' ? null : Number(picked.value);
+  // Free-text motivation (president's ask 2026-05-18: "ودي لو فيه
+  // بوكس يكتبولنا فيه ليش هو مهتم وايش يقدر يقدم"). Stored in the
+  // existing `comment` column on interest_requests — the old
+  // auto-generated role-name hint is no longer needed because the
+  // server returns `picked_role_name` as a dedicated column now, so
+  // the comment slot is freed for the member's actual words.
+  const motivation = (document.getElementById('pickrole-motivation')?.value || '').trim();
 
   const btn = document.getElementById('pickrole-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = t('mp.opps.registering'); }
@@ -322,14 +333,9 @@ export async function submitPickRole() {
         opportunity_id: _pickRoleCtx.opportunity_id,
         role_id,
         interested:     true,
-        // Comment kept for backwards-compat — heads who don't see the
-        // new role chip in the admin interest tab still get the role
-        // name in plain text via the comment field.
-        comment:        role_id
-          ? `${t('mp.opps.interest_role_prefix')} ${
-              (_pickRoleCtx.roles.find(r => Number(r.id) === role_id) || {}).role_name || ''
-            }`
-          : (t('mp.opps.interest_any_role_comment') || 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة'),
+        // Member's own words about why interested + what they can
+        // offer. Empty when they leave the textarea blank.
+        comment:        motivation || null,
       },
     });
     if (!res || !res.success) {

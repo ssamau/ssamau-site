@@ -16,7 +16,7 @@
 //     them entirely so the admin sees only un-triaged requests by default.
 
 import { DB } from '../../lib/state.js';
-import { esc, gv, sv, tag, setEl } from '../../lib/format.js';
+import { esc, gv, sv, tag, setEl, fmtDateTime } from '../../lib/format.js';
 import { api, apiGet, toast, openModal, closeModal, populateNewSelects } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
 import { localizeError } from '../../lib/api.js';
@@ -88,7 +88,7 @@ export function renderInterest(list) {
   const tb = document.getElementById('tb-interest');
   if (!tb) return;
   if (!list.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('ap.int.empty'))}</td></tr>`;
+    tb.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('ap.int.empty'))}</td></tr>`;
     return;
   }
   const yesLabel       = t('ap.int.yes');
@@ -117,13 +117,25 @@ export function renderInterest(list) {
     // open the assign-modal / toggle reviewed without re-fetching the row
     // server-side. Comment is escaped + carried as the role hint.
     const rowAttrs = `data-id="${i.id}" data-project="${esc(i.project_id)}" data-member="${esc(i.member_id)}" data-name="${esc(name)}" data-projname="${esc(proj)}" data-comment="${esc(i.comment || '')}"`;
+    // Member's home committee — president's ask 2026-05-18: from the
+    // outside it wasn't clear which committee the interested member
+    // belonged to. The server now joins committees on members.committee_id
+    // and returns member_committee_name; fallback to a DB.committees
+    // lookup via member_committee_id for older cached rows.
+    const memberCom = i.member_committee_name
+      || DB.committees.find(c => c.committee_id === i.member_committee_id)?.committee_name
+      || '';
+    const memberComCell = memberCom
+      ? tag(memberCom, 't-b')
+      : '<span style="color:var(--tm)">—</span>';
     return `<tr class="${reviewed ? 'int-row-reviewed' : ''}">
       <td><strong>${esc(name)}</strong></td>
+      <td style="font-size:.76rem">${memberComCell}</td>
       <td style="font-size:.76rem">${esc(proj)}</td>
       <td>${tag(yn ? yesLabel : noLabel, yn ? 't-g' : 't-r')}</td>
       <td>${tag(availLabel, 't-b')}</td>
       <td style="font-size:.76rem;max-width:130px">${esc(i.comment) || '—'}</td>
-      <td style="font-size:.71rem;color:var(--tm)">${String(i.submitted_at || '').split('T')[0] || '—'}</td>
+      <td style="font-size:.71rem;color:var(--tm)">${i.submitted_at ? fmtDateTime(i.submitted_at) : '—'}</td>
       <td style="white-space:nowrap">
         ${reviewed
           ? `<span class="hs-badge hs-finalapproved" style="font-size:.66rem">${esc(reviewedBadge)}</span>

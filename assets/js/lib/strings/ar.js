@@ -382,6 +382,11 @@ export default {
   'mp.opps.any_role_badge':     'أي دور',
   'mp.opps.interest_any_role_comment': 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة',
   'mp.opps.err_pick_role':      'اختر دوراً قبل المتابعة',
+  // President's ask 2026-05-18: optional free-text field where the
+  // member/head explains why they're interested + what they offer.
+  // Surfaced in the admin interest tab + notification email.
+  'mp.opps.motivation_label':       'لماذا أنت مهتم وما الذي يمكن أن تقدمه؟ (اختياري)',
+  'mp.opps.motivation_placeholder': 'اشرح باختصار سبب اهتمامك بهذه الفرصة + ما الذي يمكنك إضافته (مهارات، خبرات سابقة، توفّر معدّات...)',
   // Backward-compat hint shown on opportunities where the member
   // previously expressed project-level interest (pre-2026-05-18). The
   // refactor moved interest from per-project to per-(opportunity,role);
@@ -873,6 +878,7 @@ export default {
   'ap.apps.status_accepted':             'مقبولة',
   'ap.apps.status_rejected':             'مرفوضة',
   'ap.apps.col_name':           'الاسم',
+  'ap.apps.col_nid':            'رقم الهوية',
   'ap.apps.col_contact':        'التواصل',
   'ap.apps.col_uni':            'الجامعة / التخصص',
   'ap.apps.col_interests':      'الاهتمامات',
@@ -1393,6 +1399,7 @@ export default {
   'ap.int.sum_no':              'غير قادر',
   'ap.int.sum_pct':             'نسبة الاهتمام',
   'ap.int.col_member':          'العضو',
+  'ap.int.col_member_committee': 'لجنة العضو',
   'ap.int.col_project':         'المشروع',
   'ap.int.col_interested':      'مهتم',
   'ap.int.col_avail':           'التوفر',

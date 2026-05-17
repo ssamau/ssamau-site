@@ -169,6 +169,9 @@ export function openHeadOtherPickRole(el) {
     `;
     list.innerHTML = rowsHtml + anyRoleRow;
   }
+  // Clear stale motivation text on each open.
+  const motivationEl = document.getElementById('hd-pickrole-motivation');
+  if (motivationEl) motivationEl.value = '';
   openModal('pick-role');
 }
 
@@ -182,6 +185,8 @@ export async function submitHeadOtherPickRole() {
   const picked = document.querySelector('input[name="hd-pickrole-choice"]:checked');
   if (!picked) return;
   const role_id = picked.value === '__any__' ? null : Number(picked.value);
+  // Same motivation flow as the member portal (member/tabs/opportunities.js).
+  const motivation = (document.getElementById('hd-pickrole-motivation')?.value || '').trim();
   const btn = document.getElementById('hd-pickrole-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = t('mp.opps.registering'); }
   try {
@@ -191,11 +196,7 @@ export async function submitHeadOtherPickRole() {
         opportunity_id: _pickRoleCtx.opportunity_id,
         role_id,
         interested:     true,
-        comment:        role_id
-          ? `${t('mp.opps.interest_role_prefix')} ${
-              (_pickRoleCtx.roles.find(r => Number(r.id) === role_id) || {}).role_name || ''
-            }`
-          : (t('mp.opps.interest_any_role_comment') || 'مهتم بأي دور — مساعدة حيث تحتاج اللجنة'),
+        comment:        motivation || null,
       },
     });
     const { toast } = await import('../../lib/ui.js');

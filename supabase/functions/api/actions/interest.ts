@@ -230,11 +230,16 @@ function renderInterestNotificationHtml(opts: {
   const esc = (s: string) => String(s || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-  // Role hint pulled out of the comment — the member-portal expressInterest
-  // call sets comment = "{prefix} {role_name}". We display the comment
-  // verbatim so the head sees exactly what the member meant.
+  // Motivation block — the member's free-text answer to "why are you
+  // interested + what can you offer". Labeled prominently so the
+  // head/admin sees it as the member's own words, not just a generic
+  // note. President's spec 2026-05-18: this is the single most useful
+  // piece of context for triaging an interest request.
   const commentBlock = opts.comment
-    ? `<div dir="rtl" style="background:#fffbeb;border-inline-start:4px solid #b8932a;padding:.75rem 1rem;border-radius:6px;margin:.85rem 0;font-size:.86rem;line-height:1.7;text-align:right">${esc(opts.comment)}</div>`
+    ? `<div dir="rtl" style="background:#fffbeb;border-inline-start:4px solid #b8932a;padding:.85rem 1rem;border-radius:6px;margin:.85rem 0;text-align:right">
+         <div style="font-size:.72rem;font-weight:700;color:#92400e;margin-bottom:.4rem;letter-spacing:.02em">💬 لماذا أنا مهتم وما أقدّمه</div>
+         <div style="font-size:.88rem;line-height:1.7;color:#1f2937;white-space:pre-wrap">${esc(opts.comment)}</div>
+       </div>`
     : '';
   // Role row: shows the specific role the member picked, or an
   // "any role / help where most needed" pill so the head knows they
@@ -297,11 +302,14 @@ const interestList: Handler = async (body) => {
   return sql`
     SELECT ir.*,
            m.full_name, m.preferred_name, m.email,
+           m.committee_id      AS member_committee_id,
+           mc.committee_name   AS member_committee_name,
            p.project_name,
            opp.role_name        AS opportunity_role_name,
            opr.role_name        AS picked_role_name
     FROM   interest_requests ir
     LEFT JOIN members            m   ON m.member_id      = ir.member_id
+    LEFT JOIN committees         mc  ON mc.committee_id   = m.committee_id
     LEFT JOIN projects           p   ON p.project_id     = ir.project_id
     LEFT JOIN opportunities      opp ON opp.opportunity_id = ir.opportunity_id
     LEFT JOIN opportunity_roles  opr ON opr.id           = ir.role_id
@@ -313,11 +321,14 @@ const interestList: Handler = async (body) => {
 const interestListAll: Handler = async () => sql`
   SELECT ir.*,
          m.full_name, m.preferred_name, m.email,
+         m.committee_id      AS member_committee_id,
+         mc.committee_name   AS member_committee_name,
          p.project_name,
          opp.role_name        AS opportunity_role_name,
          opr.role_name        AS picked_role_name
   FROM   interest_requests ir
   LEFT JOIN members            m   ON m.member_id      = ir.member_id
+  LEFT JOIN committees         mc  ON mc.committee_id   = m.committee_id
   LEFT JOIN projects           p   ON p.project_id     = ir.project_id
   LEFT JOIN opportunities      opp ON opp.opportunity_id = ir.opportunity_id
   LEFT JOIN opportunity_roles  opr ON opr.id           = ir.role_id

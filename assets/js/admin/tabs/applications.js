@@ -108,7 +108,7 @@ export async function loadApplications() {
   const items = data.data || [];
   const tbody = document.getElementById('applications-tbody');
   if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('ap.apps.empty'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${esc(t('ap.apps.empty'))}</td></tr>`;
   } else {
     tbody.innerHTML = items.map(a => renderApplicationRow(a)).join('');
   }
@@ -151,6 +151,13 @@ export function renderApplicationRow(a) {
   const inviteBtn = canInvite
     ? `<button class="btn-icon" title="${esc(t('ap.apps.invite_as_member_title'))}" data-action="openInviteAsMember" data-id="${esc(a.application_id)}">🎫</button>`
     : '';
+  // National ID — surfaced at the row level (not just in the detail
+  // modal) per the president's ask 2026-05-18: he wanted to scan NIDs
+  // without clicking into every row. Monospace + LTR so digits read
+  // as digits regardless of document direction.
+  const nidCell = a.national_id
+    ? `<span dir="ltr" style="font-family:Menlo,Consolas,monospace;font-size:.78rem">${esc(a.national_id)}</span>`
+    : '<span style="color:var(--tm)">—</span>';
   return `<tr>
     <td>
       <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
@@ -159,6 +166,7 @@ export function renderApplicationRow(a) {
       </div>
       ${a.preferred_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(a.full_name)}</div>` : ''}
     </td>
+    <td>${nidCell}</td>
     <td style="font-size:.78rem;direction:ltr;text-align:right">${esc(contact)}</td>
     <td style="font-size:.78rem">${esc(uniMajor)}</td>
     <td style="font-size:.78rem;max-width:160px">${interests}</td>
