@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: i18n key parity.
+#
+# Only runs when one of the i18n catalog files is in the staged diff —
+# the check itself is cheap (~150ms), but skipping it on unrelated
+# commits keeps the feedback loop tight.
+#
+# Activation:  git config core.hooksPath scripts/git-hooks
+# Bypass once: git commit --no-verify
+#              (use sparingly — the script catches real bugs)
+
+set -e
+
+# Only run if the staged diff actually touches an i18n catalog. `git
+# diff --cached --name-only` lists everything in the staged set; grep
+# returns 0 only when there's a hit.
+STAGED_I18N=$(git diff --cached --name-only --diff-filter=ACMR | grep -E 'assets/js/lib/strings/(ar|en)\.js' || true)
+
+if [ -z "$STAGED_I18N" ]; then
+  exit 0
+fi
+
+echo "→ Running i18n parity check (catalog files staged)..."
+if ! node scripts/check-i18n-parity.mjs; then
+  echo ""
+  echo "Aborting commit. Fix the parity issues above and re-stage, or"
+  echo "use 'git commit --no-verify' if you intentionally want to ship"
+  echo "the divergence (and immediately follow up to restore parity)."
+  exit 1
+fi

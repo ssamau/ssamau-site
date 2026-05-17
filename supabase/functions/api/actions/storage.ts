@@ -95,7 +95,12 @@ const uploadMemberFile: Handler = async (body, user) => {
     throw httpErr('err.required.storage_fields', 400);
   }
   const cfg = BUCKETS[kind];
-  if (!cfg.mimes.includes(contentType)) {
+  // `BUCKETS as const` narrows `mimes` to a readonly tuple of literal
+  // strings (e.g. `readonly ['application/pdf']`), which makes
+  // `.includes(contentType)` reject a generic `string` arg in strict
+  // TS. Widen the array at the call site so the user-supplied
+  // content-type can be checked against it.
+  if (!(cfg.mimes as readonly string[]).includes(contentType)) {
     throw httpErr('err.business.content_type_not_allowed_list', 415, {
       contentType, allowed: cfg.mimes.join(', '),
     });

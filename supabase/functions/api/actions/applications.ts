@@ -294,7 +294,9 @@ async function notifyNewApplication(applicationId: string, data: Record<string, 
                 ['التخصص',     String(data.degree_field || data.major || '—')],
                 ['بداية الدراسة', t(STUDY_STARTED_LABELS_AR, data.study_started_window)],
                 ['التخرج المتوقع', t(GRADUATION_LABELS_AR, data.expected_graduation_window)],
-                ['CV',          data.cv_url ? `<a href="${esc(String(data.cv_url))}" style="color:#1A5C2E;text-decoration:underline;">رابط</a>` : '—'],
+                ['CV',          data.cv_url
+                  ? { html: `<a href="${esc(String(data.cv_url))}" style="color:#1A5C2E;text-decoration:underline;">رابط</a>` }
+                  : '—'],
               ])}
               ${committeeNames.length ? `
               <div style="margin-bottom:18px;">
@@ -368,7 +370,15 @@ function esc(s: string): string {
 // table-based layout the password-recovery email uses — survives
 // Outlook + Gmail + Apple Mail rendering quirks. role="presentation"
 // tells assistive tech (and some clients) this is layout, not data.
-function section(title: string, rows: Array<[string, string]>): string {
+//
+// Hardened 2026-05-18: value cells are HTML-escaped by default so
+// caller-supplied strings (member names, free-text answers, etc.) can't
+// inject markup into the admin inbox. The CV row needs to inject a real
+// `<a>` tag, so the row-shape now allows `{ html: string }` as an
+// explicit opt-out for safe-by-construction HTML. Plain strings go
+// through `esc()`; objects are passed through verbatim.
+type SectionRow = [label: string, value: string | { html: string }];
+function section(title: string, rows: Array<SectionRow>): string {
   return `
     <div style="margin-bottom:18px;border-bottom:1px solid #f0f0f0;padding-bottom:14px;">
       <div style="font-size:13px;font-weight:700;color:#0e3a1c;margin-bottom:10px;">${esc(title)}</div>
@@ -376,7 +386,7 @@ function section(title: string, rows: Array<[string, string]>): string {
         ${rows.map(([l, v]) => `
           <tr>
             <td style="color:#6b7280;padding:3px 0;width:140px;vertical-align:top;">${esc(l)}</td>
-            <td style="color:#111827;padding:3px 0;vertical-align:top;">${v}</td>
+            <td style="color:#111827;padding:3px 0;vertical-align:top;">${typeof v === 'string' ? esc(v) : v.html}</td>
           </tr>`).join('')}
       </table>
     </div>`;
@@ -580,7 +590,6 @@ async function autoInviteAcceptedMember(
     displayName,
     committeeName: com?.committee_name ?? null,
     signupLink: `https://ssamau.com/signup.html?token=${token}`,
-    mode: 'token',
   });
   await sendEmail({
     to: email,

@@ -132,16 +132,19 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
   const cleanText = (opts.text ?? stripHtml(opts.html)).replace(/[ \t]+(\r?\n)/g, '$1');
 
   try {
-    const message: Record<string, unknown> = {
+    // Build the message in one expression so the inferred type carries
+    // all required denomailer fields (from / to / subject / content /
+    // html). bcc is optional — spread it in conditionally instead of
+    // mutating, otherwise the inferred type drops back to
+    // Record<string, unknown> and stops satisfying SendConfig.
+    const message = {
       from:    SMTP_FROM,
       to:      Array.isArray(opts.to) ? opts.to : [opts.to],
       subject: SUBJECT_PLACEHOLDER,
       content: cleanText,
       html:    cleanHtml,
+      ...(opts.bcc && opts.bcc.length ? { bcc: opts.bcc } : {}),
     };
-    if (opts.bcc && opts.bcc.length) {
-      message.bcc = opts.bcc;
-    }
     await client.send(message);
     console.log(`[email] sent ok: subject="${opts.subject}" to=${Array.isArray(opts.to) ? opts.to.join(',') : opts.to}${opts.bcc?.length ? ` bcc=${opts.bcc.length}` : ''}`);
     return true;

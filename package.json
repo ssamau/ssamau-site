@@ -10,7 +10,9 @@
     "import:preview": "node db/preview-import.js",
     "import:static-events": "node db/import-static-events.js",
     "admin:create": "node db/create-admin.js",
-    "auth:backfill": "node db/auth-backfill.js"
+    "auth:backfill": "node db/auth-backfill.js",
+    "check:i18n": "node scripts/check-i18n-parity.mjs",
+    "install:hooks": "git config core.hooksPath scripts/git-hooks && echo 'Hooks active — pre-commit runs check:i18n on staged catalog changes.'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

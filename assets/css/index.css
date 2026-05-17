@@ -75,7 +75,12 @@ section{padding:5rem 2rem;}
 .about-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:3.5rem;align-items:center;margin-top:3rem;}
 .about-body p{font-size:.94rem;color:var(--tl);line-height:1.88;margin-bottom:1rem;}
 .about-body p:last-child{margin:0;}
-.sacm-bar{background:var(--gl);border-right:3px solid var(--g);border-radius:0 var(--rs) var(--rs) 0;padding:.7rem 1rem;font-size:.82rem;color:var(--gd);font-weight:700;margin-top:1.4rem;display:flex;justify-content:space-between;align-items:center;}
+/* Accent bar with a green stripe on the reading-start side. The
+ * matching rounded corners live on the SAME side as the stripe so it
+ * reads as a single "anchored" edge — preserves the original RTL look
+ * (stripe + rounded both on the right) and auto-flips in English mode
+ * (stripe + rounded both on the left). */
+.sacm-bar{background:var(--gl);border-inline-start:3px solid var(--g);border-start-start-radius:var(--rs);border-end-start-radius:var(--rs);border-start-end-radius:0;border-end-end-radius:0;padding:.7rem 1rem;font-size:.82rem;color:var(--gd);font-weight:700;margin-top:1.4rem;display:flex;justify-content:space-between;align-items:center;}
 .sacm-bar span{font-size:.68rem;color:var(--tm);direction:ltr;}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
 .kpi{background:var(--gl);border-radius:var(--r);padding:1.25rem;border:1px solid rgba(26,92,46,.1);}
@@ -431,13 +436,17 @@ nav.scrolled{background:rgba(255,255,255,.99);box-shadow:0 2px 16px rgba(0,0,0,.
 .lrep-chip.gold{background:rgba(184,147,42,.2);border-color:rgba(184,147,42,.35);color:var(--go);}
 .lrep-date{font-size:.7rem;color:rgba(255,255,255,.5);text-align:center;margin-top:.5rem;}
 .lrep-stats{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--bd);}
-.lrep-stat{padding:.85rem .5rem;text-align:center;border-left:1px solid var(--bd);}
-.lrep-stat:nth-child(3n){border-left:none;}
+/* 3-column stat grid separators. Each cell carries a border on its
+ * reading-start (inline-start) side; the last cell of every row has
+ * the border suppressed so the grid edges stay clean. Logical
+ * properties auto-flip in English mode. */
+.lrep-stat{padding:.85rem .5rem;text-align:center;border-inline-start:1px solid var(--bd);}
+.lrep-stat:nth-child(3n){border-inline-start:none;}
 .lrep-stat-n{font-size:1.2rem;font-weight:800;color:var(--gd);}
 .lrep-stat-l{font-size:.6rem;color:var(--tm);font-weight:600;margin-top:.1rem;}
 .lrep-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
-@media(max-width:680px){.lrep-body{grid-template-columns:1fr;}.lrep-stats{grid-template-columns:repeat(2,1fr);}.lrep-stat:nth-child(3n){border-left:1px solid var(--bd);}.lrep-stat:nth-child(2n){border-left:none!important;}}
-.lrep-desc-col{padding:1.2rem 1.5rem;border-left:1px solid var(--bd);}
+@media(max-width:680px){.lrep-body{grid-template-columns:1fr;}.lrep-stats{grid-template-columns:repeat(2,1fr);}.lrep-stat:nth-child(3n){border-inline-start:1px solid var(--bd);}.lrep-stat:nth-child(2n){border-inline-start:none!important;}}
+.lrep-desc-col{padding:1.2rem 1.5rem;border-inline-start:1px solid var(--bd);}
 .lrep-desc{font-size:.8rem;color:var(--tl);line-height:1.75;margin-bottom:.85rem;}
 .lrep-hl{list-style:none;padding:0;margin:0;}
 .lrep-hl li{font-size:.78rem;color:var(--tl);padding:.2rem 0;display:flex;align-items:flex-start;gap:.4rem;}
@@ -553,15 +562,17 @@ nav.scrolled{background:rgba(255,255,255,.99);box-shadow:0 2px 16px rgba(0,0,0,.
 .latest-ev-date{font-size:.72rem;color:rgba(255,255,255,.55);text-align:center;margin-top:.55rem;}
 
 .latest-ev-stats{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--bd);}
-.latest-ev-stat{padding:.85rem .5rem;text-align:center;border-left:1px solid var(--bd);}
-.latest-ev-stat:nth-child(3n){border-left:none;}
-@media(max-width:480px){.latest-ev-stats{grid-template-columns:repeat(2,1fr);}.latest-ev-stat:nth-child(2n){border-left:none;}.latest-ev-stat:nth-child(3n){border-left:1px solid var(--bd);}.latest-ev-stat:nth-child(even){border-left:none!important;}}
+/* Same 3-column-stat-separator pattern as .lrep-stat above. Logical
+ * properties so the English-mode render flips the separators correctly. */
+.latest-ev-stat{padding:.85rem .5rem;text-align:center;border-inline-start:1px solid var(--bd);}
+.latest-ev-stat:nth-child(3n){border-inline-start:none;}
+@media(max-width:480px){.latest-ev-stats{grid-template-columns:repeat(2,1fr);}.latest-ev-stat:nth-child(2n){border-inline-start:none;}.latest-ev-stat:nth-child(3n){border-inline-start:1px solid var(--bd);}.latest-ev-stat:nth-child(even){border-inline-start:none!important;}}
 .latest-ev-stat-n{font-size:1.25rem;font-weight:800;color:var(--gd);}
 .latest-ev-stat-l{font-size:.6rem;color:var(--tm);font-weight:600;margin-top:.1rem;}
 
 .latest-ev-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
 @media(max-width:700px){.latest-ev-body{grid-template-columns:1fr;}}
-.latest-ev-desc-col{padding:1.25rem 1.5rem;border-left:1px solid var(--bd);}
+.latest-ev-desc-col{padding:1.25rem 1.5rem;border-inline-start:1px solid var(--bd);}
 .latest-ev-desc-text{font-size:.82rem;color:var(--tl);line-height:1.75;margin-bottom:.85rem;}
 .latest-ev-highlights{list-style:none;padding:0;margin:0;}
 .latest-ev-highlights li{font-size:.78rem;color:var(--tl);padding:.2rem 0;display:flex;align-items:flex-start;gap:.45rem;line-height:1.5;}

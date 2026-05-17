@@ -58,7 +58,12 @@ body::before {
 /* Field group */
 .fg { margin-bottom: .95rem; }
 .fg label { display: block; font-size: .78rem; font-weight: 700; color: #374151; margin-bottom: .32rem; }
-.fg label .req { color: #dc2626; margin-right: .18rem; }
+/* Required-asterisk marker sits AFTER the label text in source order,
+ * so it needs a small leading gap from the label. inset-inline-start
+ * auto-flips: in RTL the asterisk is visually to the left and gets
+ * margin on its left; in LTR (English) it's on the right and gets the
+ * margin on its right side — both reading-natural. */
+.fg label .req { color: #dc2626; margin-inline-start: .18rem; }
 .fg input, .fg select, .fg textarea {
   width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px;
   padding: .65rem .8rem; font-size: .88rem;
@@ -67,8 +72,21 @@ body::before {
   transition: border-color .2s, background .2s;
 }
 .fg input, .fg textarea { direction: rtl; }
-.fg input[type=email], .fg input[type=date] { direction: ltr; text-align: right; }
-.fg input.ltr, .fg textarea.ltr { direction: ltr; text-align: left; }
+/* Email / date inputs are LTR-typed (user@example.com, YYYY-MM-DD)
+ * regardless of document language, BUT the input box itself should
+ * align with the form's reading direction — right edge in Arabic,
+ * left edge in English. We can't express "align to parent direction"
+ * with logical properties on an LTR-directed element (text-align:start
+ * always resolves to left in an LTR context), so we condition on the
+ * document `dir` attribute. */
+.fg input[type=email], .fg input[type=date] { direction: ltr; }
+[dir="rtl"] .fg input[type=email], [dir="rtl"] .fg input[type=date] { text-align: right; }
+[dir="ltr"] .fg input[type=email], [dir="ltr"] .fg input[type=date] { text-align: left; }
+/* The .ltr opt-in class is for free-text fields the page wants to
+ * render LTR (e.g. URL or code input). Same conditional alignment. */
+.fg input.ltr, .fg textarea.ltr { direction: ltr; }
+[dir="rtl"] .fg input.ltr, [dir="rtl"] .fg textarea.ltr { text-align: right; }
+[dir="ltr"] .fg input.ltr, [dir="ltr"] .fg textarea.ltr { text-align: left; }
 .fg input:focus, .fg select:focus, .fg textarea:focus {
   border-color: #1A5C2E; background: #fff;
   box-shadow: 0 0 0 3px rgba(26,92,46,.1);
@@ -83,7 +101,11 @@ body::before {
 /* Phone with country-code dropdown */
 .phone-wrap { display: grid; grid-template-columns: 90px 1fr; gap: .4rem; }
 .phone-wrap select { padding: .65rem .4rem; font-size: .8rem; text-align: center; direction: ltr; }
-.phone-wrap input  { direction: ltr; text-align: left; }
+/* Phone input is LTR (digits / + sign) but aligns to the form's
+ * reading start — same flip pattern as email/date above. */
+.phone-wrap input  { direction: ltr; }
+[dir="rtl"] .phone-wrap input { text-align: right; }
+[dir="ltr"] .phone-wrap input { text-align: left; }
 
 /* Radio / checkbox option lists */
 .opts {
@@ -99,7 +121,10 @@ body::before {
 }
 .opts label:hover { background: #fff; }
 .opts input { width: auto; margin: 0; accent-color: #1A5C2E; }
-.opts .other-input { margin-top: .3rem; padding-right: 1.55rem; }
+/* "Other (please specify)" indent matches the radio-button column on
+ * the reading-start side. padding-inline-start auto-flips so the
+ * indent stays under the radio in both directions. */
+.opts .other-input { margin-top: .3rem; padding-inline-start: 1.55rem; }
 .opts .other-input input { font-size: .82rem; padding: .45rem .65rem; }
 
 /* Committees checklist (compact grid) */
@@ -125,7 +150,9 @@ body::before {
 .cv-btn:hover { border-color: #1A5C2E; color: #1A5C2E; background: #fff; }
 .cv-state { margin-top: .45rem; font-size: .75rem; color: #1A5C2E; font-weight: 600; display: none; }
 .cv-state.show { display: block; }
-.cv-state .clear { color: #dc2626; cursor: pointer; margin-right: .4rem; text-decoration: underline; font-weight: 700; }
+/* Clear-CV link sits AFTER the filename in source order; logical
+ * margin gives it the right leading gap in both directions. */
+.cv-state .clear { color: #dc2626; cursor: pointer; margin-inline-start: .4rem; text-decoration: underline; font-weight: 700; }
 
 /* "WhatsApp same as phone" checkbox row — a non-error confirm block */
 .confirm-row {

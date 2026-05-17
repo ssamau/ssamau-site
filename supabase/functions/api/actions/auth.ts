@@ -760,7 +760,6 @@ const authInviteByEmail: Handler = async (body, user) => {
     displayName,
     committeeName: member.committee_name,
     signupLink: link,
-    mode: 'token',
   });
   const sent = await sendEmail({ to: member.email, subject, html });
 
@@ -1142,15 +1141,17 @@ export function generateInviteToken(): string {
 //     re-colour white text to grey
 //   - CTA button = <a> inside a single-cell <table> with bgcolor
 //
-// Token vs PIN mode share most copy. We pass `mode` so the body text
-// can vary: "click the link" vs "enter the PIN".
+// PIN-mode invitations don't send email at all (the head reads the
+// PIN off the screen and communicates it manually). So this composer
+// only ever runs for token-mode invitations — the earlier `mode`
+// parameter was dead weight (no branch ever read it). Dropped
+// 2026-05-18 in housekeeping.
 // Exported so other actions (e.g. applications.accept auto-invite)
 // can compose using the same template.
 export function composeInviteEmail(opts: {
   displayName: string;
   committeeName: string | null;
   signupLink: string;
-  mode: 'token' | 'pin';
 }): string {
   const esc = (s: string) => String(s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

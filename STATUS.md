@@ -281,13 +281,13 @@ only (CSP-friendly for the cert preview popup too).
 
 ## Known open items (housekeeping, no blockers)
 
-- [ ] Brand the Supabase password-reset email template via dashboard.
-- [ ] Pre-commit hook for i18n key parity (`node -e` script in commit
-      notes is the manual check today; held up fine through 1500 keys).
-- [ ] `apply.css` and `index.css` still have a few physical
-      `text-align: right` / `border-right` rules — only affects
-      English mode on those public pages.
-- [ ] Tighten `section()` helper in applications.ts to HTML-escape
-      value cells.
-- [ ] Remove dead `mode` parameter from `composeInviteEmail` in
-      auth.ts.
+All five items cleared 2026-05-18 — see the in-flight commit at the
+top of this file for details. Notes for the one item that needs a
+human:
+
+- **Branded Supabase password-reset email** — code-side is done
+  (`docs/supabase-email-templates.md` carries the full HTML for
+  recovery + email-change + magic-link templates). Application step:
+  Supabase project → Authentication → Email Templates → paste the
+  HTML from the doc into each template's "Custom HTML body" field and
+  click Save. Templates are dashboard-only; no SQL/API path for them.
