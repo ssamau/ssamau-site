@@ -40,7 +40,7 @@ import {
 } from './tabs/profile.js';
 import { loadHours } from './tabs/hours.js';
 import {
-  loadOpportunities, expressInterest,
+  loadOpportunities, expressInterest, withdrawInterest,
 } from './tabs/opportunities.js';
 import {
   loadAssignments,
@@ -235,6 +235,10 @@ setHandlers({
   // Passes el through so the handler can read data-project off the same
   // button without a fragile re-lookup.
   expressInterest:   (el) => expressInterest(el.dataset.opportunity, el.dataset.label, el),
+  // Pair with expressInterest — the rendered button swaps based on
+  // server-confirmed expressed state (interest.listOwn), so the user
+  // can mistake-correct without nuking the row.
+  withdrawInterest:  (el) => withdrawInterest(el.dataset.opportunity, null, el),
 
   // ── Hours self-submission (assignments tab → log-hours modal) ──────
   openLogHours:        (el) => openLogHoursModal(

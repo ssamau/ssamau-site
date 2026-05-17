@@ -16,7 +16,7 @@ import { t, getLang, setLang, onLangChange } from '../lib/i18n.js';
 import {
   getSession, clearSession, isLoggedIn, signOut,
 } from '../lib/auth.js';
-import { setApiStatus, filterTable, closeModal } from '../lib/ui.js';
+import { setApiStatus, filterTable, closeModal, openModal } from '../lib/ui.js';
 import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from './router.js';
 
 import { loadDashboard }       from './tabs/dashboard.js';
@@ -29,6 +29,9 @@ import {
 import {
   loadHeadOpportunities,
   toggleOpportunityCreateForm, createOpportunity,
+  openHeadOpportunityAssignments,
+  addHeadAssignmentMember, addHeadAssignmentVolunteer,
+  markHeadAssignmentAttendance, removeHeadAssignment,
 } from './tabs/opportunities.js';
 import {
   loadHeadHours, primaryApproveHours, finalApproveHours, rejectHours,
@@ -41,6 +44,14 @@ import {
   saveHeadAttendance, onHeadAttModeChange, onHeadAttAttendeeChange,
   editHeadAttendance, deleteHeadAttendance,
 } from './tabs/attendance.js';
+import {
+  loadHeadEmails, sendHeadThanks, bulkSendHeadThanks, filterHeadThanks,
+  onHeadEmailsModalOpen,
+} from './tabs/emails.js';
+import {
+  loadHeadCertificates, switchHeadCertTab, filterHeadCerts,
+  issueHeadCert, bulkIssueHeadCerts, verifyHeadCert, previewHeadCertCard,
+} from './tabs/certificates.js';
 // Reuse the member-portal self-edit profile module — same form, same
 // uploaders, same backend endpoints. The "my-profile" tab on head.html
 // has matching element ids so this module works as-is.
@@ -93,6 +104,8 @@ const loaderMap = {
   hours:         loadHeadHours,
   attendance:    loadHeadAttendance,
   applications:  loadHeadApplications,
+  emails:        loadHeadEmails,
+  certificates:  loadHeadCertificates,
   'my-profile':  loadProfile,
 };
 setLoaders(loaderMap);
@@ -176,6 +189,13 @@ document.addEventListener('click', (e) => {
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
     case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
     case 'hd.opps.create':           createOpportunity(); break;
+    // Opportunity assign modal — open from the 👥 row button, then
+    // add member / add volunteer / remove. markAttendance is dispatched
+    // from the change-event handler below (it's on a <select>).
+    case 'hd.opps.assign.open':         openHeadOpportunityAssignments(el.dataset.id); break;
+    case 'hd.opps.assign.addMember':    addHeadAssignmentMember(); break;
+    case 'hd.opps.assign.addVolunteer': addHeadAssignmentVolunteer(); break;
+    case 'hd.opps.assign.remove':       removeHeadAssignment(el.dataset.id); break;
     // Attendance tab (added 2026-05-16). open/close/save are click
     // handlers; modeChange + attendeeChange are change-event handlers
     // on the radio inputs, handled in the change-listener below.
@@ -197,6 +217,30 @@ document.addEventListener('click', (e) => {
     case 'copyShownPin':             headCopyShownPin(); break;
     // Generic close-modal — the invite + profile modals dispatch this.
     case 'closeModal':               closeModal(el.dataset.modal); break;
+    // Emails / thanks tab — single + bulk.
+    case 'hd.thanks.send':           sendHeadThanks(); break;
+    case 'hd.thanks.bulkSend':       bulkSendHeadThanks(); break;
+    // Certificates tab — sub-tab switch, issue, bulk, verify, preview.
+    case 'hd.certs.switchTab':       switchHeadCertTab(el.dataset.tab); break;
+    case 'hd.certs.issue':           issueHeadCert(); break;
+    case 'hd.certs.bulkIssue':       bulkIssueHeadCerts(); break;
+    case 'hd.certs.verify':          verifyHeadCert(); break;
+    case 'hd.certs.preview': {
+      // The cert row payload is serialized into data-card as JSON so we
+      // don't have to re-fetch by id. Decode + hand to the popup builder.
+      let card; try { card = JSON.parse(el.dataset.card.replace(/&quot;/g, '"')); } catch { return; }
+      previewHeadCertCard(card);
+      break;
+    }
+    // Generic openModal — reuses lib/ui.js so the head bundle doesn't
+    // need its own ov-* dictionary. The pre-populator hook for the
+    // emails modal fires onHeadEmailsModalOpen below.
+    case 'openModal':
+      openModal(el.dataset.modal);
+      if (el.dataset.modal === 'hd-thanks' || el.dataset.modal === 'hd-bulk-thanks') {
+        onHeadEmailsModalOpen();
+      }
+      break;
     case 'profile.save':             saveProfile(); break;
     // onUploaderChange is a CHANGE event on a file <input>, handled in
     // the separate change listener below — not here.
@@ -217,6 +261,17 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', (e) => {
   const upl = e.target.closest('[data-action="onUploaderChange"][data-event="change"]');
   if (upl) { onUploaderChange(upl); return; }
+  // Filter-select change events for the emails + certs project filters.
+  // Change-driven so we don't refetch on every keystroke; the search
+  // boxes use the `input` handler above.
+  const thxFlt = e.target.closest('[data-action="hd.thanks.filter"]');
+  if (thxFlt) { filterHeadThanks(); return; }
+  const certFlt = e.target.closest('[data-action="hd.certs.filter"]');
+  if (certFlt) { filterHeadCerts(); return; }
+  // Attendance-status dropdown inside the assign modal — change-event
+  // because <select> doesn't bubble click for value-changes.
+  const attMark = e.target.closest('[data-action="hd.opps.assign.markAttendance"]');
+  if (attMark) { markHeadAssignmentAttendance(attMark.dataset.id, attMark.value); return; }
   // Attendance tab radios — mode (project vs meeting) + attendee type
   // (member vs volunteer) flip which sub-section of the form is visible.
   const att = e.target.closest('[data-action="hd.attendance.modeChange"], [data-action="hd.attendance.attendeeChange"]');

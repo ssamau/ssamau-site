@@ -61,6 +61,12 @@
     <div class="sb-item" data-page="applications" data-action="showPage">
       <span class="sb-ic">📥</span><span data-i18n="hp.sb.applications">طلبات الانضمام</span>
     </div>
+    <div class="sb-item" data-page="emails" data-action="showPage">
+      <span class="sb-ic">💌</span><span data-i18n="hp.sb.emails">رسائل الشكر</span>
+    </div>
+    <div class="sb-item" data-page="certificates" data-action="showPage">
+      <span class="sb-ic">🏅</span><span data-i18n="hp.sb.certificates">الشهادات</span>
+    </div>
 
     <div class="sb-section" data-i18n="hp.sb.section_account">حسابي</div>
     <div class="sb-item" data-page="my-profile" data-action="showPage">
@@ -276,9 +282,10 @@
                 <th data-i18n="hp.opps.col_estimated">الساعات التقديرية</th>
                 <th data-i18n="hp.opps.col_headcount">عدد المطلوبين</th>
                 <th data-i18n="hp.opps.col_status">الحالة</th>
+                <th data-i18n="hp.opps.col_actions">إجراءات</th>
               </tr>
             </thead>
-            <tbody id="hd-opps-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+            <tbody id="hd-opps-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -389,6 +396,98 @@
             </thead>
             <tbody id="hd-apps-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ EMAILS / THANKS ══════════ -->
+    <!-- Mirrors admin emails tab, but scoped: project dropdown only lists
+         projects owned by the head's committee, single-send picker only
+         lists members of the committee. Server-side enforces the same. -->
+    <div class="page" id="page-emails">
+      <div class="card">
+        <div class="card-head">
+          <h3 data-i18n="ap.title.emails">💌 الإيميلات ورسائل الشكر</h3>
+          <div class="card-head-right">
+            <select class="filter-select" id="hd-flt-thx-prj" data-action="hd.thanks.filter">
+              <option value="" data-i18n="ap.eml.filter_all_projects">كل المشاريع</option>
+            </select>
+            <button class="btn btn-g" data-action="openModal" data-modal="hd-bulk-thanks" data-i18n="ap.eml.bulk_btn">📧 إرسال جماعي</button>
+            <button class="btn btn-ol" data-action="openModal" data-modal="hd-thanks" data-i18n="ap.eml.single_btn">+ فردي</button>
+          </div>
+        </div>
+        <div class="sum-row">
+          <div class="sum-box"><div class="sum-n" id="hd-thx-total">—</div><div class="sum-l" data-i18n="ap.eml.sum_total">إجمالي</div></div>
+          <div class="sum-box"><div class="sum-n" id="hd-thx-sent" style="color:var(--sc)">—</div><div class="sum-l" data-i18n="ap.eml.sum_sent">أُرسل</div></div>
+          <div class="sum-box"><div class="sum-n" id="hd-thx-pending" style="color:var(--wn)">—</div><div class="sum-l" data-i18n="ap.eml.sum_pending">معلّق</div></div>
+          <div class="sum-box"><div class="sum-n" id="hd-thx-failed" style="color:var(--dn)">—</div><div class="sum-l" data-i18n="ap.eml.sum_failed">فشل</div></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th data-i18n="ap.eml.col_recipient">المستلم</th>
+          <th data-i18n="ap.eml.col_project">المشروع</th>
+          <th data-i18n="ap.eml.col_subject">الموضوع</th>
+          <th data-i18n="ap.eml.col_hours">ساعات</th>
+          <th data-i18n="ap.eml.col_status">الحالة</th>
+          <th data-i18n="ap.eml.col_sent_at">أُرسل في</th>
+        </tr></thead>
+        <tbody id="hd-tb-thanks"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ══════════ CERTIFICATES ══════════ -->
+    <!-- Same tabbed shape as admin: list / issue / verify. Issue auto-
+         scopes the member + project dropdowns to the head's committee.
+         Verify is global by design — it's the same flow public verifiers
+         use (cert codes are unguessable). -->
+    <div class="page" id="page-certificates">
+      <div class="tab-row">
+        <button class="tab-btn active" data-action="hd.certs.switchTab" data-tab="list"   data-i18n="ap.cert.subtab_list">📋 الشهادات الصادرة</button>
+        <button class="tab-btn"        data-action="hd.certs.switchTab" data-tab="issue"  data-i18n="ap.cert.subtab_issue">🏅 إصدار شهادة</button>
+        <button class="tab-btn"        data-action="hd.certs.switchTab" data-tab="verify" data-i18n="ap.cert.subtab_verify">🔍 التحقق</button>
+      </div>
+      <div class="tab-content active" id="hd-cert-tab-list">
+        <div class="card">
+          <div class="card-head"><h3 data-i18n="ap.cert.list_card_title">🏅 الشهادات الصادرة</h3>
+            <div class="card-head-right">
+              <select class="filter-select" id="hd-flt-cert-prj" data-action="hd.certs.filter">
+                <option value="" data-i18n="ap.cert.filter_all_projects">كل المشاريع</option>
+              </select>
+              <button class="btn btn-g" data-action="openModal" data-modal="hd-bulk-certs" data-i18n="ap.cert.bulk_btn">⚡ إصدار جماعي</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table><thead><tr>
+            <th data-i18n="ap.cert.col_recipient">المشارك</th>
+            <th data-i18n="ap.cert.col_project">المشروع</th>
+            <th data-i18n="ap.cert.col_role">الدور</th>
+            <th data-i18n="ap.cert.col_hours">الساعات</th>
+            <th data-i18n="ap.cert.col_code">رمز التحقق</th>
+            <th data-i18n="ap.cert.col_issued">تاريخ الإصدار</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="hd-tb-certs"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody></table></div>
+        </div>
+      </div>
+      <div class="tab-content" id="hd-cert-tab-issue">
+        <div class="card"><div class="card-head"><h3 data-i18n="ap.cert.issue_card_title">🏅 إصدار شهادة جديدة</h3></div>
+          <div class="card-body">
+            <div class="fg-row">
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_project">المشروع</span> <span class="required">*</span></label><select id="hd-cert-proj-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_member">العضو</span> <span class="required">*</span></label><select id="hd-cert-mbr-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+            </div>
+            <div style="margin-top:1rem"><button class="btn btn-g" data-action="hd.certs.issue" data-i18n="ap.cert.issue_btn">🏅 إصدار</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-content" id="hd-cert-tab-verify">
+        <div class="card"><div class="card-head"><h3 data-i18n="ap.cert.verify_card_title">🔍 التحقق من شهادة</h3></div>
+          <div class="card-body">
+            <div class="fg" style="max-width:360px">
+              <label data-i18n="ap.cert.verify_lbl_code">رمز الشهادة</label>
+              <input id="hd-verify-code-input" dir="ltr" data-i18n-placeholder="ap.cert.verify_ph_code" placeholder="SSAM-XXXXXXXX" style="font-family:monospace;letter-spacing:.1em"/>
+            </div>
+            <button class="btn btn-g" data-action="hd.certs.verify" data-i18n="ap.cert.verify_btn" style="margin-top:.5rem">🔍 تحقق</button>
+            <div id="hd-verify-result" style="margin-top:1.25rem"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -605,6 +704,93 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ol" data-action="closeModal" data-modal="hd-profile" data-i18n="hp.invite.close_btn">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SINGLE THANKS MODAL ══════════ -->
+<!-- Same shape as admin's ov-thanks, hd- prefixed IDs. The project +
+     member selects are populated by head/tabs/emails.js scoped to the
+     head's committee. -->
+<div class="overlay" id="ov-hd-thanks">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="ap.eml.single_modal_title">💌 رسالة شكر فردية</h3><button class="modal-close" data-action="closeModal" data-modal="hd-thanks">✕</button></div>
+    <div class="modal-body">
+      <div class="fg"><label><span data-i18n="ap.eml.lbl_project">المشروع</span> <span class="required">*</span></label><select id="hd-thx-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_member">العضو</label><select id="hd-thx-mbr"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_subject">الموضوع</label><input id="hd-thx-sb" data-i18n-placeholder="ap.eml.ph_subject" placeholder="شكراً على مشاركتك..."/></div>
+      <div class="fg"><label data-i18n="ap.eml.lbl_body">نص الرسالة</label><textarea id="hd-thx-bd" style="height:110px"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="hd-thanks" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="hd.thanks.send" data-i18n="ap.eml.single_send_btn">📧 إرسال</button></div>
+  </div>
+</div>
+
+<!-- ══════════ BULK THANKS MODAL ══════════ -->
+<div class="overlay" id="ov-hd-bulk-thanks">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3 data-i18n="ap.eml.bulk_modal_title">📧 إرسال رسائل شكر جماعية</h3><button class="modal-close" data-action="closeModal" data-modal="hd-bulk-thanks">✕</button></div>
+    <div class="modal-body">
+      <div class="fg"><label><span data-i18n="ap.eml.lbl_project">المشروع</span> <span class="required">*</span></label><select id="hd-bthx-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg"><label data-i18n="ap.eml.bulk_lbl_subject">موضوع مخصص</label><input id="hd-bthx-sb" data-i18n-placeholder="ap.eml.bulk_ph_subject" placeholder="اتركه فارغاً للافتراضي"/></div>
+      <div class="fg"><label data-i18n="ap.eml.bulk_lbl_message">رسالة مخصصة</label><textarea id="hd-bthx-msg"></textarea></div>
+      <div class="fg-note" data-i18n="ap.eml.bulk_warning" style="color:var(--wn);margin-top:.65rem">⚠️ سيُرسل لكل مشارك لم يسبق إرساله</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="hd-bulk-thanks" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-o" data-action="hd.thanks.bulkSend" data-i18n="ap.eml.bulk_send_btn">📧 إرسال للجميع</button></div>
+  </div>
+</div>
+
+<!-- ══════════ BULK CERTS MODAL ══════════ -->
+<div class="overlay" id="ov-hd-bulk-certs">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h3 data-i18n="ap.cert.bulk_modal_title">⚡ إصدار شهادات جماعي</h3><button class="modal-close" data-action="closeModal" data-modal="hd-bulk-certs">✕</button></div>
+    <div class="modal-body">
+      <div class="fg"><label><span data-i18n="ap.cert.bulk_lbl_project">المشروع</span> <span class="required">*</span></label><select id="hd-bcert-prj"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      <div class="fg-note" data-i18n="ap.cert.bulk_hint">سيتم إصدار شهادة لكل مشارك لم تصدر له شهادة بعد.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ol" data-action="closeModal" data-modal="hd-bulk-certs" data-i18n="ap.members.cancel">إلغاء</button><button class="btn btn-g" data-action="hd.certs.bulkIssue" data-i18n="ap.cert.bulk_issue_btn">🏅 إصدار</button></div>
+  </div>
+</div>
+
+<!-- ══════════ OPPORTUNITY ASSIGNMENTS MODAL ══════════ -->
+<!-- Same shape as admin's #ov-opp-assign, hd- prefixed IDs. Member
+     picker is filled with members of the head's committee (server-side
+     also rejects out-of-scope opportunities). Volunteer fields are
+     identical to admin — volunteers aren't committee-scoped. -->
+<div class="overlay" id="ov-hd-opp-assign">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <h3 data-i18n="ap.opp.assign.title">👥 المسندون على الفرصة</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="hd-opp-assign">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="hd-opp-assign-header" style="background:var(--c-soft);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem"></div>
+      <div class="fg-row" style="align-items:end">
+        <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.add_member">إضافة عضو</label>
+          <select id="hd-opp-assign-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select>
+        </div>
+        <button class="btn btn-g" data-action="hd.opps.assign.addMember" data-i18n="ap.opp.assign.btn_add_member">+ إسناد عضو</button>
+      </div>
+      <details style="margin:.5rem 0 1rem">
+        <summary data-i18n="ap.opp.assign.disclose_vol" style="cursor:pointer;font-size:.85rem;color:var(--tm)">إسناد متطوع غير عضو</summary>
+        <div class="fg-row" style="margin-top:.5rem;align-items:end">
+          <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.lbl_vol_name">اسم المتطوع</label><input id="hd-opp-assign-vol-name"/></div>
+          <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.lbl_vol_email">البريد</label><input id="hd-opp-assign-vol-email" dir="ltr"/></div>
+          <button class="btn btn-g" data-action="hd.opps.assign.addVolunteer" data-i18n="ap.opp.assign.btn_add_vol">+ إسناد</button>
+        </div>
+      </details>
+      <div class="table-wrap" style="max-height:380px;overflow:auto">
+        <table>
+          <thead><tr>
+            <th data-i18n="ap.opp.assign.col_name">الاسم</th>
+            <th data-i18n="ap.opp.assign.col_attendance">الحضور</th>
+            <th data-i18n="ap.opp.assign.col_actions">إجراءات</th>
+          </tr></thead>
+          <tbody id="hd-opp-assign-tbody"><tr class="empty-row"><td colspan="3" data-i18n="ap.opp.assign.empty">لا يوجد مسندون بعد</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="hd-opp-assign" data-i18n="ap.members.close_btn">إغلاق</button>
     </div>
   </div>
 </div>

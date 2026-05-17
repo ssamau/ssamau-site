@@ -76,10 +76,28 @@ export async function loadOpportunities() {
 
   const committeeOpenLabel = `<span style="color:var(--tm)">${esc(t('mp.opps.committee_all'))}</span>`;
   const hoursUnit          = esc(t('mp.hours.hours_unit'));
-  const expressedLabel     = esc(t('mp.opps.expressed_badge'));
+  const withdrawLabel      = esc(t('mp.opps.withdraw_btn'));
   const expressLabel       = esc(t('mp.opps.express_btn'));
   tbody.innerHTML = rows.map(o => {
+    // expressed=true → render the withdraw button (outline, not disabled).
+    // Members frequently mis-click and need a way back. Server is fine
+    // with interest.submit { interested: false } as the withdraw path —
+    // ON CONFLICT updates the same row's `interested` flag.
     const expressed = _interestedProjects.has(o.project_id);
+    const actionBtn = expressed
+      ? `<button class="btn btn-ol btn-sm btn-interest expressed"
+                 data-action="withdrawInterest"
+                 data-opportunity="${esc(o.opportunity_id)}"
+                 data-project="${esc(o.project_id)}">
+           ${withdrawLabel}
+         </button>`
+      : `<button class="btn btn-g btn-sm btn-interest"
+                 data-action="expressInterest"
+                 data-opportunity="${esc(o.opportunity_id)}"
+                 data-project="${esc(o.project_id)}"
+                 data-label="${esc(o.role_name)}">
+           ${expressLabel}
+         </button>`;
     return `
       <tr>
         <td><strong>${esc(o.role_name) || '—'}</strong></td>
@@ -87,16 +105,7 @@ export async function loadOpportunities() {
         <td>${esc(o.owning_committee_name) || committeeOpenLabel}</td>
         <td>${fmtDate(o.event_date) || '—'}</td>
         <td>${o.estimated_hours || 0} ${hoursUnit}</td>
-        <td>
-          <button class="btn btn-g btn-sm btn-interest ${expressed ? 'expressed' : ''}"
-                  data-action="expressInterest"
-                  data-opportunity="${esc(o.opportunity_id)}"
-                  data-project="${esc(o.project_id)}"
-                  data-label="${esc(o.role_name)}"
-                  ${expressed ? 'disabled' : ''}>
-            ${expressed ? expressedLabel : expressLabel}
-          </button>
-        </td>
+        <td>${actionBtn}</td>
       </tr>
     `;
   }).join('');
@@ -143,11 +152,58 @@ export async function expressInterest(_opportunityId, _label, el) {
     }
     _interestedProjects.add(projectId);
     toast(t('mp.opps.success'), 'tok');
-    btn.classList.add('expressed');
-    btn.textContent = t('mp.opps.expressed_badge');
+    // Re-render the table so the row's button swaps from "express" to
+    // "withdraw" without us needing to mutate the existing button in
+    // place. Cheap: just touches a few <tr>s.
+    loadOpportunities();
   } catch (err) {
     console.error('[expressInterest]', err);
     btn.disabled = false;
     btn.textContent = t('mp.opps.express_btn');
+  }
+}
+
+// Withdraw a previously-expressed interest. Same server endpoint
+// (`interest.submit`) with `interested: false` — the row is unique on
+// (project_id, member_id) so the ON CONFLICT clause flips the flag
+// in place. After success we re-render so the button swaps back to
+// the "express" state. Server now uses user.member_id from the auth
+// context (locked 2026-05-17), so a member can only withdraw their
+// own interest no matter what data-* attrs the page exposes.
+export async function withdrawInterest(_opportunityId, _label, el) {
+  const btn = el || document.querySelector(`button[data-opportunity="${_opportunityId}"]`);
+  if (!btn) return;
+  const projectId = btn.dataset.project;
+  const session = getSession();
+  if (!session?.member_id) {
+    const { toast } = await import('../../lib/ui.js');
+    toast(t('mp.opps.err_no_session'), 'twarn');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = t('mp.opps.withdrawing');
+  try {
+    const res = await api('interest.submit', {
+      data: {
+        project_id: projectId,
+        interested: false,
+        comment:    null,
+      },
+    });
+    const { toast } = await import('../../lib/ui.js');
+    if (!res || !res.success) {
+      toast(localizeError(res?.error, res?.errorParams) || t('mp.opps.err_withdraw'), 'twarn');
+      btn.disabled = false;
+      btn.textContent = t('mp.opps.withdraw_btn');
+      return;
+    }
+    _interestedProjects.delete(projectId);
+    toast(t('mp.opps.success_withdraw'), 'tok');
+    loadOpportunities();
+  } catch (err) {
+    console.error('[withdrawInterest]', err);
+    btn.disabled = false;
+    btn.textContent = t('mp.opps.withdraw_btn');
   }
 }

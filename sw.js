@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v49-2026-05-16-en-alignment-fix';
+const CACHE_VERSION = 'v51-2026-05-17-head-assign-member-withdraw';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -92,6 +92,8 @@ const SHELL_URLS = [
   '/assets/js/head/tabs/hours.js',
   '/assets/js/head/tabs/attendance.js',
   '/assets/js/head/tabs/applications.js',
+  '/assets/js/head/tabs/emails.js',
+  '/assets/js/head/tabs/certificates.js',
   // Icons
   '/assets/img/logo-200.png',
   '/assets/img/icon-192.png',

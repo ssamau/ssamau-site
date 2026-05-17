@@ -14,6 +14,7 @@
 
 import { sql } from '../_sql.ts';
 import {
+  requireAdminScope, requireAuth, httpErr,
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
@@ -57,9 +58,37 @@ function thanksEnvelope(message: string): string {
 </body></html>`;
 }
 
+// Scope-check a project_id for the caller. Resolves the project's
+// owning_committee_id and runs it through requireAdminScope so heads
+// can only act on their own committee's projects; admin/superadmin
+// pass through. Throws 404 if the project doesn't exist.
+async function ensureProjectScope(user: any, project_id: unknown): Promise<void> {
+  if (!project_id) throw httpErr('err.required.project_id', 400);
+  const [proj] = await sql`
+    SELECT owning_committee_id FROM public.projects WHERE project_id = ${project_id}
+  ` as Array<{ owning_committee_id: string | null }>;
+  if (!proj) throw httpErr('err.notfound.project', 404);
+  requireAdminScope(user, proj.owning_committee_id);
+}
+
+// Same for a member_id — scope check via the member's committee_id.
+// Allows a NULL member_id (volunteer-only thanks/cert) to pass through;
+// the project scope is the gate in that case.
+async function ensureMemberScope(user: any, member_id: unknown): Promise<void> {
+  if (!member_id) return;
+  const [mem] = await sql`
+    SELECT committee_id FROM public.members WHERE member_id = ${member_id}
+  ` as Array<{ committee_id: string | null }>;
+  if (!mem) throw httpErr('err.notfound.member', 404);
+  requireAdminScope(user, mem.committee_id);
+}
+
 // ─── THANKS ──────────────────────────────────────────────────────────
 const thanksSend: Handler = async (body, user) => {
+  requireAuth(user);
   const data    = (body.data ?? body) as Record<string, unknown>;
+  await ensureProjectScope(user, data.project_id);
+  await ensureMemberScope(user, data.member_id);
   const to      = (data.recipient_email as string) || '';
   const subject = (data.subject as string) || 'رسالة شكر — نادي الطلبة السعوديين في ملبورن';
   const message = (data.message as string) || '';
@@ -85,7 +114,9 @@ const thanksSend: Handler = async (body, user) => {
 };
 
 const thanksBulkSend: Handler = async (body, user) => {
+  requireAuth(user);
   const project_id = body.project_id as string | undefined;
+  await ensureProjectScope(user, project_id);
   const subject    = (body.subject as string) || 'رسالة شكر — نادي الطلبة السعوديين في ملبورن';
   const message    = (body.message as string) || '';
   const recipients = await sql`
@@ -122,9 +153,21 @@ const thanksBulkSend: Handler = async (body, user) => {
   return { count: recipients.length, sent, failed };
 };
 
-const thanksList: Handler = async (body) => {
+const thanksList: Handler = async (body, user) => {
+  requireAuth(user);
   const project_id = body.project_id as string | undefined;
-  const member_id = body.member_id as string | undefined;
+  const member_id  = body.member_id  as string | undefined;
+  // If a specific project is requested, scope-check it explicitly so a
+  // head can't list another committee's thanks even by guessing IDs.
+  if (project_id) await ensureProjectScope(user, project_id);
+  if (member_id)  await ensureMemberScope(user, member_id);
+  // Otherwise (heads with no project filter), narrow at the SQL level
+  // to projects owned by their committee. Admins/superadmins skip this
+  // filter and see everything.
+  const isHead = user!.access === 'head';
+  const committeeFilter = isHead && !project_id && !member_id
+    ? sql`AND p.owning_committee_id = ${user!.committee_id}`
+    : sql``;
   return sql`
     SELECT t.*, m.full_name, m.preferred_name, p.project_name
     FROM thanks_emails t
@@ -133,6 +176,7 @@ const thanksList: Handler = async (body) => {
     WHERE 1=1
       ${project_id ? sql`AND t.project_id = ${project_id}` : sql``}
       ${member_id  ? sql`AND t.member_id  = ${member_id}`  : sql``}
+      ${committeeFilter}
     ORDER BY t.sent_at DESC
   `;
 };

@@ -12,11 +12,19 @@ import {
 } from '../_helpers.ts';
 
 // ─── INTEREST ────────────────────────────────────────────────────────
-const interestSubmit: Handler = async (body) => {
+// Always uses the caller's own member_id (from auth context). The body's
+// `member_id` is ignored — required for both interested:true (express)
+// and interested:false (withdraw), so a member can't spoof or revoke
+// another member's interest. interested:false is the withdraw path,
+// enabled 2026-05-17 alongside the member-portal withdraw button.
+const interestSubmit: Handler = async (body, user) => {
+  requireAuth(user);
+  if (!user!.member_id) throw httpErr('err.auth.no_member_link', 404);
   const data = (body.data ?? body) as Record<string, unknown>;
+  if (!data.project_id) throw httpErr('err.required.project_id', 400);
   await sql`
     INSERT INTO interest_requests (project_id, member_id, interested, availability_type, comment)
-    VALUES (${data.project_id}, ${data.member_id}, ${data.interested},
+    VALUES (${data.project_id}, ${user!.member_id}, ${data.interested},
             ${data.availability_type || null}, ${data.comment || null})
     ON CONFLICT (project_id, member_id) DO UPDATE SET
       interested        = EXCLUDED.interested,

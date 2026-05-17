@@ -362,6 +362,12 @@ export default {
   'mp.opps.err_submit':         'فشل تسجيل الاهتمام.',
   'mp.opps.success':            'تم تسجيل اهتمامك. سيتواصل معك رئيس اللجنة.',
   'mp.opps.interest_role_prefix': 'مهتم بدور:',
+  // مسار سحب الاهتمام — يحدث في الصفوف التي سبق وأبدى العضو اهتماماً
+  // بها، حتى يستطيع تصحيح ضغطة خاطئة دون فقدان الصف.
+  'mp.opps.withdraw_btn':       '↩️ سحب الاهتمام',
+  'mp.opps.withdrawing':        'جاري السحب...',
+  'mp.opps.success_withdraw':   'تم سحب اهتمامك.',
+  'mp.opps.err_withdraw':       'تعذّر سحب الاهتمام.',
 
   // Assignments tab
   'mp.asn.upcoming_title':      '📋 مهامي القادمة',
@@ -410,6 +416,8 @@ export default {
   'hp.sb.opportunities':        'الفرص التطوعية',
   'hp.sb.hours':                'الساعات',
   'hp.sb.applications':         'طلبات الانضمام',
+  'hp.sb.emails':               'رسائل الشكر',
+  'hp.sb.certificates':         'الشهادات',
   'hp.sb.my_profile':           'ملفي الشخصي',
   'hp.title.dashboard':         'لوحتي',
   'hp.title.members':           'أعضاء اللجنة',
@@ -525,6 +533,8 @@ export default {
   'hp.opps.col_estimated':      'الساعات التقديرية',
   'hp.opps.col_headcount':      'عدد المطلوبين',
   'hp.opps.col_status':         'الحالة',
+  'hp.opps.col_actions':        'إجراءات',
+  'hp.opps.assign_title':       'إسناد الأعضاء وتسجيل الحضور',
   'hp.opps.err_load':           '⚠️ تعذّر تحميل الفرص',
   'hp.opps.empty':              'لا توجد فرص في لجنتك بعد',
   'hp.opps.status_open':        'مفتوحة',

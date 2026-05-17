@@ -13,10 +13,31 @@
 
 import { sql } from '../_sql.ts';
 import {
-  httpErr, shortId,
+  httpErr, shortId, requireAdminScope, requireAuth,
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
+
+// Mirrors the helpers in thanks.ts — heads can only act on projects
+// owned by their committee, and only on members of their committee.
+// Admin/superadmin pass through. NULL member_id is allowed (volunteer-
+// only certs); project scope is the gate in that case.
+async function ensureProjectScope(user: any, project_id: unknown): Promise<void> {
+  if (!project_id) throw httpErr('err.required.project_id', 400);
+  const [proj] = await sql`
+    SELECT owning_committee_id FROM public.projects WHERE project_id = ${project_id}
+  ` as Array<{ owning_committee_id: string | null }>;
+  if (!proj) throw httpErr('err.notfound.project', 404);
+  requireAdminScope(user, proj.owning_committee_id);
+}
+async function ensureMemberScope(user: any, member_id: unknown): Promise<void> {
+  if (!member_id) return;
+  const [mem] = await sql`
+    SELECT committee_id FROM public.members WHERE member_id = ${member_id}
+  ` as Array<{ committee_id: string | null }>;
+  if (!mem) throw httpErr('err.notfound.member', 404);
+  requireAdminScope(user, mem.committee_id);
+}
 
 const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://ssamau.com';
 
@@ -102,7 +123,10 @@ async function tryDeliverCert(opts: {
 
 // ─── CERTIFICATES ────────────────────────────────────────────────────
 const certsIssue: Handler = async (body, user) => {
+  requireAuth(user);
   const data = (body.data ?? body) as Record<string, unknown>;
+  await ensureProjectScope(user, data.project_id);
+  await ensureMemberScope(user, data.member_id);
   const code = shortId('CRT', 8);
   const [r] = await sql`
     INSERT INTO certificates (cert_code, member_id, project_id, recipient_name, recipient_email,
@@ -131,7 +155,9 @@ const certsIssue: Handler = async (body, user) => {
 };
 
 const certsBulkIssue: Handler = async (body, user) => {
+  requireAuth(user);
   const project_id = body.project_id as string | undefined;
+  await ensureProjectScope(user, project_id);
   const role = body.role as string | undefined;
   const participants = await sql`
     SELECT pa.member_id, pa.volunteer_name, pa.volunteer_email,
@@ -188,9 +214,16 @@ const certsBulkIssue: Handler = async (body, user) => {
   return { count, emailed };
 };
 
-const certsList: Handler = async (body) => {
+const certsList: Handler = async (body, user) => {
+  requireAuth(user);
   const project_id = body.project_id as string | undefined;
-  const member_id = body.member_id as string | undefined;
+  const member_id  = body.member_id  as string | undefined;
+  if (project_id) await ensureProjectScope(user, project_id);
+  if (member_id)  await ensureMemberScope(user, member_id);
+  const isHead = user!.access === 'head';
+  const committeeFilter = isHead && !project_id && !member_id
+    ? sql`AND p.owning_committee_id = ${user!.committee_id}`
+    : sql``;
   return sql`
     SELECT c.*, m.full_name AS member_full_name, m.preferred_name AS member_preferred_name,
            p.project_name
@@ -200,6 +233,7 @@ const certsList: Handler = async (body) => {
     WHERE 1=1
       ${project_id ? sql`AND c.project_id = ${project_id}` : sql``}
       ${member_id  ? sql`AND c.member_id  = ${member_id}`  : sql``}
+      ${committeeFilter}
     ORDER BY c.issued_at DESC
   `;
 };

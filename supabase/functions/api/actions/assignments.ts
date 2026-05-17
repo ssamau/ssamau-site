@@ -1,22 +1,61 @@
 // Assignment handlers.
 //
 // Port of the ASSIGNMENTS section from netlify/functions/api.js
-// (lines 1048–1104 + 1303–1320 for bulkMarkAttendance). All five actions
-// require auth — no scope checks beyond auth on the legacy side, matching
-// Apps Script behaviour. Tighter scoping comes with the §7 redesign.
+// (lines 1048–1104 + 1303–1320 for bulkMarkAttendance).
+//
+// Scope model (2026-05-17): heads can only operate on assignments for
+// opportunities owned by their committee. Admin / superadmin pass
+// through unchanged. The opportunity → owning_committee_id link is the
+// authority; member_id committee isn't consulted because admin already
+// allows cross-committee assignments (e.g. a hospitality member helping
+// at a sports event) and that's intentional.
 
 import { sql } from '../_sql.ts';
 import {
   httpErr,
-  requireAuth,
+  requireAuth, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
 
+// Look up the opportunity's owning committee and push it through
+// requireAdminScope. Throws 404 if the opportunity_id is bogus.
+async function ensureOpportunityScope(user: any, opportunity_id: unknown): Promise<void> {
+  if (!opportunity_id) throw httpErr('err.required.opportunity_id', 400);
+  const [opp] = await sql`
+    SELECT owning_committee_id FROM public.opportunities WHERE opportunity_id = ${opportunity_id}
+  ` as Array<{ owning_committee_id: string | null }>;
+  if (!opp) throw httpErr('err.notfound.opportunity', 404);
+  requireAdminScope(user, opp.owning_committee_id);
+}
+
+// Given an assignment_id, resolve its opportunity → owning_committee
+// and scope-check. Used by remove / markAttendance which take an
+// assignment_id rather than an opportunity_id directly.
+async function ensureAssignmentScope(user: any, assignment_id: unknown): Promise<void> {
+  if (!assignment_id) throw httpErr('err.required.assignment_id', 400);
+  const [row] = await sql`
+    SELECT o.owning_committee_id
+    FROM public.assignments a
+    JOIN public.opportunities o ON o.opportunity_id = a.opportunity_id
+    WHERE a.assignment_id = ${assignment_id}
+  ` as Array<{ owning_committee_id: string | null }>;
+  if (!row) throw httpErr('err.notfound.assignment', 404);
+  requireAdminScope(user, row.owning_committee_id);
+}
+
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────
-const assignmentsList: Handler = async (body) => {
+const assignmentsList: Handler = async (body, user) => {
+  requireAuth(user);
   const opportunity_id = body.opportunity_id as string | undefined;
   const project_id = body.project_id as string | undefined;
   const member_id = body.member_id as string | undefined;
+  // If a specific opportunity is queried, scope-check it. Otherwise for
+  // heads, narrow the SQL to opportunities they own.
+  if (opportunity_id) await ensureOpportunityScope(user, opportunity_id);
+  const isHead = user!.access === 'head';
+  const committeeFilter = isHead && !opportunity_id
+    ? sql`AND o.owning_committee_id = ${user!.committee_id}`
+    : sql``;
   return sql`
     SELECT a.*,
       o.role_name, o.role_key, o.estimated_hours, o.project_id, o.owning_committee_id,
@@ -31,6 +70,7 @@ const assignmentsList: Handler = async (body) => {
       ${opportunity_id ? sql`AND a.opportunity_id = ${opportunity_id}` : sql``}
       ${project_id     ? sql`AND o.project_id     = ${project_id}`     : sql``}
       ${member_id      ? sql`AND a.member_id      = ${member_id}`      : sql``}
+      ${committeeFilter}
     ORDER BY a.created_at DESC
   `;
 };
@@ -38,7 +78,7 @@ const assignmentsList: Handler = async (body) => {
 const assignmentsAdd: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   requireAuth(user);
-  if (!data.opportunity_id) throw httpErr('err.required.opportunity_id', 400);
+  await ensureOpportunityScope(user, data.opportunity_id);
   if (!data.member_id && !data.volunteer_name) {
     throw httpErr('err.required.member_or_volunteer', 400);
   }
@@ -56,6 +96,7 @@ const assignmentsAdd: Handler = async (body, user) => {
 const assignmentsRemove: Handler = async (body, user) => {
   requireAuth(user);
   const id = body.id as string | undefined;
+  await ensureAssignmentScope(user, id);
   await sql`DELETE FROM assignments WHERE assignment_id = ${id}`;
   return { id };
 };
@@ -66,6 +107,7 @@ const assignmentsMarkAttendance: Handler = async (body, user) => {
   if (!data.assignment_id || !data.attendance_status) {
     throw httpErr('err.required.assignment_attendance', 400);
   }
+  await ensureAssignmentScope(user, data.assignment_id);
   await sql`
     UPDATE assignments SET
       attendance_status    = ${data.attendance_status},
@@ -84,6 +126,9 @@ const assignmentsBulkMarkAttendance: Handler = async (body, user) => {
   let count = 0;
   for (const r of records) {
     if (!r.assignment_id || !r.attendance_status) continue;
+    // Scope-check every record so a single bulk call can't smuggle in
+    // an assignment from another committee.
+    await ensureAssignmentScope(user, r.assignment_id);
     await sql`
       UPDATE assignments SET
         attendance_status    = ${r.attendance_status},

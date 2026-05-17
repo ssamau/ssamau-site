@@ -346,6 +346,12 @@ export default {
   'mp.opps.err_submit':         'Failed to register interest.',
   'mp.opps.success':            'Your interest is registered. The committee head will get in touch.',
   'mp.opps.interest_role_prefix': 'Interested in role:',
+  // Withdraw flow — a registered member can change their mind. The
+  // button on already-expressed rows turns into a single ↩️ action.
+  'mp.opps.withdraw_btn':       '↩️ Withdraw interest',
+  'mp.opps.withdrawing':        'Withdrawing...',
+  'mp.opps.success_withdraw':   'Your interest has been withdrawn.',
+  'mp.opps.err_withdraw':       'Failed to withdraw interest.',
 
   // Assignments tab
   'mp.asn.upcoming_title':      '📋 Upcoming assignments',
@@ -394,6 +400,8 @@ export default {
   'hp.sb.opportunities':        'Opportunities',
   'hp.sb.hours':                'Hours',
   'hp.sb.applications':         'Applications',
+  'hp.sb.emails':               'Thank-you emails',
+  'hp.sb.certificates':         'Certificates',
   'hp.sb.my_profile':           'My profile',
   'hp.title.dashboard':         'My dashboard',
   'hp.title.members':           'Committee members',
@@ -509,6 +517,8 @@ export default {
   'hp.opps.col_estimated':      'Estimated hours',
   'hp.opps.col_headcount':      'Needed',
   'hp.opps.col_status':         'Status',
+  'hp.opps.col_actions':        'Actions',
+  'hp.opps.assign_title':       'Assign members + mark attendance',
   'hp.opps.err_load':           '⚠️ Couldn’t load opportunities.',
   'hp.opps.empty':              'No opportunities in your committee yet.',
   'hp.opps.status_open':        'Open',
