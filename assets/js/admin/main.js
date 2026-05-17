@@ -19,6 +19,12 @@
 //      addEventListener bindings, at which point the shim is gone.
 
 import { getSession, clearSession, isLoggedIn, signOut, landingPageForAccess } from '../lib/auth.js';
+// Shared support module — modal + submit; the admin support inbox
+// (list + detail + status change) lives in its own tab module below.
+import {
+  openSupportModal as openSupport, submitSupportTicket as submitSupport,
+  onSupportFileChange,
+} from '../lib/support.js';
 import { applyStoredTheme, getTheme, setTheme } from '../lib/theme.js';
 
 // i18n: side-effect import sets <html dir/lang> + applies data-i18n
@@ -221,6 +227,13 @@ const loaderMap = {
   interest:         loadInterestAll,
   emails:           () => { loadThanks(''); },
   certificates:     () => { loadCerts(''); },
+  // Support inbox — superadmin only. Lazy-import the tab module so
+  // non-superadmins (who never see the sidebar entry) don't pay the
+  // download cost.
+  support:          async () => {
+    const m = await import('./tabs/support.js');
+    return m.loadSupportTickets();
+  },
 };
 setLoaders(loaderMap);
 // refreshData (in lib/ui.js) awaits the loader's promise so the
@@ -371,6 +384,19 @@ _stampSidebarUser();
 // Refresh the role label on language change so it follows the toggle.
 onLangChange(_stampSidebarUser);
 
+// Reveal superadmin-only sidebar entries (.superadmin-only) for the
+// presidency user. Other admins keep them display:none so they don't
+// see the support inbox link — server enforces the same gate, this
+// is just a UX nicety. Run after sidebar stamp so CURRENT_USER is
+// guaranteed populated.
+(function _revealSuperadminEntries() {
+  const u = window.CURRENT_USER;
+  if (!u || u.access !== 'superadmin') return;
+  document.querySelectorAll('.superadmin-only').forEach(el => {
+    el.style.display = '';
+  });
+})();
+
 // Apps-Script-era "Seed members → Google Sheets" banner removed in the
 // Netlify migration — the data lives in Postgres now and the import flow
 // is `npm run import:members` (see SETUP.md). Keeping a no-op stub here
@@ -434,6 +460,25 @@ setHandlers({
   closeModal:       (el) => closeModal(el.dataset.modal),
   openModal:        (el) => openModal(el.dataset.modal),
   showPage:         (el) => showPage(el.dataset.page),
+  // Support / bug-report — sidebar opens modal; modal submit fires
+  // the shared submitSupportTicket flow. The file picker is handled
+  // through onSupportFileChange below (change-event branch).
+  openSupportModal:    () => openSupport(),
+  submitSupportTicket: () => submitSupport(),
+  onSupportFileChange: (el) => onSupportFileChange(el),
+  // Support inbox — superadmin only, lazy-loaded.
+  loadSupportTickets:  async () => {
+    const m = await import('./tabs/support.js');
+    return m.loadSupportTickets();
+  },
+  openSupportTicket:   async (el) => {
+    const m = await import('./tabs/support.js');
+    return m.openSupportTicket(el.dataset.id);
+  },
+  setSupportStatus:    async (el) => {
+    const m = await import('./tabs/support.js');
+    return m.setSupportStatus(el.dataset.status);
+  },
   switchCertTab:    (el) => switchCertTab(el.dataset.tab),
   markAllAtt:       (el) => markAllAtt(el.dataset.status),
 

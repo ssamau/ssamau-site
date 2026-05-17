@@ -58,6 +58,12 @@
     <div class="sb-item" data-page="assignments" data-action="showPage">
       <span class="sb-ic">📋</span><span data-i18n="mp.sb.assignments">مهامي</span>
     </div>
+    <!-- Support: opens the bug-report modal directly. Available to
+         every authenticated user; superadmin-only inbox lives in the
+         admin portal. -->
+    <div class="sb-item" data-action="openSupportModal">
+      <span class="sb-ic">💬</span><span data-i18n="support.sb_open">الدعم الفني</span>
+    </div>
   </nav>
 
   <!-- Language toggle — two pills matching the auth pages' pattern.
@@ -277,6 +283,52 @@
         <button class="btn btn-ol btn-sm" type="button" data-action="closeLogHoursModal" data-i18n="mp.logh.cancel">إلغاء</button>
         <button class="btn btn-g btn-sm" type="button" data-action="submitLogHours" id="logh-submit-btn" data-i18n="mp.logh.submit">إرسال للموافقة</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SUPPORT / BUG-REPORT MODAL ══════════ -->
+<!-- Shared across admin / head / member portals via lib/support.js. -->
+<div class="overlay" id="ov-support">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3 data-i18n="support.modal_title">💬 الدعم الفني</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="support">✕</button>
+    </div>
+    <div class="modal-body">
+      <p data-i18n="support.lead" style="font-size:.82rem;color:var(--tm);margin-bottom:.85rem">
+        أبلغ المطور عن أي خلل، اقتراح، أو استفسار. ستصل التذكرة إليه مباشرة على البريد المخصّص للدعم.
+      </p>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_category">النوع</span> <span class="required">*</span></label>
+        <select id="sup-category">
+          <option value="Bug"      data-i18n="support.cat_bug">🐞 بلاغ خلل</option>
+          <option value="Feature"  data-i18n="support.cat_feature">✨ اقتراح ميزة</option>
+          <option value="Question" data-i18n="support.cat_question">❓ استفسار</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_title">العنوان</span> <span class="required">*</span></label>
+        <input id="sup-title" type="text" data-i18n-placeholder="support.ph_title" placeholder="ملخص قصير..." maxlength="200"/>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_description">الوصف</span> <span class="required">*</span></label>
+        <textarea id="sup-description" rows="4" data-i18n-placeholder="support.ph_description" placeholder="ما الذي حدث؟ ما الذي توقعته بدلاً منه؟"></textarea>
+      </div>
+      <div class="fg">
+        <label data-i18n="support.lbl_repro">خطوات إعادة الإنتاج (للبلاغات)</label>
+        <textarea id="sup-repro" rows="3" data-i18n-placeholder="support.ph_repro" placeholder="1. افتح ... 2. اضغط ... 3. لاحظ أنّ ..."></textarea>
+      </div>
+      <div class="fg">
+        <label data-i18n="support.lbl_attachment">صورة الشاشة (اختياري)</label>
+        <input type="file" id="sup-attachment-file" accept="image/jpeg,image/png,image/webp" data-action="onSupportFileChange" data-event="change"/>
+        <div class="fg-note" id="sup-attachment-meta" style="font-size:.72rem;color:var(--tm);margin-top:.25rem"></div>
+        <div class="fg-note" data-i18n="support.attachment_hint" style="font-size:.72rem;color:var(--tm)">JPG / PNG / WebP, ‎4MB‎ حد أقصى.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="support" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="submitSupportTicket" id="sup-submit-btn" data-i18n="support.submit_btn">📨 إرسال التذكرة</button>
     </div>
   </div>
 </div>

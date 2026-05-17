@@ -46,6 +46,10 @@ import { setupActions }         from './actions/setup.ts';
 // one file when convenient.
 import { storageActions }        from './actions/storage.ts';
 import { projectStorageActions } from './actions/storage_project.ts';
+// Support tickets — in-product bug/feature/question intake. Submission
+// is auth-only (any logged-in user); list/update/getAttachment are
+// gated to superadmin so only the dev sees the inbox.
+import { supportActions }        from './actions/support.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────
 // Frontend (ssamau.com) and the function (functions.supabase.co) are
@@ -115,6 +119,7 @@ const actions: Record<string, Handler> = {
   ...setupActions,
   ...storageActions,
   ...projectStorageActions,
+  ...supportActions,
 };
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────

@@ -39,6 +39,11 @@ import {
   onUploaderChange, submitUploader, deleteUploader,
 } from './tabs/profile.js';
 import { loadHours } from './tabs/hours.js';
+// Shared support module — available from the member sidebar so members
+// can fire a bug report from anywhere. The inbox view is admin-only.
+import {
+  openSupportModal, submitSupportTicket, onSupportFileChange,
+} from '../lib/support.js';
 import {
   loadOpportunities, expressInterest, withdrawInterest,
 } from './tabs/opportunities.js';
@@ -251,5 +256,12 @@ setHandlers({
   onUploaderChange:    onUploaderChange,
   submitUploader:      submitUploader,
   deleteUploader:      deleteUploader,
+
+  // ── Support / bug-report ──────────────────────────────────────────
+  // sidebar entry opens modal; modal submit + file picker share the
+  // dispatcher. lib/support.js is shared with admin + head.
+  openSupportModal:    () => openSupportModal(),
+  submitSupportTicket: () => submitSupportTicket(),
+  onSupportFileChange: (el) => onSupportFileChange(el),
 });
 setupDispatch();

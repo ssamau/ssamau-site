@@ -36,6 +36,7 @@ export const PAGE_TITLES = {
   applications:    'ap.title.applications',
   accounts:        'ap.title.accounts',
   'my-profile':    'ap.title.my_profile',
+  support:         'support.inbox_title',
 };
 
 // Loader dispatch — filled in by main.js after every tab module has been

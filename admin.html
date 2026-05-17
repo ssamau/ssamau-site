@@ -99,6 +99,18 @@
     <div class="sb-item" data-page="my-profile" data-action="showPage">
       <span class="sb-ic">🪪</span><span data-i18n="ap.sb.tab_my_profile">ملفي الشخصي</span>
     </div>
+    <!-- Support: opens the bug-report modal directly (not a routed
+         tab). Available to every authenticated user; superadmin-only
+         inbox tab is added below the divider. -->
+    <div class="sb-item" data-action="openSupportModal">
+      <span class="sb-ic">💬</span><span data-i18n="support.sb_open">الدعم الفني</span>
+    </div>
+    <!-- Superadmin-only entry to the inbox. Hidden on boot for non-
+         superadmins via admin/main.js's role gate; server enforces it
+         anyway. -->
+    <div class="sb-item superadmin-only" data-page="support" data-action="showPage" style="display:none">
+      <span class="sb-ic">📨</span><span data-i18n="support.sb_inbox">صندوق الدعم</span>
+    </div>
   </nav>
 
   <!-- Language toggle. Same pattern as member/head portals: pills above
@@ -658,9 +670,62 @@
       </div>
     </div>
 
+    <!-- ══════════ SUPPORT INBOX (superadmin) ══════════ -->
+    <!-- Surfaces every support_tickets row. Hidden for non-superadmins
+         on boot (admin/main.js role gate); the server enforces the
+         same on every list / updateStatus / getAttachment call. -->
+    <div class="page" id="page-support">
+      <div class="card">
+        <div class="card-head">
+          <h3 data-i18n="support.inbox_title">📨 صندوق الدعم</h3>
+          <div class="card-head-right">
+            <button class="btn btn-ol btn-sm" data-action="loadSupportTickets" data-i18n="support.refresh_btn">🔄 تحديث</button>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="support.inbox_lead">
+          تذاكر الدعم المُرسلة من جميع المستخدمين. كل تذكرة تُرسل تلقائياً إلى بريد المطور أيضاً.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="support.col_id">المعرّف</th>
+              <th data-i18n="support.col_category">النوع</th>
+              <th data-i18n="support.col_title">العنوان</th>
+              <th data-i18n="support.col_reporter">المُرسل</th>
+              <th data-i18n="support.col_status">الحالة</th>
+              <th data-i18n="support.col_created">الإرسال</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="sup-list-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main><!-- /#main-content -->
 </div><!-- /.main -->
 </div><!-- /#app -->
+
+<!-- ══════════ SUPPORT TICKET DETAIL MODAL (superadmin) ══════════ -->
+<div class="overlay" id="ov-support-detail">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <h3 data-i18n="support.detail_title">📨 تفاصيل التذكرة</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="support-detail">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="sup-d-meta" style="margin-bottom:1rem"></div>
+      <div id="sup-d-body"></div>
+      <div style="margin-top:1rem">
+        <div style="font-size:.72rem;color:var(--tm);letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem" data-i18n="support.change_status">تغيير الحالة</div>
+        <div id="sup-d-status-row" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="support-detail" data-i18n="ap.members.close_btn">إغلاق</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ MODALS ═══ -->
 <div class="overlay" id="ov-member">
@@ -1535,6 +1600,56 @@
   </div>
 </div>
 
+
+<!-- ══════════ SUPPORT / BUG-REPORT MODAL ══════════ -->
+<!-- Shared across admin / head / member portals via lib/support.js.
+     Submits to support.submit which inserts a ticket row + emails the
+     dev's inbox (xtlg511@icloud.com). All authenticated users can open
+     this modal; the admin support tab (inbox) is gated to superadmin
+     server-side. -->
+<div class="overlay" id="ov-support">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3 data-i18n="support.modal_title">💬 الدعم الفني</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="support">✕</button>
+    </div>
+    <div class="modal-body">
+      <p data-i18n="support.lead" style="font-size:.82rem;color:var(--tm);margin-bottom:.85rem">
+        أبلغ المطور عن أي خلل، اقتراح، أو استفسار. ستصل التذكرة إليه مباشرة على البريد المخصّص للدعم.
+      </p>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_category">النوع</span> <span class="required">*</span></label>
+        <select id="sup-category">
+          <option value="Bug"      data-i18n="support.cat_bug">🐞 بلاغ خلل</option>
+          <option value="Feature"  data-i18n="support.cat_feature">✨ اقتراح ميزة</option>
+          <option value="Question" data-i18n="support.cat_question">❓ استفسار</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_title">العنوان</span> <span class="required">*</span></label>
+        <input id="sup-title" type="text" data-i18n-placeholder="support.ph_title" placeholder="ملخص قصير..." maxlength="200"/>
+      </div>
+      <div class="fg">
+        <label><span data-i18n="support.lbl_description">الوصف</span> <span class="required">*</span></label>
+        <textarea id="sup-description" rows="4" data-i18n-placeholder="support.ph_description" placeholder="ما الذي حدث؟ ما الذي توقعته بدلاً منه؟"></textarea>
+      </div>
+      <div class="fg">
+        <label data-i18n="support.lbl_repro">خطوات إعادة الإنتاج (للبلاغات)</label>
+        <textarea id="sup-repro" rows="3" data-i18n-placeholder="support.ph_repro" placeholder="1. افتح ... 2. اضغط ... 3. لاحظ أنّ ..."></textarea>
+      </div>
+      <div class="fg">
+        <label data-i18n="support.lbl_attachment">صورة الشاشة (اختياري)</label>
+        <input type="file" id="sup-attachment-file" accept="image/jpeg,image/png,image/webp" data-action="onSupportFileChange" data-event="change"/>
+        <div class="fg-note" id="sup-attachment-meta" style="font-size:.72rem;color:var(--tm);margin-top:.25rem"></div>
+        <div class="fg-note" data-i18n="support.attachment_hint" style="font-size:.72rem;color:var(--tm)">JPG / PNG / WebP, ‎4MB‎ حد أقصى.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="support" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="submitSupportTicket" id="sup-submit-btn" data-i18n="support.submit_btn">📨 إرسال التذكرة</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 

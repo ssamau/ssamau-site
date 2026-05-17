@@ -37,6 +37,11 @@ import {
   loadHeadOtherOpportunities,
   expressOtherInterest, withdrawOtherInterest,
 } from './tabs/other-opportunities.js';
+// Shared support-ticket module — available across every portal so a
+// member, head, or admin can fire a bug report from anywhere.
+import {
+  openSupportModal, submitSupportTicket, onSupportFileChange,
+} from '../lib/support.js';
 import {
   loadHeadHours, primaryApproveHours, finalApproveHours, rejectHours,
 } from './tabs/hours.js';
@@ -207,6 +212,9 @@ document.addEventListener('click', (e) => {
     // takes user.member_id from auth context so no spoofing path.
     case 'hd.other.express':            expressOtherInterest(el); break;
     case 'hd.other.withdraw':           withdrawOtherInterest(el); break;
+    // Support / bug-report — sidebar entry + modal submit.
+    case 'openSupportModal':            openSupportModal(); break;
+    case 'submitSupportTicket':         submitSupportTicket(); break;
     // Attendance tab (added 2026-05-16). open/close/save are click
     // handlers; modeChange + attendeeChange are change-event handlers
     // on the radio inputs, handled in the change-listener below.
@@ -272,6 +280,9 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', (e) => {
   const upl = e.target.closest('[data-action="onUploaderChange"][data-event="change"]');
   if (upl) { onUploaderChange(upl); return; }
+  // Support modal file picker — same change-event pattern.
+  const sup = e.target.closest('[data-action="onSupportFileChange"][data-event="change"]');
+  if (sup) { onSupportFileChange(sup); return; }
   // Filter-select change events for the emails + certs project filters.
   // Change-driven so we don't refetch on every keystroke; the search
   // boxes use the `input` handler above.
