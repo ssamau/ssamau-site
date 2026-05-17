@@ -38,7 +38,7 @@ export async function loadCerts(pid) {
       <td style="font-size:.76rem">${esc(projectName)}</td>
       <td>${tag(c.role || '—', 't-gr')}</td>
       <td><strong style="color:var(--g)">${c.hours || 0}</strong></td>
-      <td><code style="font-size:.7rem;background:#f3f4f6;padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block">${esc(c.cert_code || '—')}</code></td>
+      <td><code style="font-size:.7rem;background:var(--bg-soft);color:var(--tx);padding:.13rem .4rem;border-radius:4px;direction:ltr;display:inline-block;border:1px solid var(--bd)">${esc(c.cert_code || '—')}</code></td>
       <td style="font-size:.71rem;color:var(--tm)">${String(c.issued_at || '').split('T')[0] || '—'}</td>
       <td><button class="btn-icon" data-action="previewCertCard" data-card="${JSON.stringify(c).replace(/"/g,'&quot;')}" title="${esc(previewTitle)}">👁️</button></td>
     </tr>`;

@@ -424,6 +424,8 @@ export default {
   'hp.title.opportunities':     'الفرص التطوعية',
   'hp.title.hours':             'الساعات',
   'hp.title.applications':      'طلبات الانضمام',
+  'hp.title.emails':            'رسائل الشكر',
+  'hp.title.certificates':      'الشهادات',
   'hp.title.my_profile':        'ملفي الشخصي',
 
   // Dashboard

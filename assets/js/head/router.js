@@ -13,6 +13,8 @@ export const PAGE_TITLES = {
   hours:         'hp.title.hours',
   attendance:    'hp.title.attendance',
   applications:  'hp.title.applications',
+  emails:        'hp.title.emails',
+  certificates:  'hp.title.certificates',
   'my-profile':  'hp.title.my_profile',
 };
 

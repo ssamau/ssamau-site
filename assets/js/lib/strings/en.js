@@ -408,6 +408,8 @@ export default {
   'hp.title.opportunities':     'Opportunities',
   'hp.title.hours':             'Hours',
   'hp.title.applications':      'Applications',
+  'hp.title.emails':            'Thank-you emails',
+  'hp.title.certificates':      'Certificates',
   'hp.title.my_profile':        'My profile',
 
   // Dashboard
