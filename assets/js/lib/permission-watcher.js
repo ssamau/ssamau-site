@@ -80,36 +80,38 @@ async function _check() {
 
   const fresh = res.data || {};
 
-  // Detect a meaningful change in role/access/committee. We only act
-  // when one of those flipped — name + email changes shouldn't trigger
-  // a reload.
-  const changedAccess    = fresh.access       && fresh.access       !== current.access;
-  const changedRole      = fresh.role         && fresh.role         !== current.role;
-  const changedCommittee = fresh.committee_id !== undefined
-                        && fresh.committee_id !== current.committee_id;
+  // Detect a meaningful change in role/access. Only access flips
+  // require a reload (sidebar visibility + portal routing depend on
+  // it). Committee changes are tracked too but coerced through `||
+  // null` so `undefined` from a legacy session shape compares equal
+  // to `null` from a fresh whoami — without that, the watcher used to
+  // reload the page on every cold load when the stored session
+  // happened to omit committee_id, silently nuking whatever the user
+  // had just clicked. (2026-05-17 bug fix; root cause of the
+  // president's "no buttons work on projects/events" report.)
+  const norm = v => (v == null ? null : v);
+  const changedAccess    = norm(fresh.access)       !== norm(current.access)       && fresh.access != null;
+  const changedRole      = norm(fresh.role)         !== norm(current.role)         && fresh.role   != null;
+  const changedCommittee = norm(fresh.committee_id) !== norm(current.committee_id);
 
   if (!changedAccess && !changedRole && !changedCommittee) return;
 
-  // Persist the new profile. Two paths because saveSession vs
-  // saveSupabaseSession write to different storage keys depending on
-  // the auth provider the user logged in through. We mirror whatever
-  // shape the existing session has.
-  if (localStorage.getItem('ssam_supabase_session')) {
-    try {
-      const wrapper = JSON.parse(localStorage.getItem('ssam_supabase_session') || '{}');
-      saveSupabaseSession(wrapper, fresh);
-    } catch {
-      // Fall back to legacy save if the wrapper is corrupt.
-      saveSession(fresh, localStorage.getItem('ssam_token') || '');
-    }
-  } else {
-    saveSession(fresh, localStorage.getItem('ssam_token') || '');
+  // For a committee-only change with no access flip, skip the
+  // reload. Sidebar / RBAC is keyed off access, not committee, so
+  // a committee-id-changed page reload buys nothing and can only
+  // surprise the user mid-action.
+  if (!changedAccess && !changedRole) {
+    // Silently update the stored session so the next API call
+    // sees the new committee, but don't reload.
+    _persistFreshSession(fresh);
+    return;
   }
 
-  // Navigate the user to the portal that matches the new access. If
-  // they were on admin.html and got demoted to member, this sends
-  // them to member.html. If still in the same portal, just reload
-  // so sidebar/RBAC visibility updates.
+  // Persist the new profile then route. Reload only on access change
+  // (sidebar/RBAC keyed off access); committee-only changes already
+  // returned early above.
+  _persistFreshSession(fresh);
+
   const wantedLanding = landingPageForAccess(fresh.access);
   const currentPath   = window.location.pathname;
   if (currentPath.endsWith(wantedLanding) || currentPath === '/' + wantedLanding) {
@@ -117,6 +119,25 @@ async function _check() {
     window.location.reload();
   } else {
     window.location.href = wantedLanding;
+  }
+}
+
+// Persist the latest profile into whichever storage key the active
+// session uses. Two paths because saveSession vs saveSupabaseSession
+// write to different keys depending on the auth provider the user
+// logged in through. We mirror whatever shape the existing session
+// has so the watcher doesn't accidentally promote a legacy session
+// to a Supabase one or vice versa.
+function _persistFreshSession(fresh) {
+  if (localStorage.getItem('ssam_supabase_session')) {
+    try {
+      const wrapper = JSON.parse(localStorage.getItem('ssam_supabase_session') || '{}');
+      saveSupabaseSession(wrapper, fresh);
+    } catch {
+      saveSession(fresh, localStorage.getItem('ssam_token') || '');
+    }
+  } else {
+    saveSession(fresh, localStorage.getItem('ssam_token') || '');
   }
 }
 
