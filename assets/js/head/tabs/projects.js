@@ -21,14 +21,17 @@ const TYPE_KEY = {
   Event:   'ap.prj.type_event',
   Project: 'ap.prj.type_project',
 };
+// DB enum is 'Planned' (default from the initial migration), not
+// 'Planning' — the catalog key name still says `status_planning` but
+// it maps to the canonical 'Planned' value the DB stores.
 const STATUS_KEY = {
-  Planning:  'ap.prj.status_planning',
+  Planned:   'ap.prj.status_planning',
   Active:    'ap.prj.status_active',
   Completed: 'ap.prj.status_completed',
   Cancelled: 'ap.prj.status_cancelled',
 };
 const STATUS_COLOR = {
-  Planning:  't-y',
+  Planned:   't-y',
   Active:    't-g',
   Completed: 't-b',
   Cancelled: 't-gr',

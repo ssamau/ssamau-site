@@ -428,6 +428,7 @@ export default {
   'hp.sb.dashboard':            'My dashboard',
   'hp.sb.members':              'Committee members',
   'hp.sb.projects':             'Projects & events',
+  'hp.title.projects':          '🗓️ Your committee projects',
   'hp.sb.opportunities':        'Opportunities',
   'hp.sb.other_opportunities':  'Other opportunities',
   'hp.proj.card_title':         '🗓️ Your committee projects',

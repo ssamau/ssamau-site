@@ -9,6 +9,7 @@ import { t } from '../lib/i18n.js';
 export const PAGE_TITLES = {
   dashboard:     'hp.title.dashboard',
   members:       'hp.title.members',
+  projects:      'hp.title.projects',
   opportunities: 'hp.title.opportunities',
   'other-opportunities': 'hp.title.other_opportunities',
   hours:         'hp.title.hours',

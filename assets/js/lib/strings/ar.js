@@ -454,6 +454,7 @@ export default {
   'hp.sb.dashboard':            'لوحتي',
   'hp.sb.members':              'أعضاء اللجنة',
   'hp.sb.projects':             'المشاريع والفعاليات',
+  'hp.title.projects':          '🗓️ مشاريع لجنتك',
   'hp.sb.opportunities':        'الفرص التطوعية',
   'hp.sb.other_opportunities':  'فرص أخرى',
   // Head Projects tab — page header + table columns + modal labels.
