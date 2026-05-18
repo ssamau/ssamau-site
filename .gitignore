@@ -14,3 +14,9 @@ supabase/.temp/
 # Generated preview from `npm run import:inspect`. Contains PII
 # (national IDs, addresses, phones) from the leadership xlsx — never commit.
 db/import-preview.json
+
+# Note: `npm run screenshots` writes PNGs to ~/Desktop/SSAM-Demo-Output/
+# by default (override via SSAM_DEMO_OUT_DIR). That folder lives OUTSIDE
+# the repo intentionally — generated artifacts shouldn't be versioned.
+# The spec files under scripts/screenshots/ ARE versioned so the
+# pipeline stays reproducible.
