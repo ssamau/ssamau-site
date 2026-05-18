@@ -377,6 +377,11 @@ export default {
   'mp.opps.withdrawing':        'جاري السحب...',
   'mp.opps.success_withdraw':   'تم سحب اهتمامك.',
   'mp.opps.err_withdraw':       'تعذّر سحب الاهتمام.',
+  // حالة "معتمد" — رئيس اللجنة أكّد المشاركة، ولم يعد بإمكان العضو
+  // الانسحاب ذاتياً. زر السحب يُستبدل بشارة "معتمد" + ملاحظة توجّه
+  // العضو للتواصل مع رئيس اللجنة.
+  'mp.opps.assigned_badge':     '✅ معتمد',
+  'mp.opps.assigned_hint':      'للانسحاب تواصل مع رئيس اللجنة',
   // Multi-role pick-role modal (2026-05-18).
   'mp.opps.pick_role_title':    '🎯 اختر الدور',
   'mp.opps.pick_role_lead':     'اختر الدور الذي يناسبك. إذا لم تكن متأكداً أو مستعد للمساعدة في أي مهمة، اختر "أي دور".',
@@ -1699,6 +1704,7 @@ export default {
 
   // — Business-logic violations —
   'err.business.assignment_not_yours':  'هذا الإسناد لا يخصّك',
+  'err.business.withdraw_after_assigned': 'تم تأكيد مشاركتك في هذه الفرصة من قِبَل رئيس اللجنة. للانسحاب تواصل معه مباشرة.',
   'err.business.hours_already_recorded':'تم تسجيل ساعات لهذا الإسناد بالفعل. اطلب من رئيس اللجنة التعديل إن لزم.',
   'err.business.hours_needs_attended':  'الساعات تُسجَّل فقط لإسناد محسوب "حضر" (المبدأ الثاني).',
   'err.business.hours_zero':            'إجمالي الساعات يجب أن يكون أكبر من صفر',

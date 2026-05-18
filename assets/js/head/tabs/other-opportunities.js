@@ -18,6 +18,11 @@ import { localizeError } from '../../lib/api.js';
 
 // opportunity_id → { role_id: number|null }
 const _interestedOpportunities = new Map();
+// Set<opportunity_id> — populated from assignments.listOwn. When the
+// head has been confirmed for a foreign-committee opportunity, the
+// withdraw button is replaced by a ✅ confirmed badge (server rejects
+// withdraw with err.business.withdraw_after_assigned anyway).
+const _assignedOpportunities = new Set();
 // Pre-multi-role legacy interest (project-level only). Tracked
 // separately so the visual "previously expressed" hint still shows on
 // opportunities in projects the head registered interest in before
@@ -34,9 +39,13 @@ export async function loadHeadOtherOpportunities() {
   if (!tbody) return;
   tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
-  const [oppsRes, interestRes] = await Promise.all([
+  // Three parallel fetches mirror the member-portal opportunities tab.
+  // assignments.listOwn is what lets us swap the withdraw button for a
+  // ✅ confirmed badge once the foreign-committee head has assigned us.
+  const [oppsRes, interestRes, assignRes] = await Promise.all([
     api('opportunities.list'),
     api('interest.listOwn'),
+    api('assignments.listOwn'),
   ]);
   if (!oppsRes || !oppsRes.success) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--dn)">${esc(t('mp.opps.err_load'))}</td></tr>`;
@@ -45,6 +54,7 @@ export async function loadHeadOtherOpportunities() {
 
   _interestedOpportunities.clear();
   _legacyInterestedProjects.clear();
+  _assignedOpportunities.clear();
   if (interestRes && interestRes.success) {
     for (const i of (interestRes.data || [])) {
       const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
@@ -56,6 +66,11 @@ export async function loadHeadOtherOpportunities() {
       } else if (i.project_id) {
         _legacyInterestedProjects.add(i.project_id);
       }
+    }
+  }
+  if (assignRes && assignRes.success) {
+    for (const a of (assignRes.data || [])) {
+      if (a.opportunity_id) _assignedOpportunities.add(a.opportunity_id);
     }
   }
 
@@ -94,9 +109,19 @@ export async function loadHeadOtherOpportunities() {
       ? roles.reduce((n, r) => n + (Number(r.estimated_hours) || 0), 0)
       : (Number(o.estimated_hours) || 0);
 
-    const expr = _interestedOpportunities.get(o.opportunity_id);
+    const isAssigned = _assignedOpportunities.has(o.opportunity_id);
+    const expr       = _interestedOpportunities.get(o.opportunity_id);
     let actionCell;
-    if (expr) {
+    if (isAssigned) {
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+        <span style="display:inline-block;background:#1A5C2E;color:#fff;padding:.25rem .7rem;border-radius:50px;font-size:.75rem;font-weight:700">
+          ${esc(t('mp.opps.assigned_badge') || '✅ معتمد')}
+        </span>
+        <span style="font-size:.7rem;color:var(--tm)">
+          ${esc(t('mp.opps.assigned_hint') || 'للانسحاب تواصل مع رئيس اللجنة')}
+        </span>
+      </div>`;
+    } else if (expr) {
       const pickedRole = expr.role_id ? roles.find(r => Number(r.id) === Number(expr.role_id)) : null;
       const chip = pickedRole
         ? `<span style="display:inline-block;background:#e8f5e9;color:#1A5C2E;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${esc(pickedRole.role_name)}</span>`

@@ -26,6 +26,12 @@ import { localizeError } from '../../lib/api.js';
 // opportunity_id → { role_id: number|null }. Lookup tells us if the
 // member has already registered + which role (or "any role") they picked.
 const _interestedOpportunities = new Map();
+// Set<opportunity_id>. Once the head/admin has assigned the member,
+// the row appears here — the render branch swaps the withdraw button
+// for a "✅ معتمد" confirmation badge so the member can't self-withdraw
+// from a confirmed role. Server-side enforcement lives in
+// interest.submit (rejects with err.business.withdraw_after_assigned).
+const _assignedOpportunities = new Set();
 // Legacy backward-compat (2026-05-18): pre-multi-role members
 // expressed interest at the PROJECT level — one interest_requests row
 // per (project, member) with opportunity_id IS NULL. Those rows don't
@@ -51,10 +57,13 @@ export async function loadOpportunities() {
   if (!tbody) return;
   tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
-  // Two parallel fetches: opportunities + own interest history.
-  const [oppsRes, interestRes] = await Promise.all([
+  // Three parallel fetches: opportunities + own interest history + own
+  // confirmed assignments. Assignments determine whether the withdraw
+  // button is allowed (it isn't once the head/admin has confirmed).
+  const [oppsRes, interestRes, assignRes] = await Promise.all([
     api('opportunities.list'),
     api('interest.listOwn'),
+    api('assignments.listOwn'),
   ]);
   if (!oppsRes || !oppsRes.success) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6" style="color:var(--dn)">${esc(t('mp.opps.err_load'))}</td></tr>`;
@@ -68,6 +77,7 @@ export async function loadOpportunities() {
   // badge correctly reflects current state.
   _interestedOpportunities.clear();
   _legacyInterestedProjects.clear();
+  _assignedOpportunities.clear();
   if (interestRes && interestRes.success) {
     for (const i of (interestRes.data || [])) {
       const yn = i.interested === true || i.interested === 'TRUE' || i.interested === 'true';
@@ -83,6 +93,11 @@ export async function loadOpportunities() {
         // they can still pick a specific role to refine.
         _legacyInterestedProjects.add(i.project_id);
       }
+    }
+  }
+  if (assignRes && assignRes.success) {
+    for (const a of (assignRes.data || [])) {
+      if (a.opportunity_id) _assignedOpportunities.add(a.opportunity_id);
     }
   }
 
@@ -166,11 +181,27 @@ function _applyMemberOppFilters() {
       ? roles.reduce((n, r) => n + (Number(r.estimated_hours) || 0), 0)
       : (Number(o.estimated_hours) || 0);
 
-    // Expressed state. The cached entry holds the role_id the member
-    // last picked; show a small chip indicating which role (or "any role").
-    const expr = _interestedOpportunities.get(o.opportunity_id);
+    // Three-way state for the action cell:
+    //   1) ASSIGNED — head/admin already confirmed. Show ✅ "معتمد" badge,
+    //      NO withdraw button. Server-side withdraw is rejected with
+    //      err.business.withdraw_after_assigned, but we hide the button
+    //      so the member doesn't even try. To leave, they ask the head.
+    //   2) INTERESTED — opted in but not yet assigned. Show role chip +
+    //      withdraw button.
+    //   3) NEW — no interest record yet. Show the green "اهتمام" button.
+    const isAssigned = _assignedOpportunities.has(o.opportunity_id);
+    const expr       = _interestedOpportunities.get(o.opportunity_id);
     let actionCell;
-    if (expr) {
+    if (isAssigned) {
+      actionCell = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+        <span style="display:inline-block;background:#1A5C2E;color:#fff;padding:.25rem .7rem;border-radius:50px;font-size:.75rem;font-weight:700">
+          ${esc(t('mp.opps.assigned_badge') || '✅ معتمد')}
+        </span>
+        <span style="font-size:.7rem;color:var(--tm)">
+          ${esc(t('mp.opps.assigned_hint') || 'للانسحاب تواصل مع رئيس اللجنة')}
+        </span>
+      </div>`;
+    } else if (expr) {
       const pickedRole = expr.role_id ? roles.find(r => Number(r.id) === Number(expr.role_id)) : null;
       const chip = pickedRole
         ? `<span style="display:inline-block;background:#e8f5e9;color:#1A5C2E;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:.3rem">${esc(pickedRole.role_name)}</span>`

@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v70-2026-05-18-admin-profile-css-head-projects';
+const CACHE_VERSION = 'v71-2026-05-18-assign-email-and-withdraw-guard';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 

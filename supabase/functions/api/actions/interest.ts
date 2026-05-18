@@ -40,6 +40,25 @@ const interestSubmit: Handler = async (body, user) => {
                           ? null
                           : Number(role_id_raw);
 
+  // Withdraw-guard 2026-05-18: once the head/admin has assigned the
+  // member to this opportunity, they can't self-withdraw — they must
+  // ask the head to remove them. Prevents members from disappearing
+  // from a confirmed role the day before the event. Only guards the
+  // multi-role path (opportunity_id present); legacy project-level
+  // interest can still be withdrawn freely since it never produces a
+  // direct assignment row.
+  if (!interested && opportunity_id) {
+    const [existingAssignment] = await sql`
+      SELECT assignment_id FROM public.assignments
+      WHERE  opportunity_id = ${opportunity_id}
+        AND  member_id      = ${user!.member_id}
+      LIMIT 1
+    ` as Array<{ assignment_id: string }>;
+    if (existingAssignment) {
+      throw httpErr('err.business.withdraw_after_assigned', 409);
+    }
+  }
+
   if (opportunity_id) {
     // Multi-role flow. role_id may legitimately be NULL ("any role" —
     // member is willing to help with whatever the head decides).

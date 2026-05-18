@@ -67,6 +67,10 @@ export interface EmailOptions {
   // (we pass SMTP_USER as a placeholder so the message is technically
   // addressed to the sender's own inbox + delivered to everyone in BCC).
   bcc?: string[];
+  // Reply-To override. Defaults to SMTP_FROM (info@ssamau.com).
+  // Set per-message when we want replies to land in a different inbox
+  // — e.g. an admin's personal address on a one-off member nudge.
+  replyTo?: string;
 }
 
 // Unique ASCII sentinel — kept ASCII so denomailer's broken encoder
@@ -137,8 +141,13 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
     // html). bcc is optional — spread it in conditionally instead of
     // mutating, otherwise the inferred type drops back to
     // Record<string, unknown> and stops satisfying SendConfig.
+    // Reply-To always set — Gmail/Outlook treat its presence as a small
+    // positive deliverability signal vs absence. Defaults to SMTP_FROM
+    // so replies funnel to the same Workspace inbox the message came
+    // from, unless the caller wants to route them elsewhere.
     const message = {
       from:    SMTP_FROM,
+      replyTo: opts.replyTo || SMTP_FROM,
       to:      Array.isArray(opts.to) ? opts.to : [opts.to],
       subject: SUBJECT_PLACEHOLDER,
       content: cleanText,
