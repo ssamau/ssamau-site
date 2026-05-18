@@ -253,6 +253,14 @@ export function clearForm(type) {
      // on the next openModal('opportunity') (which fires whenever the
      // admin clicks "+ إضافة فرصة") — no need to clear it here.
     opportunity: ['opp-edit-id','opp-notes'],
+    // Head's own committee-scoped project modal. Mirrors admin
+    // `project` but uses hd-prj-* IDs to avoid collision when both
+    // form pages are in the same DOM (they're not currently — head
+    // and admin run as separate portals — but future-proofs the
+    // pattern).
+    'hd-project':  ['hd-prj-edit-id','hd-prj-name','hd-prj-desc',
+                    'hd-prj-date','hd-prj-start','hd-prj-end',
+                    'hd-prj-location'],
   };
   (fields[type] || []).forEach(id => sv(id, ''));
   // Reset number inputs

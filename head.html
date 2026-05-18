@@ -49,6 +49,9 @@
     <div class="sb-item" data-page="members" data-action="showPage">
       <span class="sb-ic">👥</span><span data-i18n="hp.sb.members">أعضاء اللجنة</span>
     </div>
+    <div class="sb-item" data-page="projects" data-action="showPage">
+      <span class="sb-ic">🗓️</span><span data-i18n="hp.sb.projects">المشاريع والفعاليات</span>
+    </div>
     <div class="sb-item" data-page="opportunities" data-action="showPage">
       <span class="sb-ic">🎯</span><span data-i18n="hp.sb.opportunities">الفرص التطوعية</span>
     </div>
@@ -243,6 +246,36 @@
               </tr>
             </thead>
             <tbody id="hd-members-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PROJECTS / EVENTS (committee-scoped) ══════════ -->
+    <!-- Heads can add + edit projects for their own committee only.
+         The server's requireAdminScope gates the writes; this UI just
+         filters the list to the head's committee_id client-side. -->
+    <div class="page" id="page-projects">
+      <div class="card">
+        <div class="card-head">
+          <h3 data-i18n="hp.proj.card_title">🗓️ مشاريع لجنتك</h3>
+          <div class="card-head-right">
+            <button class="btn btn-g btn-sm" data-action="hd.projects.openCreate" data-i18n="hp.proj.add_btn">+ إضافة مشروع</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="hp.proj.col_name">الاسم</th>
+                <th data-i18n="hp.proj.col_type">النوع</th>
+                <th data-i18n="hp.proj.col_date">التاريخ</th>
+                <th data-i18n="hp.proj.col_location">الموقع</th>
+                <th data-i18n="hp.proj.col_status">الحالة</th>
+                <th data-i18n="hp.proj.col_actions">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="hd-projects-tbody"><tr class="empty-row"><td colspan="6" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -587,6 +620,62 @@
     <div class="modal-footer">
       <button class="btn btn-ol" data-action="hd.other.closePick" data-i18n="mp.opps.pick_role_cancel">إلغاء</button>
       <button class="btn btn-g" data-action="hd.other.submitPick" id="hd-pickrole-submit-btn" data-i18n="mp.opps.pick_role_submit">✓ تسجيل الاهتمام</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ HEAD PROJECT EDIT MODAL ══════════ -->
+<!-- Add + edit a single project. Committee scope is implicit (the
+     head's own), so there's no committee picker. The server enforces
+     ownership server-side via requireAdminScope. -->
+<div class="overlay" id="ov-hd-project">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="hd-project-modal-title" data-i18n="hp.proj.modal_add">+ إضافة مشروع</h3>
+      <button class="modal-close" data-action="closeModal" data-modal="hd-project">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="hd-prj-edit-id"/>
+      <div class="fg">
+        <label><span data-i18n="hp.proj.lbl_name">الاسم</span> <span class="required">*</span></label>
+        <input id="hd-prj-name" data-i18n-placeholder="hp.proj.ph_name" placeholder="مثل: ملتقى تعارف الخريف"/>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label data-i18n="hp.proj.lbl_type">النوع</label>
+          <select id="hd-prj-type">
+            <option value="Event"   data-i18n="ap.prj.type_event">فعالية</option>
+            <option value="Project" data-i18n="ap.prj.type_project">مشروع</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label data-i18n="hp.proj.lbl_status">الحالة</label>
+          <select id="hd-prj-status">
+            <option value="Planning"  data-i18n="ap.prj.status_planning">تخطيط</option>
+            <option value="Active"    data-i18n="ap.prj.status_active">نشط</option>
+            <option value="Completed" data-i18n="ap.prj.status_completed">منتهي</option>
+            <option value="Cancelled" data-i18n="ap.prj.status_cancelled">ملغى</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label data-i18n="hp.proj.lbl_date">التاريخ</label><input id="hd-prj-date" type="date"/></div>
+        <div class="fg"><label data-i18n="hp.proj.lbl_start">وقت البداية</label><input id="hd-prj-start" type="time"/></div>
+        <div class="fg"><label data-i18n="hp.proj.lbl_end">وقت النهاية</label><input id="hd-prj-end" type="time"/></div>
+      </div>
+      <div class="fg">
+        <label data-i18n="hp.proj.lbl_location">الموقع</label>
+        <input id="hd-prj-location" data-i18n-placeholder="hp.proj.ph_location" placeholder="Docklands Community Hub"/>
+      </div>
+      <div class="fg">
+        <label data-i18n="hp.proj.lbl_desc">الوصف</label>
+        <textarea id="hd-prj-desc" rows="3"></textarea>
+      </div>
+      <div class="fg-note" data-i18n="hp.proj.committee_hint">المشروع سيُسجَّل تلقائياً تحت لجنتك. لإسناد المشاريع إلى لجان أخرى، تواصل مع الإدارة.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol" data-action="closeModal" data-modal="hd-project" data-i18n="ap.members.cancel">إلغاء</button>
+      <button class="btn btn-g" data-action="hd.projects.save" data-i18n="ap.members.save_btn">💾 حفظ</button>
     </div>
   </div>
 </div>

@@ -38,6 +38,10 @@ import {
   markHeadAssignmentAttendance, removeHeadAssignment,
 } from './tabs/opportunities.js';
 import {
+  loadHeadProjects, openHeadProjectCreate, editHeadProject,
+  saveHeadProject, confirmDeleteHeadProject,
+} from './tabs/projects.js';
+import {
   loadHeadOtherOpportunities,
   openHeadOtherPickRole, closeHeadOtherPickRole, submitHeadOtherPickRole,
   withdrawOtherInterest,
@@ -116,6 +120,7 @@ async function logout() {
 const loaderMap = {
   dashboard:           loadDashboard,
   members:             loadHeadMembers,
+  projects:            loadHeadProjects,
   opportunities:       loadHeadOpportunities,
   'other-opportunities': loadHeadOtherOpportunities,
   hours:               loadHeadHours,
@@ -223,6 +228,13 @@ document.addEventListener('click', (e) => {
     case 'hd.other.closePick':          closeHeadOtherPickRole(); break;
     case 'hd.other.submitPick':         submitHeadOtherPickRole(); break;
     case 'hd.other.withdraw':           withdrawOtherInterest(el); break;
+    // Projects tab (2026-05-18). Heads add/edit projects scoped to
+    // their committee. requireAdminScope on the server enforces the
+    // committee match — admins can still edit head-created rows.
+    case 'hd.projects.openCreate':      openHeadProjectCreate(); break;
+    case 'hd.projects.edit':            editHeadProject(el.dataset.id); break;
+    case 'hd.projects.save':            saveHeadProject(); break;
+    case 'hd.projects.confirmDelete':   confirmDeleteHeadProject(el.dataset.id, el.dataset.name); break;
     // Support / bug-report — sidebar entry + modal submit.
     case 'openSupportModal':            openSupportModal(); break;
     case 'submitSupportTicket':         submitSupportTicket(); break;

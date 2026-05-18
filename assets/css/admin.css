@@ -310,6 +310,101 @@ tr:hover td { background:var(--bg-soft); }
 .profile-stat .pl { font-size:.7rem; color:var(--tl); margin-top:.15rem; }
 
 /* ═══════════════════════════════════════════════
+   SELF-PROFILE TAB (admin / head / member)
+═══════════════════════════════════════════════ */
+/* The "My Profile" tab shares one module (assets/js/member/tabs/profile.js)
+ * across all three portals via a common #profile-form-wrap container.
+ * Styles must live HERE (admin.css) because admin.html only loads
+ * admin.css — head.html and member.html also load admin.css so they
+ * pick these rules up for free. Moved here 2026-05-18 from member.css
+ * after the broken admin.html my-profile layout was flagged. */
+
+/* Read-only header strip: tile grid of label/value pairs. Each row is
+ * its own bordered card so it stands out in dark mode where a subtle
+ * background tint alone would be invisible. */
+.profile-readonly-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: .6rem;
+  background: var(--gl, #e8f5e9);
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: .85rem;
+}
+.prs-row {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  font-size: .82rem;
+  background: var(--bg, #fff);
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  min-width: 0;
+}
+.prs-label {
+  color: var(--tm, #6b7280);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.prs-value {
+  color: var(--tx, #111827);
+  font-weight: 700;
+  font-size: .9rem;
+  word-break: break-word;
+}
+.prs-note {
+  margin: 0 0 1.1rem 0;
+  font-size: .72rem;
+  color: var(--tm, #9ca3af);
+  text-align: center;
+}
+
+/* Edit form layout. .pf-section rows are green-underlined section
+ * headings; .fg-grid wraps each row of fields into a responsive grid. */
+.profile-edit-form { padding: 0; }
+.fg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .65rem .85rem;
+}
+.pf-section {
+  font-size: .9rem;
+  font-weight: 800;
+  color: var(--g, #1A5C2E);
+  margin: 1.4rem 0 .65rem 0;
+  padding: .4rem 0 .35rem 0;
+  border-bottom: 2px solid var(--g, #1A5C2E);
+}
+.profile-edit-form .pf-section:first-of-type { margin-top: .25rem; }
+
+/* Inputs + selects bidi-auto-detect so LTR data (emails, URLs, phone
+ * numbers) renders correctly inside RTL forms. Selects pick up their
+ * own border/background so the OS default doesn't leak through. */
+.profile-edit-form .fg input,
+.profile-edit-form .fg textarea {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+.profile-edit-form .fg select {
+  background: var(--sf, #f9fafb);
+  border: 1px solid var(--bd, #e5e7eb);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-family: inherit;
+  font-size: .88rem;
+  color: var(--tx, #111827);
+  width: 100%;
+  cursor: pointer;
+}
+.profile-edit-form .fg select:focus {
+  outline: none;
+  border-color: var(--g, #1A5C2E);
+}
+
+/* ═══════════════════════════════════════════════
    SETUP / CONFIG
 ═══════════════════════════════════════════════ */
 .setup-box { background:var(--sf); border-radius:var(--r); border:1px solid var(--bd); padding:2rem; max-width:520px; margin:2rem auto; text-align:center; }
