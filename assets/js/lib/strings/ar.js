@@ -1645,6 +1645,7 @@ export default {
   'err.auth.unauthorized':            'يجب تسجيل الدخول للمتابعة',
   'err.auth.invalid_credentials':     'بيانات الدخول غير صحيحة',
   'err.auth.missing_credentials':     'بيانات الدخول ناقصة',
+  'err.auth.locked_out':              'تم تعليق محاولات الدخول مؤقتاً لكثرة المحاولات الخاطئة. أعد المحاولة لاحقاً.',
   'err.auth.invite_invalid':          'الرابط لم يعد صالحاً',
   'err.auth.invite_expired':          'انتهت صلاحية الدعوة، الرجاء طلب دعوة جديدة من المسؤول',
   'err.auth.pin_expired':             'انتهت صلاحية الرمز، الرجاء طلب دعوة جديدة من المسؤول',

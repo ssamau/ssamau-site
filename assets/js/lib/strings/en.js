@@ -1592,6 +1592,7 @@ export default {
   'err.auth.unauthorized':            'You must be signed in.',
   'err.auth.invalid_credentials':     'Invalid credentials.',
   'err.auth.missing_credentials':     'Missing credentials.',
+  'err.auth.locked_out':              'Too many failed attempts — sign-in is temporarily locked. Try again later.',
   'err.auth.invite_invalid':          'Invite link is no longer valid.',
   'err.auth.invite_expired':          'Invite expired — ask the admin for a new one.',
   'err.auth.pin_expired':             'PIN expired — ask the admin for a new one.',

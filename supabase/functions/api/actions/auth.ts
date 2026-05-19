@@ -13,6 +13,50 @@
 
 import { sql } from '../_sql.ts';
 import { rateLimit, getClientIp } from '../_ratelimit.ts';
+
+// ─── Brute-force lockout helpers (audit findings M1, M2) ──────────────
+// Backed by private.auth_attempts (migration 20260519225001). The two
+// helpers below capture the full pattern: check, attempt, branch on
+// outcome.
+//
+// LOCKOUT_LIMITS keys map to `bucket` values in the table.
+const LOCKOUT_LIMITS = {
+  auth: { max: 5, windowMinutes: 15 },   // legacy bcrypt login
+  pin:  { max: 5, windowMinutes: 72 * 60 }, // PIN signup, matches PIN validity
+} as const;
+
+async function checkLockout(bucket: keyof typeof LOCKOUT_LIMITS, identifier: string): Promise<void> {
+  const cfg = LOCKOUT_LIMITS[bucket];
+  const [{ count }] = await sql`
+    SELECT COUNT(*)::int AS count FROM private.auth_attempts
+    WHERE  identifier = ${identifier}
+      AND  bucket     = ${bucket}
+      AND  failed_at  > NOW() - (${cfg.windowMinutes}::int * INTERVAL '1 minute')
+  ` as Array<{ count: number }>;
+  if (count >= cfg.max) {
+    throw httpErr('err.auth.locked_out', 429);
+  }
+}
+
+async function recordFailedAttempt(
+  bucket: keyof typeof LOCKOUT_LIMITS,
+  identifier: string,
+  req?: Request,
+): Promise<void> {
+  const ip = req ? getClientIp(req) : null;
+  const ua = req?.headers.get('user-agent') ?? null;
+  await sql`
+    INSERT INTO private.auth_attempts (identifier, bucket, ip, user_agent)
+    VALUES (${identifier}, ${bucket}, ${ip}, ${ua})
+  `;
+}
+
+async function clearFailedAttempts(bucket: keyof typeof LOCKOUT_LIMITS, identifier: string): Promise<void> {
+  await sql`
+    DELETE FROM private.auth_attempts
+    WHERE identifier = ${identifier} AND bucket = ${bucket}
+  `;
+}
 import {
   bcryptCompare, bcryptHash, signToken,
   httpErr, randomBytesB64Url,
@@ -97,10 +141,16 @@ const authResolveIdentifier: Handler = async (body) => {
 };
 
 // ─── `auth` — username + password login, issues HS256 JWT ───────────────
-const auth: Handler = async (body) => {
+const auth: Handler = async (body, _user, req) => {
   const username = body.username as string | undefined;
   const password = body.password as string | undefined;
   if (!username || !password) throw httpErr('err.auth.missing_credentials', 400);
+
+  // Brute-force lockout (audit M1) — check BEFORE running bcrypt so
+  // even a locked-out attacker can't keep the CPU busy. Identifier is
+  // lowercased so case variants ("FOO" vs "foo") share a counter.
+  const lockoutKey = username.trim().toLowerCase();
+  await checkLockout('auth', lockoutKey);
 
   const rows = await sql`
     SELECT u.id, u.username, u.password_hash, u.access_level, u.member_id,
@@ -117,10 +167,20 @@ const auth: Handler = async (body) => {
   }>;
 
   const u = rows[0];
-  if (!u) throw httpErr('err.auth.invalid_credentials', 401);
+  if (!u) {
+    // Even "user doesn't exist" counts as a failed attempt — otherwise
+    // an attacker could enumerate usernames by hitting names that DON'T
+    // exist (no lockout) vs names that DO (eventual lockout). The
+    // counter blurs that distinction.
+    await recordFailedAttempt('auth', lockoutKey, req);
+    throw httpErr('err.auth.invalid_credentials', 401);
+  }
 
   const okPw = await bcryptCompare(password, u.password_hash);
-  if (!okPw) throw httpErr('err.auth.invalid_credentials', 401);
+  if (!okPw) {
+    await recordFailedAttempt('auth', lockoutKey, req);
+    throw httpErr('err.auth.invalid_credentials', 401);
+  }
 
   // Inactive-status gate (2026-05-17): users whose `members.status` was
   // flipped to 'Inactive' by an admin must not be able to log in,
@@ -130,6 +190,8 @@ const auth: Handler = async (body) => {
     throw httpErr('err.access.member_inactive', 403);
   }
 
+  // Successful login → wipe the failed-attempt history for this user.
+  await clearFailedAttempts('auth', lockoutKey);
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
   return {
@@ -1041,12 +1103,21 @@ const authSignupCompleteByToken: Handler = async (body) => {
 // now error messages are deliberately UNIFORM across "NID not found" /
 // "no invite issued" / "PIN wrong" so attackers can't tell which of
 // those they hit — same generic credentials-style response.
-const authSignupCompleteByPin: Handler = async (body) => {
+const authSignupCompleteByPin: Handler = async (body, _user, req) => {
   const nationalId = String(body.national_id ?? '').trim();
   const pin        = String(body.pin         ?? '').trim();
   const password   = String(body.password    ?? '');
   if (!nationalId || !pin) throw httpErr('err.auth.missing_credentials', 400);
   if (password.length < 8) throw httpErr('err.auth.password_too_short', 400);
+
+  // Brute-force lockout (audit M2) — key off NID alone, NOT NID+PIN.
+  // If we keyed off NID+PIN, an attacker would never trip the lockout
+  // because each guess uses a fresh key. NID alone groups all PIN
+  // guesses for the same applicant under one counter, which is what
+  // matters. 5 strikes within the 72h PIN window → locked out;
+  // admin must re-issue the PIN.
+  const lockoutKey = `nid:${nationalId}`;
+  await checkLockout('pin', lockoutKey);
 
   // Single query covering member lookup + linked users row + PIN state.
   // Returning eagerly with a uniform error message means the attacker
@@ -1076,6 +1147,8 @@ const authSignupCompleteByPin: Handler = async (body) => {
     // Without this, attackers could enumerate valid NIDs by measuring
     // response time. Use a known-junk hash that will reliably mismatch.
     await bcryptCompare('___fake___', '$2a$10$abcdefghijklmnopqrstuvwx0123456789ABCDEFGHIJKLMNOPQR');
+    // Count the attempt so a script can't probe NIDs unbounded.
+    await recordFailedAttempt('pin', lockoutKey, req);
     throw generic;
   }
   if (row.signup_completed_at || row.auth_user_id) {
@@ -1096,8 +1169,12 @@ const authSignupCompleteByPin: Handler = async (body) => {
   const pinOk = await bcryptCompare(pin, row.signup_pin_hash);
   if (!pinOk) {
     console.warn(`[auth.signup.completeByPin] wrong PIN for user ${row.id}`);
+    await recordFailedAttempt('pin', lockoutKey, req);
     throw generic;
   }
+
+  // Successful match → clear the failure history for this NID.
+  await clearFailedAttempts('pin', lockoutKey);
 
   // Create auth.users (same as completeByToken path).
   const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
