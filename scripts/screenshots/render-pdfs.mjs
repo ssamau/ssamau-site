@@ -24,6 +24,7 @@ const GUIDES = [
   { name: 'member-guide', label: 'Member' },
   { name: 'head-guide',   label: 'Head' },
   { name: 'admin-guide',  label: 'Admin' },
+  { name: 'dev-guide',    label: 'Dev' },
 ];
 
 const browser = await chromium.launch();
