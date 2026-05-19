@@ -941,6 +941,10 @@
     </div>
     <div class="modal-body">
       <div id="hd-opp-assign-header" style="background:var(--c-soft);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem"></div>
+      <div class="fg" style="margin-bottom:.6rem">
+        <label data-i18n="ap.opp.assign.lbl_role">الدور</label>
+        <select id="hd-opp-assign-role"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select>
+      </div>
       <div class="fg-row" style="align-items:end">
         <div class="fg" style="flex:1"><label data-i18n="ap.opp.assign.add_member">إضافة عضو</label>
           <select id="hd-opp-assign-member"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select>
@@ -959,11 +963,12 @@
         <table>
           <thead><tr>
             <th data-i18n="ap.opp.assign.col_name">الاسم</th>
+            <th data-i18n="ap.opp.assign.col_role">الدور</th>
             <th data-i18n="ap.opp.assign.col_attendance">الحضور</th>
             <th data-i18n="hp.opps.assign_col_hours">الساعات</th>
             <th data-i18n="ap.opp.assign.col_actions">إجراءات</th>
           </tr></thead>
-          <tbody id="hd-opp-assign-tbody"><tr class="empty-row"><td colspan="4" data-i18n="ap.opp.assign.empty">لا يوجد مسندون بعد</td></tr></tbody>
+          <tbody id="hd-opp-assign-tbody"><tr class="empty-row"><td colspan="5" data-i18n="ap.opp.assign.empty">لا يوجد مسندون بعد</td></tr></tbody>
         </table>
       </div>
     </div>

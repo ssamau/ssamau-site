@@ -358,6 +358,35 @@ export async function openOpportunityAssignments(opportunityId) {
       ${com ? esc(com.committee_name) : '—'}
     </div>`;
 
+  // Role picker — same shape as the head's modal. roles[] comes from
+  // opportunities.list with a `taken` counter for each role. Full
+  // roles get disabled options + a fullness suffix in the label so
+  // the admin sees capacity at a glance. First non-full role is
+  // auto-selected. Hidden entirely if the opp pre-dates the multi-
+  // role refactor and has no roles[].
+  const roleSel = document.getElementById('opp-assign-role');
+  const roles   = Array.isArray(o.roles) ? o.roles : [];
+  if (roleSel) {
+    if (!roles.length) {
+      roleSel.innerHTML = `<option value="">—</option>`;
+      roleSel.parentElement.style.display = 'none';
+    } else {
+      roleSel.parentElement.style.display = '';
+      const fullLabel = t('mp.opps.role_full_badge') || 'ممتلئ';
+      let firstAvailable = null;
+      roleSel.innerHTML = roles.map(r => {
+        const taken     = Number(r.taken) || 0;
+        const needed    = Number(r.headcount_needed) || 1;
+        const remaining = Math.max(0, needed - taken);
+        const isFull    = remaining === 0;
+        if (!isFull && firstAvailable === null) firstAvailable = String(r.id);
+        const suffix = isFull ? ` — ${fullLabel}` : ` (${remaining}/${needed})`;
+        return `<option value="${esc(String(r.id))}" ${isFull ? 'disabled' : ''}>${esc(r.role_name)}${suffix}</option>`;
+      }).join('');
+      if (firstAvailable !== null) roleSel.value = firstAvailable;
+    }
+  }
+
   // Fill member-picker with members not yet assigned to this opportunity
   const memberSel = document.getElementById('opp-assign-member');
   memberSel.innerHTML = `<option value="">${esc(t('ap.prj.choose'))}</option>`;
@@ -378,7 +407,7 @@ export async function openOpportunityAssignments(opportunityId) {
 export function renderAssignments(items) {
   const tbody = document.getElementById('opp-assign-tbody');
   if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="3">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(a => {
@@ -389,20 +418,37 @@ export function renderAssignments(items) {
     const opts = ATTENDANCE_OPTIONS.map(s =>
       `<option value="${s}" ${a.attendance_status === s ? 'selected' : ''}>${esc(t(ATTENDANCE_KEY[s]))}</option>`
     ).join('');
+    // Role column — `assigned_role_name` is the JOIN result from
+    // assignments.role_id → opportunity_roles.role_name. NULL on
+    // legacy / opportunity-level assignments → em-dash.
+    const roleCell = a.assigned_role_name
+      ? esc(a.assigned_role_name)
+      : `<span style="color:var(--tm)">—</span>`;
     return `<tr>
       <td>${name}</td>
+      <td>${roleCell}</td>
       <td><select data-action="markAttendance" data-id="${a.assignment_id}">${opts}</select></td>
       <td><button class="btn-icon del" data-action="removeAssignment" data-id="${a.assignment_id}">🗑️</button></td>
     </tr>`;
   }).join('');
 }
 
+// Read the role_id from the admin's role-picker dropdown. Same
+// contract as the head's _selectedRoleId(): empty → null (legacy
+// single-role opps where the dropdown is hidden), otherwise Number().
+function _adminSelectedRoleId() {
+  const raw = gv('opp-assign-role');
+  return (!raw || raw === '') ? null : Number(raw);
+}
+
 export async function addAssignmentMember() {
   const memberId = gv('opp-assign-member');
   if (!memberId || !_activeOpportunity) return;
+  const role_id = _adminSelectedRoleId();
   const res = await api('assignments.add', {
     opportunity_id: _activeOpportunity.opportunity_id,
     member_id:      memberId,
+    role_id,
   });
   if (res && res.success) {
     toast(t('ap.opp.assign.success_add'));
@@ -415,10 +461,12 @@ export async function addAssignmentVolunteer() {
   const name  = gv('opp-assign-vol-name');
   const email = gv('opp-assign-vol-email');
   if (!name || !_activeOpportunity) { toast(t('ap.opp.assign.err_vol_name'), 'twarn'); return; }
+  const role_id = _adminSelectedRoleId();
   const res = await api('assignments.add', {
     opportunity_id:  _activeOpportunity.opportunity_id,
     volunteer_name:  name,
     volunteer_email: email || null,
+    role_id,
   });
   if (res && res.success) {
     toast(t('ap.opp.assign.success_add'));

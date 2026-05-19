@@ -187,6 +187,37 @@ export async function openHeadOpportunityAssignments(opportunityId) {
       </div>`;
   }
 
+  // Role picker — populated from the opportunity's roles[] with each
+  // role's remaining-slots count appended. Full roles are disabled
+  // (selecting one would fail server-side with err.business.role_full
+  // anyway, but we surface the constraint at click time). First
+  // available role is auto-selected so single-role opps need zero
+  // clicks. If the opportunity has no roles (shouldn't happen post
+  // 2026-05-18 migration), the picker is hidden + assignments fall
+  // back to legacy opportunity-level capacity.
+  const roleSel = document.getElementById('hd-opp-assign-role');
+  const roles   = Array.isArray(_activeOpp.roles) ? _activeOpp.roles : [];
+  if (roleSel) {
+    if (!roles.length) {
+      roleSel.innerHTML = `<option value="">—</option>`;
+      roleSel.parentElement.style.display = 'none';
+    } else {
+      roleSel.parentElement.style.display = '';
+      const fullLabel = t('mp.opps.role_full_badge') || 'ممتلئ';
+      let firstAvailable = null;
+      roleSel.innerHTML = roles.map(r => {
+        const taken     = Number(r.taken) || 0;
+        const needed    = Number(r.headcount_needed) || 1;
+        const remaining = Math.max(0, needed - taken);
+        const isFull    = remaining === 0;
+        if (!isFull && firstAvailable === null) firstAvailable = String(r.id);
+        const suffix = isFull ? ` — ${fullLabel}` : ` (${remaining}/${needed})`;
+        return `<option value="${esc(String(r.id))}" ${isFull ? 'disabled' : ''}>${esc(r.role_name)}${suffix}</option>`;
+      }).join('');
+      if (firstAvailable !== null) roleSel.value = firstAvailable;
+    }
+  }
+
   // Member picker: list members not yet assigned.
   const memberSel = document.getElementById('hd-opp-assign-member');
   if (memberSel) memberSel.innerHTML = `<option value="">${esc(t('ap.prj.choose'))}</option>`;
@@ -210,7 +241,7 @@ function _renderAssignments(items) {
   const tbody = document.getElementById('hd-opp-assign-tbody');
   if (!tbody) return;
   if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('ap.opp.assign.empty'))}</td></tr>`;
     return;
   }
   // Hours-override default = the opportunity's estimated_hours. The
@@ -231,8 +262,16 @@ function _renderAssignments(items) {
     // Pre-fills with the opportunity's estimated_hours so the default
     // path is "head doesn't touch hours, member gets the estimated
     // credit"; head can edit before flipping to Attended to override.
+    // Role column — `assigned_role_name` comes from the assignments.list
+    // JOIN onto opportunity_roles via assignments.role_id. NULL on
+    // legacy opportunity-level assignments → render as an em-dash so
+    // the head can tell which rows pre-date the multi-role refactor.
+    const roleCell = a.assigned_role_name
+      ? esc(a.assigned_role_name)
+      : `<span style="color:var(--tm)">—</span>`;
     return `<tr>
       <td>${name}</td>
+      <td>${roleCell}</td>
       <td><select data-action="hd.opps.assign.markAttendance" data-id="${esc(a.assignment_id)}">${opts}</select></td>
       <td>
         <input type="number" min="0" max="24" step="0.5"
@@ -247,13 +286,24 @@ function _renderAssignments(items) {
   }).join('');
 }
 
+// Read the role_id from the role-picker dropdown. Empty string from
+// gv() → null (legacy single-role opps where the dropdown is hidden).
+// Otherwise coerce to Number so the server gets a proper BIGINT match
+// for opportunity_roles.id.
+function _selectedRoleId() {
+  const raw = gv('hd-opp-assign-role');
+  return (!raw || raw === '') ? null : Number(raw);
+}
+
 export async function addHeadAssignmentMember() {
   const memberId = gv('hd-opp-assign-member');
   if (!memberId || !_activeOpp) return;
+  const role_id = _selectedRoleId();
   const res = await api('assignments.add', {
     data: {
       opportunity_id: _activeOpp.opportunity_id,
       member_id:      memberId,
+      role_id,
     },
   });
   if (res && res.success) {
@@ -267,11 +317,13 @@ export async function addHeadAssignmentVolunteer() {
   const name  = gv('hd-opp-assign-vol-name');
   const email = gv('hd-opp-assign-vol-email');
   if (!name || !_activeOpp) { toast(t('ap.opp.assign.err_vol_name'), 'twarn'); return; }
+  const role_id = _selectedRoleId();
   const res = await api('assignments.add', {
     data: {
       opportunity_id:  _activeOpp.opportunity_id,
       volunteer_name:  name,
       volunteer_email: email || null,
+      role_id,
     },
   });
   if (res && res.success) {
