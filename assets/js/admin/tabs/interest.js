@@ -244,8 +244,21 @@ export async function confirmInterestAssign() {
   const btn = document.getElementById('ia-confirm-btn');
   if (btn) { btn.disabled = true; btn.textContent = t('ap.int.assign_confirming_btn'); }
   try {
+    // Forward the interest's role_id ONLY when the admin kept the
+    // dropdown on the same opportunity the member expressed interest
+    // in. If admin overrode to a different opportunity, the interest's
+    // role_id wouldn't exist there — let the server fall back to
+    // opportunity-level capacity. role_id NULL on the interest means
+    // "any role"; we pass it through so the assignment row stays
+    // role-agnostic until the head/admin picks one later.
+    const sameOpp = oppId === _activeInterest.opportunity_id;
+    const role_id = sameOpp ? (_activeInterest.role_id ?? null) : null;
     const r1 = await api('assignments.add', {
-      data: { opportunity_id: oppId, member_id: _activeInterest.member_id },
+      data: {
+        opportunity_id: oppId,
+        member_id:      _activeInterest.member_id,
+        role_id,
+      },
     });
     if (!r1 || !r1.success) {
       toast(localizeError(r1?.error, r1?.errorParams) || t('ap.int.assign_err_fail'), 'twarn');
