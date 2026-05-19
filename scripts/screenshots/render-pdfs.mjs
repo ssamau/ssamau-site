@@ -21,10 +21,11 @@ import { stat } from 'fs/promises';
 
 const BASE = join(homedir(), 'Desktop', 'SSAM-Demo-Output', 'pdfs');
 const GUIDES = [
-  { name: 'member-guide', label: 'Member' },
-  { name: 'head-guide',   label: 'Head' },
-  { name: 'admin-guide',  label: 'Admin' },
-  { name: 'dev-guide',    label: 'Dev' },
+  { name: 'member-guide',  label: 'Member' },
+  { name: 'head-guide',    label: 'Head' },
+  { name: 'admin-guide',   label: 'Admin' },
+  { name: 'dev-guide',     label: 'Dev' },
+  { name: 'ios-app-guide', label: 'iOS' },
 ];
 
 const browser = await chromium.launch();
