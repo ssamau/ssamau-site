@@ -11,15 +11,8 @@
     "import:static-events": "node db/import-static-events.js",
     "admin:create": "node db/create-admin.js",
     "auth:backfill": "node db/auth-backfill.js",
-    "seed:demo": "node db/seed-demo.js",
-    "wipe:demo": "node db/wipe-demo.js",
-    "screenshots": "node scripts/screenshots/run.mjs",
-    "render:pdfs": "node scripts/screenshots/render-pdfs.mjs",
     "check:i18n": "node scripts/check-i18n-parity.mjs",
     "install:hooks": "git config core.hooksPath scripts/git-hooks && echo 'Hooks active — pre-commit runs check:i18n on staged catalog changes.'"
-  },
-  "devDependencies": {
-    "playwright": "^1.49.0"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
