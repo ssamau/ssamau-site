@@ -352,7 +352,13 @@ export const SUPERADMIN_ACTIONS = new Set<string>([
 ]);
 
 // ─── Handler type ───────────────────────────────────────────────────────
+// `req` is the third arg — optional because most handlers only need
+// body + user. Handlers that rate-limit or inspect headers (Origin,
+// X-Forwarded-For for IP-based throttling) opt in by typing the third
+// parameter. The dispatcher always passes the real Request so existing
+// handlers that ignore it just keep working.
 export type Handler = (
   body: Record<string, unknown>,
   user: UserContext | null,
+  req?: Request,
 ) => Promise<unknown>;

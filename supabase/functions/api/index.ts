@@ -53,18 +53,40 @@ import { supportActions }        from './actions/support.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────
 // Frontend (ssamau.com) and the function (functions.supabase.co) are
-// different origins, so respond to OPTIONS preflights with these.
-const corsHeaders = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+// different origins, so the function emits CORS headers on every
+// response. Security audit 2026-05-19 (finding H3): the previous
+// `Access-Control-Allow-Origin: '*'` allowed any origin to call the
+// API. Combined with localStorage-stored JWTs, an XSS bug on an
+// unrelated site could exfiltrate tokens AND call the API directly.
+//
+// Allowlist + Vary: Origin so the CDN doesn't conflate cached
+// responses across origins. Requests from unknown origins still
+// get a response — we just don't advertise the cross-origin grant,
+// so the browser refuses to expose the result to the calling script.
+const ALLOWED_ORIGINS = new Set<string>([
+  'https://ssamau.com',
+  'https://www.ssamau.com',
+  'https://ssamau.netlify.app',  // Netlify default subdomain
+  'http://localhost:8888',        // netlify dev
+  'http://127.0.0.1:8888',
+]);
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  const allow  = ALLOWED_ORIGINS.has(origin) ? origin : 'https://ssamau.com';
+  return {
+    'Access-Control-Allow-Origin':  allow,
+    'Vary':                         'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+}
 
 // ─── Response helpers ───────────────────────────────────────────────────
-function ok(data: unknown) {
+function ok(req: Request, data: unknown) {
   return new Response(JSON.stringify({ success: true, data }), {
     status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -74,14 +96,14 @@ function ok(data: unknown) {
 // _helpers.ts) — the HttpError's `.params` flows through to
 // errorParams so messages like "Member not found ({id})" can
 // interpolate runtime data.
-function fail(error: string | (Error & { params?: Record<string, unknown> }), status = 400) {
+function fail(req: Request, error: string | (Error & { params?: Record<string, unknown> }), status = 400) {
   const msg    = error instanceof Error ? error.message : String(error);
   const params = error instanceof Error ? (error.params ?? null) : null;
   const body: Record<string, unknown> = { success: false, error: msg };
   if (params) body.errorParams = params;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -124,28 +146,28 @@ const actions: Record<string, Handler> = {
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeadersFor(req) });
 
   if (req.method !== 'POST') {
-    return fail('err.dispatcher.method_not_allowed', 405);
+    return fail(req, 'err.dispatcher.method_not_allowed', 405);
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return fail('err.dispatcher.body_must_be_json', 400);
+    return fail(req, 'err.dispatcher.body_must_be_json', 400);
   }
 
   const action = String(body.action ?? '').trim();
-  if (!action) return fail('err.dispatcher.action_required', 400);
+  if (!action) return fail(req, 'err.dispatcher.action_required', 400);
 
   const handler = actions[action];
   if (!handler) {
     // Build a real HttpError so fail() picks up the `params` for
     // `errorParams` interpolation (a plain object wouldn't satisfy
     // `instanceof Error`).
-    return fail(httpErr('err.dispatcher.unknown_action', 404, { action }), 404);
+    return fail(req, httpErr('err.dispatcher.unknown_action', 404, { action }), 404);
   }
 
   // Auth gate. Public actions are dispatched anonymously; everything
@@ -156,26 +178,26 @@ serve(async (req) => {
   let user: Awaited<ReturnType<typeof resolveUserContext>> = null;
   if (!PUBLIC_ACTIONS.has(action)) {
     user = await resolveUserContext(req.headers.get('authorization'));
-    if (!user) return fail('err.auth.unauthorized', 401);
+    if (!user) return fail(req, 'err.auth.unauthorized', 401);
     // Role-system refactor (2026-05-15): admin-tier and superadmin-tier
     // allowlists are checked separately. ADMIN_ACTIONS opens the action
     // to presidency-or-dev (most operational ops); SUPERADMIN_ACTIONS
     // stays dev-only (currently empty, reserved for future dev-shaped
     // ops like the dev-account-handover flow).
     if (ADMIN_ACTIONS.has(action) && user.access !== 'superadmin' && user.access !== 'admin') {
-      return fail('err.access.admin_only', 403);
+      return fail(req, 'err.access.admin_only', 403);
     }
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
-      return fail('err.access.dev_only', 403);
+      return fail(req, 'err.access.dev_only', 403);
     }
   }
 
   try {
-    const data = await handler(body, user);
-    return ok(data);
+    const data = await handler(body, user, req);
+    return ok(req, data);
   } catch (e) {
     const err = e as Error & { status?: number; params?: Record<string, unknown> };
     console.error(`[${action}]`, err);
-    return fail(err.message ? err : 'err.server', err.status || 500);
+    return fail(req, err.message ? err : 'err.server', err.status || 500);
   }
 });

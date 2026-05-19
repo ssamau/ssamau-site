@@ -14,6 +14,7 @@ import {
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
 import { generateInviteToken, composeInviteEmail } from './auth.ts';
+import { rateLimit, getClientIp } from '../_ratelimit.ts';
 
 // Recipient address for new-application notifications. The president's
 // stated requirement: notify the shared admin inbox every time someone
@@ -46,8 +47,35 @@ function gateApplicantType(requested: unknown): 'Member' | 'Volunteer' {
   return requested === 'Volunteer' ? 'Volunteer' : 'Member';
 }
 
-const applicationsSubmit: Handler = async (body) => {
+const applicationsSubmit: Handler = async (body, _user, req) => {
   const data = (body.data ?? body) as Record<string, unknown>;
+
+  // ── Rate limiting (security audit H4, 2026-05-19) ────────────────
+  // Public unauthenticated endpoint + triggers admin email per submit.
+  // Two tiers stacked: IP cap defeats most scripted floods; NID cap
+  // catches a determined attacker who rotates IPs but reuses one
+  // identity. Either limit hit → 429 with `err.rate.too_many_applications`.
+  if (req) {
+    const ip = getClientIp(req);
+    const ipCheck = rateLimit({
+      bucket:     'applications.submit',
+      identifier: `ip:${ip}`,
+      max:        3,
+      windowMs:   60 * 60 * 1000,  // 3 per hour per IP
+    });
+    if (!ipCheck.ok) throw httpErr('err.rate.too_many_applications', 429);
+
+    const nid = String(data.national_id ?? '').trim();
+    if (nid) {
+      const nidCheck = rateLimit({
+        bucket:     'applications.submit',
+        identifier: `nid:${nid}`,
+        max:        1,
+        windowMs:   24 * 60 * 60 * 1000,  // 1 per 24h per NID
+      });
+      if (!nidCheck.ok) throw httpErr('err.rate.duplicate_application', 429);
+    }
+  }
 
   // Display name: prefer the new structured name_ar; fall back to full_name
   // for any old/legacy callers still posting the original v1 schema.

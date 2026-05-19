@@ -12,6 +12,7 @@
 // proxied through this Edge Function.
 
 import { sql } from '../_sql.ts';
+import { rateLimit, getClientIp } from '../_ratelimit.ts';
 import {
   bcryptCompare, bcryptHash, signToken,
   httpErr, randomBytesB64Url,
@@ -561,10 +562,24 @@ const usersSendPasswordReset: Handler = async (body, user) => {
 // admin-triggered temp-password flow. There are only 4 of them and
 // they're all leadership accounts; documented in STATUS.md.
 //
-// Rate limiting: Supabase Auth applies its own per-email limits
-// (typically 1 recovery email per minute per address). We don't add
-// our own — at SSAM's scale (~100 users) that's overkill.
-const authRequestPasswordReset: Handler = async (body) => {
+// Rate limiting (security audit H4, 2026-05-19): Supabase Auth applies
+// per-email limits, but Supabase's edge limits ARE bypassed when the
+// caller uses the admin API. Also: without our own counter, an
+// attacker can probe identifiers (email enumeration via timing or
+// downstream Supabase quota errors). Per-IP throttle: 5/hour. The
+// `err.rate.too_many_resets` toast does NOT reveal whether the
+// identifier exists — same shape as the success response.
+const authRequestPasswordReset: Handler = async (body, _user, req) => {
+  if (req) {
+    const ipCheck = rateLimit({
+      bucket:     'auth.reset',
+      identifier: `ip:${getClientIp(req)}`,
+      max:        5,
+      windowMs:   60 * 60 * 1000,
+    });
+    if (!ipCheck.ok) throw httpErr('err.rate.too_many_resets', 429);
+  }
+
   const raw = String(body.identifier ?? '').trim();
   const redirectTo = (body.redirectTo as string | undefined)?.trim()
     || 'https://ssamau.com/reset-password.html';
