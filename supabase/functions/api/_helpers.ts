@@ -170,12 +170,48 @@ export interface UserContext {
   auth_user_id: string | null;         // UUID for Supabase, null for legacy
 }
 
-// Resolves an incoming Authorization header to a UserContext, trying the
-// Supabase path first (the long-term path) and falling back to the
-// legacy HS256 path (the 4 unmigrated leadership accounts). Returns
-// null if both paths fail — the dispatcher renders 401 from there.
-export async function resolveUserContext(authHeader: string | null): Promise<UserContext | null> {
-  // Path 1: Supabase JWT. Almost every authed request after migration.
+// Resolves an incoming Request to a UserContext, trying THREE paths in
+// order:
+//   1. HttpOnly cookie `ssam_session` (the long-term path post-H2). Always
+//      contains an HS256 JWT minted by our own dispatcher.
+//   2. Supabase JWT in Authorization header (transitional — kept while
+//      old localStorage-token clients drain).
+//   3. Legacy HS256 JWT in Authorization header (rare; supports the
+//      pre-H2 frontend during the rollout window).
+//
+// Returns null if all paths fail — the dispatcher renders 401 from there.
+//
+// Once every active client has logged in fresh post-H2 (typically a
+// week), paths 2 + 3 can be removed.
+import { getSessionTokenFromCookie } from './_cookies.ts';
+
+export async function resolveUserContext(req: Request): Promise<UserContext | null> {
+  // Path 1: HttpOnly cookie. The new canonical path.
+  const cookieToken = getSessionTokenFromCookie(req);
+  if (cookieToken && JWT_SECRET) {
+    try {
+      const key = new TextEncoder().encode(JWT_SECRET);
+      const { payload } = await jwtVerify(cookieToken, key, { algorithms: ['HS256'] });
+      const p = payload as unknown as LegacyJwtPayload;
+      return {
+        id:            p.id,
+        username:      p.username,
+        access:        p.access,
+        member_id:     p.member_id,
+        committee_id:  p.committee_id,
+        auth_provider: 'legacy',  // cookie is signed with our HS256 key
+        email:         null,
+        auth_user_id:  null,
+      };
+    } catch {
+      // Invalid or expired cookie — fall through to header-based paths
+      // so a stale cookie doesn't lock the user out of a still-valid
+      // header-token flow during rollout.
+    }
+  }
+
+  // Path 2: Supabase JWT in Authorization header (transitional).
+  const authHeader = req.headers.get('authorization');
   const supaUser = await verifySupabaseToken(authHeader);
   if (supaUser) {
     const rows = await sql`
@@ -205,7 +241,7 @@ export async function resolveUserContext(authHeader: string | null): Promise<Use
     };
   }
 
-  // Path 2: Legacy HS256 JWT — the 4 unmigrated accounts.
+  // Path 3: Legacy HS256 JWT in Authorization header (transitional).
   const legacyPayload = await verifyToken(authHeader);
   if (legacyPayload) {
     return {
@@ -301,6 +337,12 @@ export const PUBLIC_ACTIONS = new Set<string>([
   'auth',
   'auth.resolveIdentifier',
   'auth.requestPasswordReset',
+  // H2 (2026-05-19) cookie-session bridge actions. signOut works from
+  // any state (logged in or out). exchangeSupabaseToken is the
+  // post-login bridge: client calls supabase-js, gets a token, posts
+  // here to swap it for an HttpOnly cookie. Both must be public.
+  'auth.signOut',
+  'auth.exchangeSupabaseToken',
   // Phase 3 of Branch 4 — member completes the signup flow from
   // signup.html using either the email-link token or the NID+PIN combo.
   // These are intentionally public: at the moment the member calls
@@ -357,8 +399,19 @@ export const SUPERADMIN_ACTIONS = new Set<string>([
 // X-Forwarded-For for IP-based throttling) opt in by typing the third
 // parameter. The dispatcher always passes the real Request so existing
 // handlers that ignore it just keep working.
+//
+// `ctx` is the fourth arg — also optional. Handlers that need to set
+// cookies on the response (login, signOut, exchangeSupabaseToken) call
+// `ctx.setCookie(value)`. The dispatcher collects the queued cookies
+// and emits one `Set-Cookie` header per entry. Existing handlers
+// ignore this arg.
+export interface HandlerCtx {
+  setCookie: (value: string) => void;
+}
+
 export type Handler = (
   body: Record<string, unknown>,
   user: UserContext | null,
   req?: Request,
+  ctx?: HandlerCtx,
 ) => Promise<unknown>;

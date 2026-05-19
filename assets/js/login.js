@@ -32,8 +32,9 @@ import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
 
 import { callApi, apiOrThrow } from './lib/api.js';
 import {
-  saveSession, saveSupabaseSession, clearSession,
-  supabaseSignIn, getLastUsername, isLoggedIn,
+  saveSession, clearSession,
+  supabaseSignIn, bridgeSupabaseSession,
+  getLastUsername, isLoggedIn,
   getSession, landingPageForAccess, signOut,
 } from './lib/auth.js';
 import { $ } from './lib/dom.js';
@@ -118,46 +119,45 @@ async function doLogin() {
       throw new Error('invalid');
     }
 
-    // ── Step 2A: Supabase path ────────────────────────────────────
+    // ── Step 2A: Supabase path (H2-aware) ─────────────────────────
+    // 1. Verify password via Supabase Auth → access_token (in memory only).
+    // 2. Hand the token to our Edge Function's exchangeSupabaseToken
+    //    action → server verifies, mints HS256, sets HttpOnly cookie,
+    //    returns user metadata.
+    // 3. Cache metadata locally for SPA shell rendering. The Supabase
+    //    access_token never touches localStorage; it lives only on the
+    //    stack of this function and is GC'd when login redirects.
     if (resolveResult.auth_provider === 'supabase') {
       const session = await supabaseSignIn(resolveResult.email, password);
       if (!session?.access_token) throw new Error('invalid');
 
-      // We have a Supabase session now. Fetch the app-level profile via
-      // `auth.whoami` — needs to go through callApi() so the apikey
-      // header is set and the Bearer token from the new session is
-      // attached. Trick: getToken() reads localStorage, so we need
-      // to save the Supabase session BEFORE the whoami call, then
-      // augment with the profile after it returns.
-      saveSupabaseSession(session, { username: identifier });
-      let whoami;
+      let user;
       try {
-        whoami = await apiOrThrow('auth.whoami');
-      } catch (whoamiErr) {
-        // Inactive members + any other whoami failure must NOT leave a
-        // partial Supabase session in localStorage — otherwise reload
-        // would short-circuit straight to landing without re-checking.
-        // Sign out on both the Supabase + local side, then re-throw so
-        // the outer catch surfaces the localized message.
-        try { await signOut(); } catch { /* ignore */ }
+        user = await bridgeSupabaseSession(session.access_token);
+      } catch (bridgeErr) {
+        // Bridge can refuse for inactive members or any other policy
+        // reason. Make sure nothing of the failed session lingers
+        // locally, then re-throw so the outer catch shows the toast.
         clearSession();
-        throw whoamiErr;
+        throw bridgeErr;
       }
-      // Re-save with the full profile. saveSupabaseSession overwrites
-      // the previous entry cleanly.
-      saveSupabaseSession(session, whoami);
-      window.location.href = landingPageForAccess(whoami.access);
+      saveSession(user);
+      window.location.href = landingPageForAccess(user.access);
       return;
     }
 
     // ── Step 2B: legacy path ──────────────────────────────────────
+    // The `auth` action's response still includes `token` for one
+    // rollout window (so pre-H2 clients keep working), but we ignore
+    // it here — the HttpOnly cookie set on the response IS the
+    // session going forward.
     if (resolveResult.auth_provider === 'legacy') {
       const r = await apiOrThrow('auth', {
         username: resolveResult.username,
         password,
       });
-      if (!r.token || !r.user) throw new Error('bad response shape');
-      saveSession(r.user, r.token);
+      if (!r.user) throw new Error('bad response shape');
+      saveSession(r.user);
       window.location.href = landingPageForAccess(r.user.access);
       return;
     }

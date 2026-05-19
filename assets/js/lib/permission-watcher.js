@@ -22,7 +22,7 @@
 
 import { callApi } from './api.js';
 import {
-  getSession, saveSession, saveSupabaseSession, clearSession,
+  getSession, saveSession, clearSession,
   signOut, landingPageForAccess,
 } from './auth.js';
 
@@ -122,23 +122,12 @@ async function _check() {
   }
 }
 
-// Persist the latest profile into whichever storage key the active
-// session uses. Two paths because saveSession vs saveSupabaseSession
-// write to different keys depending on the auth provider the user
-// logged in through. We mirror whatever shape the existing session
-// has so the watcher doesn't accidentally promote a legacy session
-// to a Supabase one or vice versa.
+// Persist the latest profile into the unified session key. Post-H2
+// (2026-05-19) there's a single localStorage shape for both auth
+// providers — only metadata, no tokens — so the watcher's branching
+// went away.
 function _persistFreshSession(fresh) {
-  if (localStorage.getItem('ssam_supabase_session')) {
-    try {
-      const wrapper = JSON.parse(localStorage.getItem('ssam_supabase_session') || '{}');
-      saveSupabaseSession(wrapper, fresh);
-    } catch {
-      saveSession(fresh, localStorage.getItem('ssam_token') || '');
-    }
-  } else {
-    saveSession(fresh, localStorage.getItem('ssam_token') || '');
-  }
+  saveSession(fresh);
 }
 
 export function stopPermissionWatcher() {

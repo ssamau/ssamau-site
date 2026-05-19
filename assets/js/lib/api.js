@@ -1,11 +1,13 @@
 // Shared API client for every page.
 //
 // Single POST endpoint at the Supabase Edge Function; the body is always
-// { action, ...params }. Auth (when present) is sent as a Bearer token in the
-// Authorization header. The Supabase anon key is sent in the `apikey` header —
-// Supabase requires this on every request to route it to the function (and
-// it's safe to ship to the browser: RLS is the actual security boundary, the
-// anon key only proves "this request is for this Supabase project").
+// { action, ...params }. Auth flows via the HttpOnly `ssam_session`
+// cookie set by the server on login — the frontend never touches the
+// JWT directly. `credentials: 'include'` tells the browser to attach
+// the cookie cross-origin (paired with the server's CORS allowlist +
+// Access-Control-Allow-Credentials:true since the H2 migration on
+// 2026-05-19). The Supabase anon key in the `apikey` header is still
+// required by Supabase's gateway routing — it's public and safe.
 //
 // callApi() returns a flattened envelope so existing call sites that read
 // either `result.data` (when the server returned an array) or `result.<field>`
@@ -14,7 +16,7 @@
 // On 401 the helper clears the session and bounces the user to login.html —
 // every page that imports this module gets that behaviour for free.
 
-import { clearSession, getToken } from './auth.js';
+import { clearSession } from './auth.js';
 import { t } from './i18n.js';
 
 // ─── Server-error localization ──────────────────────────────────────
@@ -53,17 +55,21 @@ export const API_URL      = SUPABASE_URL + '/functions/v1/api';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmaWJ4dndpdWx3aWl1d2VyYXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODI2NzEsImV4cCI6MjA5NDE1ODY3MX0.A0_w-iQQK-ozDiRWBS62ho_THvxEhzHWO-zgBcvfk78';
 
 export async function callApi(action, params = {}) {
-  const token   = getToken();
   const headers = {
     'Content-Type': 'application/json',
     'apikey':       SUPABASE_ANON_KEY,
   };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
 
   const resp = await fetch(API_URL, {
-    method: 'POST',
+    method:      'POST',
     headers,
-    body:   JSON.stringify({ action, ...params }),
+    body:        JSON.stringify({ action, ...params }),
+    // H2 (2026-05-19): send the HttpOnly ssam_session cookie cross-
+    // origin. Needs Access-Control-Allow-Credentials:true on the
+    // server side AND a specific (non-wildcard) Allow-Origin, both
+    // of which the Edge Function now does (see _helpers.ts +
+    // index.ts corsHeadersFor).
+    credentials: 'include',
   });
 
   if (resp.status === 401) {

@@ -13,6 +13,7 @@
 
 import { sql } from '../_sql.ts';
 import { rateLimit, getClientIp } from '../_ratelimit.ts';
+import { buildSessionCookie, buildClearCookie } from '../_cookies.ts';
 
 // ─── Brute-force lockout helpers (audit findings M1, M2) ──────────────
 // Backed by private.auth_attempts (migration 20260519225001). The two
@@ -141,7 +142,7 @@ const authResolveIdentifier: Handler = async (body) => {
 };
 
 // ─── `auth` — username + password login, issues HS256 JWT ───────────────
-const auth: Handler = async (body, _user, req) => {
+const auth: Handler = async (body, _user, req, ctx) => {
   const username = body.username as string | undefined;
   const password = body.password as string | undefined;
   if (!username || !password) throw httpErr('err.auth.missing_credentials', 400);
@@ -194,6 +195,12 @@ const auth: Handler = async (body, _user, req) => {
   await clearFailedAttempts('auth', lockoutKey);
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
+  // H2 (2026-05-19): set the HttpOnly session cookie. Frontend post-H2
+  // no longer reads tokens from the response body — but we still
+  // include the token in the JSON response for one rollout window so
+  // pre-H2 clients can finish their current session. Remove after a
+  // week (a fresh deploy with cookie-only frontend is in main already).
+  ctx?.setCookie(buildSessionCookie(token));
   return {
     token,
     user: {
@@ -1323,8 +1330,93 @@ export function composeInviteEmail(opts: {
 </html>`;
 }
 
+// ─── `auth.signOut` — clear the HttpOnly session cookie ───────────────
+// Public action — callable even from an expired session, since the
+// client may already be unauthenticated. Idempotent: clearing an
+// already-cleared cookie is a no-op.
+const authSignOut: Handler = async (_body, _user, _req, ctx) => {
+  ctx?.setCookie(buildClearCookie());
+  return { signed_out: true };
+};
+
+// ─── `auth.exchangeSupabaseToken` — Supabase token → HS256 cookie ─────
+// Bridges Supabase Auth into our cookie-based session.
+//
+// Flow:
+//   1. Frontend calls supabase-js `signInWithPassword` and receives a
+//      Supabase access_token in the response.
+//   2. Frontend POSTs that token here.
+//   3. We verify it via auth.getUser (same as resolveUserContext used
+//      to do for header-based Supabase tokens), look up the linked
+//      public.users row, mint our own HS256 JWT with that user's
+//      identity, and set it as the HttpOnly cookie.
+//   4. Frontend discards the Supabase token. Future requests carry
+//      only our cookie. supabase-js is configured with
+//      persistSession:false so nothing of Supabase's lives in
+//      localStorage either.
+//
+// Public action — the Supabase token IS the authentication factor here.
+const authExchangeSupabaseToken: Handler = async (body, _user, _req, ctx) => {
+  const accessToken = String(body.access_token ?? '').trim();
+  if (!accessToken) throw httpErr('err.auth.missing_credentials', 400);
+
+  const SUPABASE_URL      = Deno.env.get('SUPABASE_URL') ?? '';
+  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw httpErr('err.misc.storage_not_configured', 500);
+  }
+
+  // Verify the Supabase token by asking Supabase Auth.
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await client.auth.getUser(accessToken);
+  if (error || !data?.user) {
+    throw httpErr('err.auth.invalid_credentials', 401);
+  }
+
+  // Find the linked public.users row + members info to embed in JWT.
+  const rows = await sql`
+    SELECT u.id, u.username, u.access_level, u.member_id,
+           m.full_name, m.preferred_name, m.committee_id, m.status AS member_status
+    FROM   public.users u
+    LEFT JOIN public.members m ON m.member_id = u.member_id
+    WHERE  u.auth_user_id = ${data.user.id}
+    LIMIT  1
+  ` as Array<{
+    id: number; username: string; access_level: string; member_id: string | null;
+    full_name: string | null; preferred_name: string | null; committee_id: string | null;
+    member_status: string | null;
+  }>;
+  const u = rows[0];
+  if (!u) throw httpErr('err.auth.invalid_credentials', 401);
+
+  // Inactive accounts can't bridge a session either.
+  if (u.member_id && u.member_status === 'Inactive') {
+    throw httpErr('err.access.member_inactive', 403);
+  }
+
+  await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
+  const token = await signToken(u);
+  ctx?.setCookie(buildSessionCookie(token));
+  return {
+    user: {
+      id: u.id,
+      username: u.username,
+      name: u.preferred_name || u.full_name,
+      role: u.access_level,
+      access: u.access_level,
+      member_id: u.member_id,
+      committee_id: u.committee_id,
+    },
+  };
+};
+
 export const authActions: Record<string, Handler> = {
   'auth':                    auth,
+  'auth.signOut':            authSignOut,
+  'auth.exchangeSupabaseToken': authExchangeSupabaseToken,
   'auth.resolveIdentifier':  authResolveIdentifier,
   'auth.requestPasswordReset': authRequestPasswordReset,
   'auth.whoami':             authWhoami,

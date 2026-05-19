@@ -75,10 +75,17 @@ function corsHeadersFor(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? '';
   const allow  = ALLOWED_ORIGINS.has(origin) ? origin : 'https://ssamau.com';
   return {
-    'Access-Control-Allow-Origin':  allow,
-    'Vary':                         'Origin',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Origin':      allow,
+    'Vary':                             'Origin',
+    'Access-Control-Allow-Headers':     'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods':     'GET, POST, OPTIONS',
+    // H2 (2026-05-19): credentials must be allowed for the
+    // ssam_session cookie to travel cross-origin (ssamau.com ↔
+    // pfibxvwiulwiiuwerawe.supabase.co). The frontend pairs this with
+    // `credentials: 'include'` on every fetch. Browsers refuse to
+    // honor this with a wildcard origin — the allowlist above is the
+    // mechanism that satisfies "specific origin required".
+    'Access-Control-Allow-Credentials': 'true',
   };
 }
 
@@ -171,13 +178,12 @@ serve(async (req) => {
   }
 
   // Auth gate. Public actions are dispatched anonymously; everything
-  // else requires either a Supabase Auth JWT (migrated accounts) or a
-  // legacy HS256 JWT (the four unmigrated leadership accounts).
-  // `resolveUserContext` tries Supabase first, falls back to legacy —
-  // handlers receive a unified UserContext regardless of provenance.
+  // else requires a valid session — cookie first (the canonical post-H2
+  // path) then Authorization header (transitional, drained as old
+  // localStorage-token clients re-log).
   let user: Awaited<ReturnType<typeof resolveUserContext>> = null;
   if (!PUBLIC_ACTIONS.has(action)) {
-    user = await resolveUserContext(req.headers.get('authorization'));
+    user = await resolveUserContext(req);
     if (!user) return fail(req, 'err.auth.unauthorized', 401);
     // Role-system refactor (2026-05-15): admin-tier and superadmin-tier
     // allowlists are checked separately. ADMIN_ACTIONS opens the action
@@ -192,12 +198,26 @@ serve(async (req) => {
     }
   }
 
+  // H2 (2026-05-19): collect Set-Cookie values the handler may queue
+  // for login / signOut / token-exchange flows. The handler ctx
+  // exposes a single `setCookie` callback that pushes onto this list,
+  // and the response builder emits one Set-Cookie header per entry.
+  const queuedCookies: string[] = [];
+  const ctx = { setCookie: (v: string) => queuedCookies.push(v) };
+
   try {
-    const data = await handler(body, user, req);
-    return ok(req, data);
+    const data = await handler(body, user, req, ctx);
+    const resp = ok(req, data);
+    for (const c of queuedCookies) resp.headers.append('Set-Cookie', c);
+    return resp;
   } catch (e) {
     const err = e as Error & { status?: number; params?: Record<string, unknown> };
     console.error(`[${action}]`, err);
-    return fail(req, err.message ? err : 'err.server', err.status || 500);
+    const resp = fail(req, err.message ? err : 'err.server', err.status || 500);
+    // Even on error, propagate any cookies the handler queued before
+    // throwing — e.g. signOut wants the clear-cookie to land even if a
+    // later step errors.
+    for (const c of queuedCookies) resp.headers.append('Set-Cookie', c);
+    return resp;
   }
 });
