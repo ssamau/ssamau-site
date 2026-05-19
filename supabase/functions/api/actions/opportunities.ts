@@ -62,7 +62,18 @@ const opportunitiesList: Handler = async (body) => {
             'estimated_hours', r.estimated_hours,
             'headcount_needed',r.headcount_needed,
             'notes',           r.notes,
-            'sort_order',      r.sort_order
+            'sort_order',      r.sort_order,
+            -- Capacity counters used by the member portal + head's
+            -- other-opps tab to disable a role when it's full and
+            -- show "X / Y" remaining. The subquery joins assignments
+            -- on role_id so multi-role opps count per-role, not in
+            -- aggregate. NULL role_id assignments (legacy / "any
+            -- role") are NOT counted here; they show up under the
+            -- opportunity-level legacy assigned_count above.
+            'taken',
+              (SELECT COUNT(*) FROM assignments a2
+                WHERE a2.opportunity_id = o.opportunity_id
+                  AND a2.role_id = r.id)
           ) ORDER BY r.sort_order, r.id
         ) FROM opportunity_roles r WHERE r.opportunity_id = o.opportunity_id),
         '[]'::json

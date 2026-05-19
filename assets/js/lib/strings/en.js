@@ -364,6 +364,10 @@ export default {
   // the ✅ badge + a hint telling the member to contact the head.
   'mp.opps.assigned_badge':     '✅ Confirmed',
   'mp.opps.assigned_hint':      'To withdraw, contact your committee head',
+  // Capacity badges. "Full" appears when all slots are claimed; the
+  // remaining indicator shows X out of Y when there's still room.
+  'mp.opps.role_full_badge':    'Full',
+  'mp.opps.role_remaining':     '{remaining} / {total} left',
   // Multi-role pick-role modal (2026-05-18).
   'mp.opps.pick_role_title':    '🎯 Pick a role',
   'mp.opps.pick_role_lead':     'Pick the role that suits you. If you\'re unsure or willing to help wherever needed, pick "any role".',
@@ -1654,6 +1658,7 @@ export default {
   // — Business-logic violations —
   'err.business.assignment_not_yours':  'This assignment doesn’t belong to you.',
   'err.business.withdraw_after_assigned': 'Your participation has been confirmed by the committee head. To withdraw, contact them directly.',
+  'err.business.role_full':             'This role is full — no more slots available. Pick a different role.',
   'err.business.hours_already_recorded':'Hours already recorded for this assignment. Ask a committee head to edit if needed.',
   'err.business.hours_needs_attended':  'Hours can only be recorded for assignments marked Attended (Principle 2).',
   'err.business.hours_zero':            'Total hours must be greater than zero.',

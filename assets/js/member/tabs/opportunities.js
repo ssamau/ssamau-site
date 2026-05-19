@@ -295,21 +295,40 @@ export function openPickRoleModal(el) {
   const list = document.getElementById('pickrole-list');
   if (list) {
     const hoursUnit = esc(t('mp.hours.hours_unit'));
-    // Radio rows per role + one trailing "any role" row. First role is
-    // pre-checked so the submit button has something valid to send if
-    // the member clicks straight through without changing.
-    const rowsHtml = _pickRoleCtx.roles.map((r, i) => `
-      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid var(--c-soft);border-radius:8px;cursor:pointer">
-        <input type="radio" name="pickrole-choice" value="${esc(String(r.id))}" ${i === 0 ? 'checked' : ''}/>
+    const fullLabel = esc(t('mp.opps.role_full_badge') || 'ممتلئ');
+    // Find the first AVAILABLE role to pre-check. If every role is
+    // full, no radio is pre-checked — the "any role" fallback gets
+    // the default. roles[] carries the `taken` counter from
+    // opportunities.list; combined with headcount_needed it tells us
+    // exactly which rows to disable.
+    const firstAvailableIdx = _pickRoleCtx.roles.findIndex(r =>
+      (Number(r.taken) || 0) < (Number(r.headcount_needed) || 1)
+    );
+    const rowsHtml = _pickRoleCtx.roles.map((r, i) => {
+      const taken     = Number(r.taken) || 0;
+      const needed    = Number(r.headcount_needed) || 1;
+      const remaining = Math.max(0, needed - taken);
+      const isFull    = remaining === 0;
+      const checked   = (!isFull && i === firstAvailableIdx) ? 'checked' : '';
+      // Full roles get a red "ممتلئ" pill + a disabled radio so the
+      // member can't even attempt them. Available roles show the
+      // remaining count so they know how close to full it is.
+      const stateChip = isFull
+        ? `<span style="display:inline-block;background:#fee2e2;color:#b91c1c;padding:.1rem .5rem;border-radius:50px;font-size:.65rem;font-weight:700;margin-inline-start:.4rem">${fullLabel}</span>`
+        : `<span style="display:inline-block;background:#e8f5e9;color:#1A5C2E;padding:.1rem .5rem;border-radius:50px;font-size:.65rem;font-weight:700;margin-inline-start:.4rem">${esc(t('mp.opps.role_remaining', { remaining: String(remaining), total: String(needed) }))}</span>`;
+      return `
+      <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid var(--c-soft);border-radius:8px;cursor:${isFull ? 'not-allowed' : 'pointer'};opacity:${isFull ? '.55' : '1'}">
+        <input type="radio" name="pickrole-choice" value="${esc(String(r.id))}" ${checked} ${isFull ? 'disabled' : ''}/>
         <div style="flex:1">
-          <div style="font-weight:600">${esc(r.role_name)}</div>
+          <div style="font-weight:600">${esc(r.role_name)}${stateChip}</div>
           <div style="font-size:.72rem;color:var(--tm);margin-top:.15rem">
-            👥 ${Number(r.headcount_needed) || 1} · ⏱️ ${Number(r.estimated_hours) || 0} ${hoursUnit}
+            👥 ${needed} · ⏱️ ${Number(r.estimated_hours) || 0} ${hoursUnit}
             ${r.notes ? ` · ${esc(r.notes)}` : ''}
           </div>
         </div>
       </label>
-    `).join('');
+    `;
+    }).join('');
     const anyRoleRow = `
       <label class="fg-check" style="display:flex;gap:.6rem;padding:.6rem .8rem;border:1px dashed var(--c-soft);border-radius:8px;cursor:pointer;background:#fffbeb">
         <input type="radio" name="pickrole-choice" value="__any__" ${_pickRoleCtx.roles.length === 0 ? 'checked' : ''}/>

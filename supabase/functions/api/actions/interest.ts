@@ -11,6 +11,7 @@ import {
   type Handler,
 } from '../_helpers.ts';
 import { sendEmail } from '../_email.ts';
+import { getRoleCapacity } from './assignments.ts';
 
 // ─── INTEREST ────────────────────────────────────────────────────────
 // Always uses the caller's own member_id (from auth context). The body's
@@ -56,6 +57,19 @@ const interestSubmit: Handler = async (body, user) => {
     ` as Array<{ assignment_id: string }>;
     if (existingAssignment) {
       throw httpErr('err.business.withdraw_after_assigned', 409);
+    }
+  }
+
+  // Capacity-guard 2026-05-19 (president's spec): block expressing
+  // interest in a role that's already full. role_id IS NULL means the
+  // member chose "any role" — we skip the per-role cap check in that
+  // case because the head will place them in whichever role still has
+  // a slot. Only fires for the multi-role flow + when actually
+  // expressing interest (not withdrawing).
+  if (interested && opportunity_id && role_id !== null) {
+    const cap = await getRoleCapacity(opportunity_id, role_id);
+    if (cap && cap.taken >= cap.needed) {
+      throw httpErr('err.business.role_full', 409);
     }
   }
 

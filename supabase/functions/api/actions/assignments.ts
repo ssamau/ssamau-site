@@ -57,16 +57,22 @@ const assignmentsList: Handler = async (body, user) => {
   const committeeFilter = isHead && !opportunity_id
     ? sql`AND o.owning_committee_id = ${user!.committee_id}`
     : sql``;
+  // Multi-role 2026-05-19: also join opportunity_roles via the new
+  // assignments.role_id so the UI can render the specific role each
+  // assignee was placed in (separate from the legacy single-role
+  // mirror on opportunities.role_name).
   return sql`
     SELECT a.*,
       o.role_name, o.role_key, o.estimated_hours, o.project_id, o.owning_committee_id,
       p.project_name, p.project_type, p.event_date,
       m.full_name AS member_full_name, m.preferred_name AS member_preferred_name,
-      m.email AS member_email
+      m.email AS member_email,
+      orole.role_name AS assigned_role_name
     FROM assignments a
     JOIN opportunities o ON o.opportunity_id = a.opportunity_id
     LEFT JOIN projects p ON p.project_id     = o.project_id
     LEFT JOIN members  m ON m.member_id      = a.member_id
+    LEFT JOIN opportunity_roles orole ON orole.id = a.role_id
     WHERE 1=1
       ${opportunity_id ? sql`AND a.opportunity_id = ${opportunity_id}` : sql``}
       ${project_id     ? sql`AND o.project_id     = ${project_id}`     : sql``}
@@ -76,6 +82,46 @@ const assignmentsList: Handler = async (body, user) => {
   `;
 };
 
+// Capacity helper — counts confirmed assignments on a (opportunity,
+// role) pair and compares to the role's headcount_needed. Returns
+// { taken, needed } so callers can decide rejection vs warning.
+// Pass role_id=null to count opportunity-level (legacy single-role)
+// assignments — useful for opportunities created BEFORE the multi-
+// role refactor that never got a role_id assigned to existing rows.
+//
+// Exported so interest.ts can apply the same guard at the express-
+// interest stage (block before the head sees the request, not just
+// at the assign step).
+export async function getRoleCapacity(
+  opportunity_id: string,
+  role_id: number | null,
+): Promise<{ taken: number; needed: number } | null> {
+  if (role_id === null || role_id === undefined) {
+    // No role specified — fall back to the opportunity-level legacy
+    // headcount on `opportunities.headcount_needed`.
+    const [opp] = await sql`
+      SELECT headcount_needed FROM public.opportunities
+      WHERE  opportunity_id = ${opportunity_id}
+    ` as Array<{ headcount_needed: number }>;
+    if (!opp) return null;
+    const [{ taken }] = await sql`
+      SELECT COUNT(*)::int AS taken FROM public.assignments
+      WHERE  opportunity_id = ${opportunity_id} AND role_id IS NULL
+    ` as Array<{ taken: number }>;
+    return { taken, needed: Number(opp.headcount_needed) || 1 };
+  }
+  const [role] = await sql`
+    SELECT headcount_needed FROM public.opportunity_roles
+    WHERE  id = ${role_id} AND opportunity_id = ${opportunity_id}
+  ` as Array<{ headcount_needed: number }>;
+  if (!role) return null;
+  const [{ taken }] = await sql`
+    SELECT COUNT(*)::int AS taken FROM public.assignments
+    WHERE  opportunity_id = ${opportunity_id} AND role_id = ${role_id}
+  ` as Array<{ taken: number }>;
+  return { taken, needed: Number(role.headcount_needed) || 1 };
+}
+
 const assignmentsAdd: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   requireAuth(user);
@@ -83,10 +129,24 @@ const assignmentsAdd: Handler = async (body, user) => {
   if (!data.member_id && !data.volunteer_name) {
     throw httpErr('err.required.member_or_volunteer', 400);
   }
+  // Capacity guard 2026-05-19 — block adding a member/volunteer to a
+  // role that's already filled to headcount. role_id is optional in
+  // the request body; if omitted, falls back to opportunity-level
+  // capacity (legacy single-role behavior). Server-authoritative — no
+  // way for the UI to bypass.
+  const role_id_raw = data.role_id;
+  const role_id = (role_id_raw === undefined || role_id_raw === null || role_id_raw === '')
+                   ? null
+                   : Number(role_id_raw);
+  const cap = await getRoleCapacity(String(data.opportunity_id), role_id);
+  if (cap && cap.taken >= cap.needed) {
+    throw httpErr('err.business.role_full', 409);
+  }
+
   const [r] = await sql`
-    INSERT INTO assignments (opportunity_id, member_id, volunteer_name, volunteer_email,
+    INSERT INTO assignments (opportunity_id, role_id, member_id, volunteer_name, volunteer_email,
                              assigned_by, attendance_status)
-    VALUES (${data.opportunity_id}, ${data.member_id || null},
+    VALUES (${data.opportunity_id}, ${role_id}, ${data.member_id || null},
             ${data.volunteer_name || null}, ${data.volunteer_email || null},
             ${user.id}, 'Pending')
     RETURNING assignment_id
