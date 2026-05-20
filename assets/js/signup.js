@@ -31,7 +31,7 @@ applyStoredTheme();
 // data-i18n attributes, so they need re-rendering on language change).
 import { t, getLang, setLang, onLangChange } from './lib/i18n.js';
 
-import { callApi } from './lib/api.js';
+import { callApi, localizeError } from './lib/api.js';
 import { $ } from './lib/dom.js';
 
 // ── Language toggle wiring ──────────────────────────────────────────
@@ -122,14 +122,15 @@ async function doSubmit() {
           password:    pw1,
         });
 
-    // 2026-05-21: defensive null guard. callApi returns null on
-    // non-JSON responses + on 401s (server returns 401 for a bad
-    // PIN — `auth.signup.completeByPin` throws err.auth.invalid_credentials).
-    // Without this guard the page crashed with "Cannot read properties
-    // of null" before the user saw the real error. The allowlist fix
-    // in lib/api.js prevents the 401-redirect now, but the null guard
-    // stays as defense-in-depth.
-    if (!result || !result.success) throw new Error(result?.error || 'Activation failed');
+    // Null-guard + localized error surfacing. callApi returns null on
+    // non-JSON responses; on 401 it now returns the parsed envelope
+    // (so the user sees `err.auth.invalid_credentials` translated to
+    // "wrong NID or PIN", not a generic "Activation failed"). Both
+    // paths still need to throw for the catch below to render.
+    if (!result) throw new Error(t('su.err_unexpected'));
+    if (!result.success) {
+      throw new Error(localizeError(result.error, result.errorParams) || t('su.err_unexpected'));
+    }
 
     // Clear the URL query string so refreshing doesn't replay the token.
     history.replaceState(null, '', window.location.pathname);
