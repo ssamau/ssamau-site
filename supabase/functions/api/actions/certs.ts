@@ -238,6 +238,27 @@ const certsList: Handler = async (body, user) => {
   `;
 };
 
+// Self-scoped listing — mirrors hours.listOwn / interest.listOwn /
+// assignments.listOwn / members.getOwn. Returns only the caller's own
+// certificate rows (joined with project_name for display), so the
+// member portal + iOS Certificates tab can render the member's history
+// without going through the admin/head certs.list (which gates on
+// committee scope and would 403 a regular member calling it for
+// themselves, and would leak every cert in the system if called
+// unscoped). project_name is already shown on the verify page so it's
+// safe to expose alongside the certificate row.
+const certsListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user!.member_id) throw httpErr('err.auth.no_member_link', 404);
+  return sql`
+    SELECT c.*, p.project_name
+    FROM   certificates c
+    LEFT JOIN projects p ON p.project_id = c.project_id
+    WHERE  c.member_id = ${user!.member_id}
+    ORDER BY c.issued_at DESC
+  `;
+};
+
 const certsVerify: Handler = async (body) => {
   const cert_code = body.cert_code as string | undefined;
   if (!cert_code) throw httpErr('err.required.cert_code', 400);
@@ -271,5 +292,6 @@ export const certsActions: Record<string, Handler> = {
   'certs.issue':     certsIssue,
   'certs.bulkIssue': certsBulkIssue,
   'certs.list':      certsList,
+  'certs.listOwn':   certsListOwn,
   'certs.verify':    certsVerify,
 };

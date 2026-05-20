@@ -9,6 +9,22 @@ Newest first.
 
 ---
 
+## [Web] 2026-05-21 · certs.listOwn — member-scoped certificate list
+
+- New action: returns the caller's own certificates (joined with
+  project_name). Auth-gated; requires `user.member_id`. Throws
+  `err.auth.no_member_link` (404) for accounts with no linked member
+  (e.g. dev accounts), same shape as `hours.listOwn`.
+- Mirrors the existing `hours.listOwn` / `interest.listOwn` /
+  `assignments.listOwn` / `members.getOwn` self-scoped pattern.
+- `certs.list` unchanged — still admin/head only, still scopes via
+  `ensureProjectScope` / `ensureMemberScope`.
+- **iOS impact:** unblocks the Certificates tab. iOS switches
+  `CertificatesViewModel` from `certs.list { member_id }` (which
+  hit `ensureMemberScope → requireAdminScope` and returned
+  `err.access.forbidden`) to `certs.listOwn` (no body). Response
+  shape is the same row set, just narrower scope.
+
 ## [Web] 2026-05-21 · interest.submit blocks "any role" on full multi-role opps
 
 - `interest.submit` previously skipped the capacity check whenever
