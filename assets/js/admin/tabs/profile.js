@@ -10,7 +10,7 @@
 
 import { DB, STATUS_COLORS } from '../../lib/state.js';
 import { esc, sv, tag, fmtDate } from '../../lib/format.js';
-import { api, populateProfileSelect } from '../../lib/ui.js';
+import { api, populateProfileSelect, applyTableLabels } from '../../lib/ui.js';
 import { showPage } from '../router.js';
 import { loadMembers } from './members.js';
 import { t } from '../../lib/i18n.js';
@@ -140,6 +140,17 @@ export async function loadMemberProfile(memberId) {
         }).join('')}</tbody>
       </table></div>
     </div>` : `<div style="color:var(--tm);text-align:center;padding:2rem">${esc(t('ap.prf.empty_hours'))}</div>`}`;
+  // Mobile data-labels — the table-to-card stack at <640px shows each
+  // <td>'s value plus its column header. applyTableLabels reads
+  // <thead><th> text and stamps it on each <td> as data-label. The
+  // MutationObserver in watchTableLabels() (initialized once on
+  // module load) only observes <tbody>s that existed at the time.
+  // The profile-page hours table is rendered dynamically here, so its
+  // tbody was never seen — and on mobile, the president saw stacked
+  // numbers (0/1.00/0/1.00) with no column labels. Calling
+  // applyTableLabels() against the newly-rendered #profile-content
+  // stamps the labels in place.
+  applyTableLabels(content);
 }
 
 export function viewProfile(memberId) {
