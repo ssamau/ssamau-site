@@ -306,12 +306,21 @@ const getMemberHours: Handler = async (body) => {
 // (or no-op on null) so the cache stays consistent.
 export async function recomputeMemberTotalHours(member_id: string | null | undefined): Promise<void> {
   if (!member_id) return;
+  // 2026-05-21: added `notes IS DISTINCT FROM 'Deleted'` on the hours
+  // side. Every other read path (getMemberHours, hours.listOwn) filters
+  // soft-deleted rows out — this aggregate did not, which caused
+  // members.total_hours to keep counting hours that had been deleted
+  // through the admin UI. President flagged: مازن + رزان showed 2.00
+  // when their real participation was a single 1h committee meeting
+  // (a stale `auto:head-attendance` hours row had been soft-deleted
+  // but the recompute still summed it).
   await sql`
     UPDATE members SET total_hours = (
       SELECT COALESCE(SUM(total_hours), 0)
       FROM hours
       WHERE member_id = ${member_id}
         AND approval_status = 'FinalApproved'
+        AND (notes IS DISTINCT FROM 'Deleted')
     ) + (
       SELECT COALESCE(SUM(meeting_hours), 0)
       FROM attendance
@@ -326,6 +335,9 @@ export async function recomputeMemberTotalHours(member_id: string | null | undef
 // Mirror of recomputeMemberTotalHours, but for advisor totals (Phase D).
 // Every hours-mutation handler calls this alongside the member version so
 // whichever participant the row references gets its cache rebuilt.
+// Same `notes IS DISTINCT FROM 'Deleted'` filter as the member version
+// — advisors have the identical soft-delete semantics in the hours
+// table, so the integrity rule has to apply here too.
 async function recomputeAdvisorTotalHours(advisor_id: number | null | undefined): Promise<void> {
   if (!advisor_id) return;
   await sql`
@@ -334,6 +346,7 @@ async function recomputeAdvisorTotalHours(advisor_id: number | null | undefined)
       FROM hours
       WHERE advisor_id = ${advisor_id}
         AND approval_status = 'FinalApproved'
+        AND (notes IS DISTINCT FROM 'Deleted')
     )
     WHERE id = ${advisor_id}
   `;
