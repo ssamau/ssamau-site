@@ -90,7 +90,11 @@ export async function loadAttendance(projectId) {
     // timestamp. Both are useful for admin auditing; surfacing them in
     // the same cell keeps the column count manageable.
     const checkerName = checker ? esc(checker.preferred_name || checker.full_name) : '';
-    const recorderUser = a.recorded_by_username ? esc(a.recorded_by_username) : '—';
+    // Prefer the recorder's linked-member display name; fall back to
+    // username for system accounts that aren't linked.
+    const recorderUser = a.recorded_by_member_name
+      ? esc(a.recorded_by_member_name)
+      : (a.recorded_by_username ? esc(a.recorded_by_username) : '—');
     const recordedAt = a.recorded_at ? fmtDateTime(a.recorded_at) : '';
     const recorderCell = `
       ${checkerName ? `<div style="font-size:.78rem;font-weight:600">${checkerName}</div>` : ''}

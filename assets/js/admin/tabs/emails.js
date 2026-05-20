@@ -66,7 +66,12 @@ export function renderThanks(list) {
       ? `<strong style="color:var(--g)">${Number(row.recorded_hours)}</strong>`
       : '—';
     const projectName = row.project_name || (p ? p.project_name : row.project_id) || '—';
-    const sentBy = row.sent_by_username ? esc(row.sent_by_username) : '—';
+    // Sender label — prefer the linked member's display name over the
+    // raw username. System accounts (no member_id) fall back to the
+    // username so we never render a blank.
+    const sentBy = row.sent_by_member_name
+      ? esc(row.sent_by_member_name)
+      : (row.sent_by_username ? esc(row.sent_by_username) : '—');
     const sentAt = row.sent_at ? fmtDateTime(row.sent_at) : '';
     return `<tr>
       <td>${nm}</td>

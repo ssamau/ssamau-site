@@ -117,15 +117,22 @@ const attendanceList: Handler = async (body) => {
   // the member who physically did the check). Both fields are useful —
   // admin needs to know "who's on the hook for this data" (recorder)
   // distinct from "who confirmed it in person" (checker).
+  //
+  // recorded_by_member_name follows the same pattern as thanks.list: the
+  // recorder's linked-member display name, so the UI shows "روان"
+  // instead of "rawan". System accounts with no linked member fall back
+  // to the username on the frontend.
   return sql`
     SELECT a.id AS attendance_id, a.*,
            m.full_name AS member_full_name, m.preferred_name AS member_preferred_name,
            p.project_name, p.event_date AS project_event_date,
-           u.username AS recorded_by_username
+           u.username AS recorded_by_username,
+           COALESCE(rm.preferred_name, rm.full_name) AS recorded_by_member_name
     FROM attendance a
-    LEFT JOIN members m  ON m.member_id  = a.member_id
-    LEFT JOIN projects p ON p.project_id = a.project_id
-    LEFT JOIN users u    ON u.id          = a.recorded_by
+    LEFT JOIN members m   ON m.member_id  = a.member_id
+    LEFT JOIN projects p  ON p.project_id = a.project_id
+    LEFT JOIN users u     ON u.id         = a.recorded_by
+    LEFT JOIN members rm  ON rm.member_id = u.member_id
     WHERE ${project_id ? sql`a.project_id = ${project_id}` : sql`TRUE`}
       AND a.attendance_status <> 'Deleted'
     ORDER BY a.recorded_at DESC

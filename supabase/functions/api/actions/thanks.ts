@@ -175,11 +175,16 @@ const thanksList: Handler = async (body, user) => {
   // two-source rule recomputeMemberTotalHours uses globally. Lets
   // admins eyeball whether the thank-you matched the hours the member
   // actually earned without bouncing to the hours tab.
+  // sent_by_member_name uses the user's linked public.members row when
+  // present so the UI shows a real name instead of the raw username
+  // (mbr_mbr_tlkdfb / faisal-admin). Falls back to the username on the
+  // frontend side for system accounts that aren't linked to a member.
   return sql`
     SELECT t.*,
            m.full_name, m.preferred_name,
            p.project_name,
            u.username AS sent_by_username,
+           COALESCE(sm.preferred_name, sm.full_name) AS sent_by_member_name,
            COALESCE((
              SELECT SUM(h.total_hours)
              FROM hours h
@@ -196,9 +201,10 @@ const thanksList: Handler = async (body, user) => {
                AND a.attendance_status <> 'Deleted'
            ), 0) AS recorded_hours
     FROM thanks_emails t
-    LEFT JOIN members  m ON m.member_id  = t.member_id
-    LEFT JOIN projects p ON p.project_id = t.project_id
-    LEFT JOIN users    u ON u.id          = t.sent_by
+    LEFT JOIN members  m  ON m.member_id  = t.member_id
+    LEFT JOIN projects p  ON p.project_id = t.project_id
+    LEFT JOIN users    u  ON u.id         = t.sent_by
+    LEFT JOIN members  sm ON sm.member_id = u.member_id
     WHERE 1=1
       ${project_id ? sql`AND t.project_id = ${project_id}` : sql``}
       ${member_id  ? sql`AND t.member_id  = ${member_id}`  : sql``}
