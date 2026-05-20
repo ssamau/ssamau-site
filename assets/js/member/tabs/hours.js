@@ -59,7 +59,11 @@ export async function loadHours() {
     // project attendance the head credited inline) — show the meeting
     // title when there's no project name, and add a small meeting
     // badge so the member knows where the hours came from.
-    const isAttendanceRow = r.source === 'attendance';
+    // 2026-05-21: hours table is the single canonical source. Rows that
+    // were auto-created from a meeting attendance carry a notes prefix
+    // of `auto:meeting:`. The check below replaces the old
+    // `source === 'attendance'` signal (which is gone with the UNION).
+    const isAttendanceRow = (r.notes || '').startsWith('auto:meeting:');
     const projectName = r.project_name || (isAttendanceRow ? r.meeting_title : null);
     const projectCell = projectName
       ? `${esc(projectName)}${isAttendanceRow ? ` <span style="font-size:.65rem;color:var(--bl)">${esc(t('ap.att.badge_meeting'))}</span>` : ''}`

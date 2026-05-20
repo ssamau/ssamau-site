@@ -53,7 +53,12 @@ export function renderHoursRow(h) {
   // directly, no approval stage). Attendance-sourced rows are marked
   // with a "📅 لقاء" badge and don't get approve/reject/delete buttons
   // here (edit goes via the attendance tab).
-  const isAttendanceRow = h.source === 'attendance';
+  // Auto-created meeting-attendance hours row signal (post 2026-05-21
+  // collapse to single source). Drives the badge + suppresses approval
+  // buttons on rows that came from the attendance form. Same semantics
+  // as the previous `source === 'attendance'` check but reads from the
+  // notes prefix that survives the UNION removal.
+  const isAttendanceRow = (h.notes || '').startsWith('auto:meeting:');
   // Don't rely on participant_type string casing — older rows store
   // 'member' / 'volunteer' (lowercase) but the form sends 'Member' /
   // 'Volunteer' (capital). Check member_id presence directly: if there's

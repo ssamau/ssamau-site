@@ -168,13 +168,12 @@ const thanksList: Handler = async (body, user) => {
   const committeeFilter = isHead && !project_id && !member_id
     ? sql`AND p.owning_committee_id = ${user!.committee_id}`
     : sql``;
-  // sent_by_username + the LATERAL hours subquery feed the admin list
+  // sent_by_username + the recorded_hours subquery feed the admin list
   // view (commit 0674e69's siblings). The hours number is the member's
-  // total recorded hours for THIS project — sums FinalApproved
-  // `hours` rows plus credited `attendance.meeting_hours`, the same
-  // two-source rule recomputeMemberTotalHours uses globally. Lets
-  // admins eyeball whether the thank-you matched the hours the member
-  // actually earned without bouncing to the hours tab.
+  // total recorded hours for THIS project. 2026-05-21: collapsed to a
+  // single source — the hours table is canonical (meeting attendance
+  // is auto-mirrored there by _syncMeetingHoursRow in attendance.ts),
+  // and the soft-delete filter matches every other read path.
   // sent_by_member_name uses the user's linked public.members row when
   // present so the UI shows a real name instead of the raw username
   // (mbr_mbr_tlkdfb / faisal-admin). Falls back to the username on the
@@ -191,14 +190,7 @@ const thanksList: Handler = async (body, user) => {
              WHERE h.member_id   = t.member_id
                AND h.project_id  = t.project_id
                AND h.approval_status = 'FinalApproved'
-           ), 0) +
-           COALESCE((
-             SELECT SUM(a.meeting_hours)
-             FROM attendance a
-             WHERE a.member_id   = t.member_id
-               AND a.project_id  = t.project_id
-               AND a.meeting_hours IS NOT NULL
-               AND a.attendance_status <> 'Deleted'
+               AND (h.notes IS DISTINCT FROM 'Deleted')
            ), 0) AS recorded_hours
     FROM thanks_emails t
     LEFT JOIN members  m  ON m.member_id  = t.member_id

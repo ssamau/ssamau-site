@@ -124,7 +124,9 @@ export async function loadMemberProfile(memberId) {
           // then to em-dash. The previous code dropped to `h.project_id`
           // which template-literal-stringified `null` as the literal
           // word "null" in the cell.
-          const isAttendanceRow = h.source === 'attendance';
+          // Auto-created meeting-attendance hours row signal — see
+          // member/tabs/hours.js for the 2026-05-21 collapse rationale.
+          const isAttendanceRow = (h.notes || '').startsWith('auto:meeting:');
           const projectName = (prj && prj.project_name)
             || h.project_name
             || (isAttendanceRow ? h.meeting_title : null);

@@ -50,7 +50,9 @@ function _renderRow(h) {
   // the meeting title + a "📅 لقاء" badge when there's no project, and
   // suppress approval actions (those rows are FinalApproved by design
   // and don't go through the head's approval queue).
-  const isAttendanceRow = h.source === 'attendance';
+  // Auto-created meeting-attendance hours row — same notes-prefix
+  // signal used across admin + member after the 2026-05-21 collapse.
+  const isAttendanceRow = (h.notes || '').startsWith('auto:meeting:');
   const name = esc(h.member_preferred_name || h.member_full_name || h.member_id || '—');
   let projInner;
   if (h.project_name) {

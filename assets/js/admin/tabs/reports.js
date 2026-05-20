@@ -112,7 +112,10 @@ export async function exportSacmReport(el) {
           'بعد':           _num(r.hours_after),
           'الإجمالي':       _num(r.total_hours),
           'الحالة':         _str(r.approval_status),
-          'المصدر':        r.source === 'attendance'
+          // 2026-05-21: hours table is the single canonical source.
+          // Auto-created meeting-attendance rows are detected by the
+          // notes prefix instead of the UNION's `source` column.
+          'المصدر':        (r.notes || '').startsWith('auto:meeting:')
                             ? 'حضور لقاء'
                             : 'ساعات معتمدة',
           'سُجِّل في':      _str(r.recorded_at),
