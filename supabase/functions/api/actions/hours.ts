@@ -238,11 +238,14 @@ const getMemberHours: Handler = async (body) => {
     -- Pull the linked attendance row (if the hours row was auto-created
     -- from a meeting attendance) so the list view can still render the
     -- meeting title + date alongside the hours row. Marker pattern in
-    -- hours.notes is auto-meeting-prefixed with the attendance id; we
-    -- extract the integer suffix (chars 15+) and join on attendance.id.
+    -- hours.notes is 'auto:meeting:<attendance_id>'; the prefix is 13
+    -- chars so the first digit of the id sits at position 14 (1-indexed).
+    -- (Was FROM 15 — off-by-one — pre-2026-05-21. With FROM 15, one-digit
+    -- ids missed the join entirely and two-digit ids joined to the wrong
+    -- attendance row.)
     LEFT JOIN attendance a ON
       h.notes LIKE 'auto:meeting:%' AND
-      a.id = NULLIF(SUBSTRING(h.notes FROM 15), '')::int
+      a.id = NULLIF(SUBSTRING(h.notes FROM 14), '')::int
     WHERE (h.notes IS DISTINCT FROM 'Deleted')
       ${member_id       ? sql`AND h.member_id       = ${member_id}`       : sql``}
       ${project_id      ? sql`AND h.project_id      = ${project_id}`      : sql``}
@@ -437,7 +440,7 @@ const hoursListOwn: Handler = async (_body, user) => {
     LEFT JOIN opportunities o  ON o.opportunity_id = asg.opportunity_id
     LEFT JOIN attendance a ON
       h.notes LIKE 'auto:meeting:%' AND
-      a.id = NULLIF(SUBSTRING(h.notes FROM 15), '')::int
+      a.id = NULLIF(SUBSTRING(h.notes FROM 14), '')::int
     LEFT JOIN public.users   pa_u ON pa_u.id        = h.primary_approver_id
     LEFT JOIN public.members pa_m ON pa_m.member_id = pa_u.member_id
     LEFT JOIN public.users   fa_u ON fa_u.id        = h.final_approver_id

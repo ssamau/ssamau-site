@@ -9,6 +9,27 @@ Newest first.
 
 ---
 
+## [Web] 2026-05-21 · fix off-by-one in hours → attendance meeting join
+
+- `getMemberHours` and `hours.listOwn` extract the attendance id
+  from `hours.notes` (marker pattern `'auto:meeting:<id>'`) and
+  join to `attendance` on it. The substring start was 15; the
+  prefix is 13 characters long so the first digit sits at
+  position 14. With FROM 15:
+  - one-digit ids → `''` → NULL → join misses, `meeting_title`
+    and `meeting_date` come back null even though the row clearly
+    links to a meeting.
+  - two-digit ids → first digit dropped → join silently matches
+    the **wrong** attendance row (e.g. id 10 parses as 0).
+- Fixed both sites to `SUBSTRING ... FROM 14`. Verified against
+  the three production rows currently using the marker — all
+  now resolve to the correct attendance row.
+- **iOS impact:** response shape unchanged. `meeting_title` /
+  `meeting_date` start populating on hours rows linked to a
+  meeting (previously nil), and existing two-digit-id rows stop
+  showing the wrong meeting's data. iOS already decodes both
+  fields as optional — no Codable change, no migration.
+
 ## [Web] 2026-05-21 · hours.listOwn returns approver chain
 
 - Response now includes `primary_approved_at`, `final_approved_at`,
