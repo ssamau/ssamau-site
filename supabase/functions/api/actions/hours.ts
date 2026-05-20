@@ -406,12 +406,28 @@ const hoursListOwn: Handler = async (_body, user) => {
   // attendance is needed. The LEFT JOIN onto attendance via the marker
   // pulls the meeting_title + date so the member-portal renderer can
   // still show the meeting context next to its hours row.
+  //
+  // Approver-chain fields (added 2026-05-21 for iOS): the approver-id
+  // columns on `hours` are public.users.id integers, so the chain goes
+  // users → members to surface the display name. We return BOTH
+  // preferred_name and full_name for each approver so callers can
+  // apply their own fallback (iOS catalog does
+  // `preferred_name ?? full_name ?? "—"`); cheaper than COALESCE-ing
+  // in SQL and consistent with the attendance.ts / assignments.ts
+  // approver-pair pattern already in use elsewhere.
   return sql`
     SELECT h.id AS hours_id, h.id AS source_id, 'hours'::text AS source,
            h.member_id, h.project_id,
            h.hours_before, h.hours_during, h.hours_after, h.total_hours,
            h.approval_status, h.recorded_at,
            h.notes, h.assignment_id,
+           h.primary_approved_at,
+           h.final_approved_at,
+           h.rejected_reason,
+           pa_m.preferred_name AS primary_approver_preferred_name,
+           pa_m.full_name      AS primary_approver_full_name,
+           fa_m.preferred_name AS final_approver_preferred_name,
+           fa_m.full_name      AS final_approver_full_name,
            p.project_name, p.event_date,
            o.role_name AS opportunity_role_name,
            a.meeting_title, a.meeting_date
@@ -422,6 +438,10 @@ const hoursListOwn: Handler = async (_body, user) => {
     LEFT JOIN attendance a ON
       h.notes LIKE 'auto:meeting:%' AND
       a.id = NULLIF(SUBSTRING(h.notes FROM 15), '')::int
+    LEFT JOIN public.users   pa_u ON pa_u.id        = h.primary_approver_id
+    LEFT JOIN public.members pa_m ON pa_m.member_id = pa_u.member_id
+    LEFT JOIN public.users   fa_u ON fa_u.id        = h.final_approver_id
+    LEFT JOIN public.members fa_m ON fa_m.member_id = fa_u.member_id
     WHERE h.member_id = ${user.member_id}
       AND (h.notes IS DISTINCT FROM 'Deleted')
     ORDER BY h.recorded_at DESC

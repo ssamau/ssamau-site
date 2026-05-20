@@ -9,6 +9,22 @@ Newest first.
 
 ---
 
+## [Web] 2026-05-21 · hours.listOwn returns approver chain
+
+- Response now includes `primary_approved_at`, `final_approved_at`,
+  `rejected_reason`, plus `preferred_name` + `full_name` pairs for
+  the primary and final approver (joined `users → members` from the
+  approver-id columns already on `hours`).
+- All five new fields are nullable — they're populated only when the
+  row reaches the matching approval stage.
+- No schema change — columns already exist on `hours`. `hours.list`,
+  `getMemberHours`, and the head-facing handlers are untouched.
+- **iOS impact:** `HoursRow` Codable gains the five new fields. The
+  member-portal hours detail sheet renders an approver-chain
+  section ("Primary approved by X on …", "Final approved by Y on
+  …", "Rejected — reason"). iOS hides whichever pair is nil. Names
+  use the existing `preferred_name ?? full_name ?? "—"` fallback.
+
 ## [Web] 2026-05-21 · certs.listOwn — member-scoped certificate list
 
 - New action: returns the caller's own certificates (joined with
