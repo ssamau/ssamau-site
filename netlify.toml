@@ -30,10 +30,19 @@
   framework = "#static"
   port = 8888
 
+# Same-origin proxy to the Supabase Edge Function. Production frontend
+# POSTs to https://ssamau.com/api; Netlify proxies the request (and the
+# response, Set-Cookie included) to the Edge Function. The browser sees
+# a same-origin response, so the ssam_session cookie is first-party on
+# .ssamau.com — SameSite=Lax works, and iOS Safari ITP no longer blocks
+# it the way it does cross-origin SameSite=None cookies. This replaces
+# the legacy /.netlify/functions/api route, which the frontend already
+# stopped calling when the backend moved to Supabase Edge Functions.
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api"
+  from = "/api"
+  to = "https://pfibxvwiulwiiuwerawe.supabase.co/functions/v1/api"
   status = 200
+  force = true
 
 # Vanity short-url for cert verification. The cert card footer shows
 # "ssamau.com/verify" as the verification URL — the president typed

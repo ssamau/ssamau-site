@@ -40,13 +40,28 @@ export function localizeError(raw, params) {
   return raw;
 }
 
-// Supabase project URL + Edge Function endpoint. Same project hosts
-// both — /functions/v1/api is our custom Edge Function (action
-// dispatcher, replaces /.netlify/functions/api after the migration);
-// /auth/v1/* is Supabase's built-in Auth API used by lib/auth.js for
-// sign-in + password reset.
+// Supabase project URL — kept for /auth/v1/* calls (sign-in, password
+// reset, password update) which still hit Supabase Auth directly from
+// lib/auth.js. Those endpoints aren't cookie-bearing, so cross-origin
+// is fine for them.
 export const SUPABASE_URL = 'https://pfibxvwiulwiiuwerawe.supabase.co';
-export const API_URL      = SUPABASE_URL + '/functions/v1/api';
+
+// Edge Function endpoint. Same-origin via the Netlify proxy declared
+// in netlify.toml (/api → Supabase Edge Function). The proxy keeps the
+// ssam_session cookie first-party on .ssamau.com so iOS Safari ITP
+// doesn't drop it — that was the production login-reliability fix.
+// Falls back to the direct Supabase URL on hostnames that aren't
+// proxied (preview deploys outside *.netlify.app, plain `python -m
+// http.server`, file://, etc.). `netlify dev` honours the proxy on
+// localhost:8888, so day-to-day local dev uses the same path as prod.
+const HAS_PROXY = (() => {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  return h === 'ssamau.com' || h === 'www.ssamau.com'
+      || h.endsWith('.netlify.app')
+      || h === 'localhost' || h === '127.0.0.1';
+})();
+export const API_URL = HAS_PROXY ? '/api' : SUPABASE_URL + '/functions/v1/api';
 
 // Supabase project anon key. PUBLIC — safe to commit + ship to the browser.
 // This is not a secret; it identifies the project. Real auth is the Bearer

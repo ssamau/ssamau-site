@@ -178,9 +178,22 @@ async function logout() {
   // refresh token revoked server-side; legacy users just have their
   // local state cleared (HS256 tokens can't be revoked). Either way
   // clearSession runs at the end so we always exit to a clean state.
+  // signOut has its own try/catch + 3s abort timeout, so the redirect
+  // below always fires.
   await signOut();
   window.location.href = 'login.html';
 }
+
+// Direct binding (2026-05-20). The previous data-action wiring routed
+// through dispatch.js, which only takes effect after setupDispatch()
+// runs at the bottom of this file — hundreds of lines of imports +
+// init later. Clicking signout before that point did literally nothing
+// (the symptom Faisal hit: first click ignored, second click worked
+// because by then the dispatcher was up). Direct addEventListener
+// here works the instant the button exists in the DOM and main.js
+// has executed past this line, with no dependence on any other
+// module's initialization order.
+document.getElementById('topbar-logout')?.addEventListener('click', logout);
 
 
 'use strict';
@@ -441,7 +454,9 @@ window.addEventListener('load', () => {
 // load function).
 setHandlers({
   // ── No-arg ──────────────────────────────────────────────────────
-  refreshData, logout, copyShownPw, copyShownPin, generateAccountPw,
+  // `logout` is bound directly (above) so it works even if dispatch
+  // initialization is delayed — see the addEventListener comment.
+  refreshData, copyShownPw, copyShownPin, generateAccountPw,
   saveAccount, saveAdvisor, saveAttendance, saveBulkAttendance,
   saveBulkCerts, saveBulkThanks, saveCommittee, saveHours, saveInterest,
   saveMember, saveOpportunity, saveParticipant, saveProject, saveThanks,

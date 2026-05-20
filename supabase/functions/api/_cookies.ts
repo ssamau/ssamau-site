@@ -11,16 +11,18 @@
 // it automatically to every same-origin (or correctly-allowed cross-
 // origin) fetch.
 //
-// Cross-origin notes:
-//   Frontend = https://ssamau.com (Netlify)
-//   Backend  = https://pfibxvwiulwiiuwerawe.supabase.co (Supabase)
-//   These are different ETLD+1s, so the cookie MUST be SameSite=None
-//   to travel between them. SameSite=None requires Secure. The
-//   complement on the frontend side: every fetch needs
-//   `credentials: 'include'` and the server's CORS response must
-//   set `Access-Control-Allow-Credentials: true` + a specific
-//   `Access-Control-Allow-Origin` (not `*`). The H3 fix already
-//   locked the origin to an allowlist.
+// Same-origin notes (2026-05-20):
+//   Frontend POSTs to https://ssamau.com/api; Netlify proxies the
+//   request to the Edge Function (see netlify.toml). The browser sees
+//   a same-origin response, so the cookie is first-party on
+//   .ssamau.com. That lets us use SameSite=Lax — iOS Safari ITP only
+//   targets SameSite=None third-party cookies, which is what broke
+//   logins for some users in the cross-origin setup we ran before.
+//
+//   For non-proxied entry points (preview deploys outside the rewrite
+//   path, or future iOS/Android clients calling Supabase directly), the
+//   Authorization-header fallback in resolveUserContext still works —
+//   the cookie isn't the only path.
 
 const COOKIE_NAME = 'ssam_session';
 
@@ -34,7 +36,7 @@ export function buildSessionCookie(token: string): string {
   return `${COOKIE_NAME}=${token}` +
     `; HttpOnly` +
     `; Secure` +
-    `; SameSite=None` +
+    `; SameSite=Lax` +
     `; Path=/` +
     `; Max-Age=${MAX_AGE_SECONDS}`;
 }
@@ -44,7 +46,7 @@ export function buildClearCookie(): string {
   return `${COOKIE_NAME}=` +
     `; HttpOnly` +
     `; Secure` +
-    `; SameSite=None` +
+    `; SameSite=Lax` +
     `; Path=/` +
     `; Max-Age=0`;
 }

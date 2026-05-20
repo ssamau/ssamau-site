@@ -93,14 +93,18 @@ async function logout() {
   if (!confirm(t('common.confirm_logout'))) return;
   // signOut() handles both auth paths: Supabase users get their refresh
   // token revoked; legacy users have their local state cleared. clearSession
-  // runs at the end either way.
+  // runs at the end either way. signOut has its own 3s timeout, so the
+  // redirect below always fires even on a hung network.
   try { await signOut(); } catch (err) {
-    // Even if Supabase's revoke fails (offline/server blip), the session
-    // is locally cleared. Surface to console + redirect anyway.
     console.warn('[member] signOut error (ignored):', err);
   }
   window.location.href = 'login.html';
 }
+
+// Direct binding so signout works the moment the button exists,
+// independent of when the data-action dispatcher comes up. See the
+// admin/main.js note for the regression this prevents.
+document.getElementById('topbar-logout')?.addEventListener('click', logout);
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -227,7 +231,7 @@ if (document.readyState === 'loading') {
 // signatures (still callable directly from JS).
 setHandlers({
   // ── No-arg ────────────────────────────────────────────────────────
-  logout,
+  // `logout` is bound directly above — see the addEventListener note.
   'profile.save':    saveProfile,
 
   // ── Hardcoded-string args ─────────────────────────────────────────

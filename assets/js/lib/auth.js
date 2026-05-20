@@ -137,19 +137,32 @@ export function clearSession() {
  * clear-cookie Set-Cookie. Then wipes local metadata. Network errors
  * are swallowed — the local clear must always happen so the user
  * isn't stranded on a stale UI.
+ *
+ * Hard 3s timeout (2026-05-20): without it, a hanging request (offline
+ * device, captive portal, blocked preflight) would leave the user
+ * stuck on the page because the caller `await`s us before redirecting.
+ * The cookie still gets cleared server-side on the eventual response;
+ * if it doesn't, the next request 401s and the user re-logs.
  */
 export async function signOut() {
   try {
-    await fetch(API_URL, {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey':       SUPABASE_ANON_KEY,
-      },
-      credentials: 'include',
-      body:        JSON.stringify({ action: 'auth.signOut' }),
-    });
-  } catch { /* network blip — proceed to clear local state */ }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      await fetch(API_URL, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey':       SUPABASE_ANON_KEY,
+        },
+        credentials: 'include',
+        body:        JSON.stringify({ action: 'auth.signOut' }),
+        signal:      controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch { /* network blip / abort — proceed to clear local state */ }
   clearSession();
 }
 

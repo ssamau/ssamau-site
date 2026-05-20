@@ -37,7 +37,7 @@
 // Phase C typeahead + Phase D advisor-hours into one cache marker.
 // Every install rolling forward to this version drops everything
 // cached under v6/v7/v8 in one sweep.
-const CACHE_VERSION = 'v77-2026-05-20-apply-role-picker';
+const CACHE_VERSION = 'v78-2026-05-20-same-origin-api';
 const SHELL_CACHE   = `ssam-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `ssam-assets-${CACHE_VERSION}`;
 
@@ -151,6 +151,12 @@ self.addEventListener('fetch', (event) => {
   // frontend POSTs there, so this branch is mostly defensive — but
   // covers cases like opening the URL directly in DevTools to debug.
   if (url.hostname.endsWith('.supabase.co') && url.pathname.startsWith('/functions/')) return;
+
+  // Same-origin /api proxy (2026-05-20 same-origin migration). Pure
+  // defensive bypass — the frontend only POSTs here, and the GET
+  // bypass above already covers that — but if anything ever GETs
+  // /api for debugging, don't let the SW cache the response.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api')) return;
 
   // Network-only for Google Tag Manager beacon — analytics shouldn't
   // be cached and replayed on the next page load.

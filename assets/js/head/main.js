@@ -113,6 +113,11 @@ async function logout() {
   window.location.href = 'login.html';
 }
 
+// Direct binding so signout works the moment the button exists,
+// independent of when the data-action dispatcher comes up. See the
+// admin/main.js note for the regression this prevents.
+document.getElementById('topbar-logout')?.addEventListener('click', logout);
+
 
 // ════════════════════════════════════════════════════════════════════
 // ROUTER WIRING
@@ -200,7 +205,8 @@ document.addEventListener('click', (e) => {
   if (!el) return;
   const action = el.dataset.action;
   switch (action) {
-    case 'logout':                   logout(); break;
+    // 'logout' moved to a direct addEventListener on #topbar-logout;
+    // see the head/main.js top-of-file binding for the rationale.
     case 'setTheme':                 setTheme(el.dataset.value); break;
     case 'showPage':                 showPage(el.dataset.page); break;
     case 'hd.hours.primaryApprove':  primaryApproveHours(el.dataset.id); break;
