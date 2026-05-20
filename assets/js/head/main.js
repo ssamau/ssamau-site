@@ -19,7 +19,7 @@ import {
 // Permission revalidation — same module the admin/member portals use.
 // Detects server-side access_level or status changes without a re-login.
 import { startPermissionWatcher } from '../lib/permission-watcher.js';
-import { setApiStatus, filterTable, closeModal, openModal } from '../lib/ui.js';
+import { setApiStatus, filterTable, closeModal, openModal, refreshData, setRefreshLoaders } from '../lib/ui.js';
 import { showPage, closeSidebar, toggleSidebar, setLoaders, routeFromHash } from './router.js';
 
 import { loadDashboard }       from './tabs/dashboard.js';
@@ -137,6 +137,10 @@ const loaderMap = {
   'my-profile':        loadProfile,
 };
 setLoaders(loaderMap);
+// Same loaderMap powers the topbar refresh button. refreshData looks up
+// the currently-active page id and awaits the matching loader so the
+// spinner animation matches the actual fetch lifetime.
+setRefreshLoaders(loaderMap);
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -208,6 +212,7 @@ document.addEventListener('click', (e) => {
   switch (action) {
     // 'logout' moved to a direct addEventListener on #topbar-logout;
     // see the head/main.js top-of-file binding for the rationale.
+    case 'refreshData':              refreshData(); break;
     case 'setTheme':                 setTheme(el.dataset.value); break;
     case 'showPage':                 showPage(el.dataset.page); break;
     case 'hd.hours.primaryApprove':  primaryApproveHours(el.dataset.id); break;

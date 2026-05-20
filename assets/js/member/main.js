@@ -30,7 +30,7 @@ import {
 // Permission revalidation — same module as admin/head. Bounces the
 // user to login if marked inactive and reloads on access-level change.
 import { startPermissionWatcher } from '../lib/permission-watcher.js';
-import { setApiStatus } from '../lib/ui.js';
+import { setApiStatus, refreshData, setRefreshLoaders } from '../lib/ui.js';
 import {
   showPage, closeSidebar, toggleSidebar, setLoaders,
 } from './router.js';
@@ -120,6 +120,10 @@ const loaderMap = {
   assignments:   loadAssignments,
 };
 setLoaders(loaderMap);
+// Same loaderMap drives the topbar refresh button. refreshData looks
+// up the currently-active page id and awaits the matching loader so
+// the spinner animation matches the actual fetch lifetime.
+setRefreshLoaders(loaderMap);
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -232,6 +236,7 @@ if (document.readyState === 'loading') {
 setHandlers({
   // ── No-arg ────────────────────────────────────────────────────────
   // `logout` is bound directly above — see the addEventListener note.
+  refreshData,
   'profile.save':    saveProfile,
 
   // ── Hardcoded-string args ─────────────────────────────────────────
