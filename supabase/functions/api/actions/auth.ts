@@ -195,11 +195,13 @@ const auth: Handler = async (body, _user, req, ctx) => {
   await clearFailedAttempts('auth', lockoutKey);
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
-  // H2 (2026-05-19): set the HttpOnly session cookie. Frontend post-H2
-  // no longer reads tokens from the response body — but we still
-  // include the token in the JSON response for one rollout window so
-  // pre-H2 clients can finish their current session. Remove after a
-  // week (a fresh deploy with cookie-only frontend is in main already).
+  // Two transports for the JWT, both permanent now:
+  //   * HttpOnly cookie — what the web client reads (post-H2 since
+  //     2026-05-19; the same-origin /api proxy keeps it first-party).
+  //   * `token` in the JSON body — what the iOS app reads, since
+  //     native clients can't see HttpOnly cookies and use a Bearer
+  //     header on subsequent requests. The body-token is the
+  //     documented iOS contract, not a rollout-window leftover.
   ctx?.setCookie(buildSessionCookie(token));
   return {
     token,
@@ -1400,7 +1402,13 @@ const authExchangeSupabaseToken: Handler = async (body, _user, _req, ctx) => {
   await sql`UPDATE users SET last_login_at = NOW() WHERE id = ${u.id}`;
   const token = await signToken(u);
   ctx?.setCookie(buildSessionCookie(token));
+  // 2026-05-21: emit `token` in the JSON body too. Symmetric with the
+  // legacy `auth` handler. The cookie path keeps working for the web
+  // client; native iOS reads `data.token` because it can't see the
+  // HttpOnly Set-Cookie. Documented in the web↔iOS sync contract
+  // (ios-app-requirements.pdf §4 + §17).
   return {
+    token,
     user: {
       id: u.id,
       username: u.username,
