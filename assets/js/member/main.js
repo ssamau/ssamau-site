@@ -30,7 +30,7 @@ import {
 // Permission revalidation — same module as admin/head. Bounces the
 // user to login if marked inactive and reloads on access-level change.
 import { startPermissionWatcher } from '../lib/permission-watcher.js';
-import { setApiStatus, refreshData, setRefreshLoaders } from '../lib/ui.js';
+import { setApiStatus, refreshData, setRefreshLoaders, closeModal } from '../lib/ui.js';
 import {
   showPage, closeSidebar, toggleSidebar, setLoaders,
 } from './router.js';
@@ -242,6 +242,12 @@ setHandlers({
   // ── Hardcoded-string args ─────────────────────────────────────────
   showPage:          (el) => showPage(el.dataset.page),
   setTheme:          (el) => setTheme(el.dataset.value),
+  // Generic modal close — every overlay's ✕ + cancel buttons fire this
+  // with data-modal="<id-suffix>". The support modal in particular was
+  // unreachable on this portal until 2026-05-21 because closeModal was
+  // never registered here (admin + head wired it, member didn't), so
+  // clicks on ✕ / إلغاء silently no-op'd. President flagged.
+  closeModal:        (el) => closeModal(el.dataset.modal),
 
   // ── Live filter on tables (input event, value-driven) ─────────────
   // Reuses lib/ui.js's filterTable via dynamic import below — kept
