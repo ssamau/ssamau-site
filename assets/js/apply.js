@@ -141,15 +141,16 @@ function radioVal(name) {
   return r.length ? r[0].value : '';
 }
 
-// Seasonal applicant-type gate, mirrored from the server's
-// gateApplicantType() in applications.ts. Used to (a) tag the submit
-// body, (b) flip a CSS class on <body> so member-specific copy can be
-// hidden in the volunteer window via the .volunteer-only / .member-only
-// utility classes. UTC month so the cutover is consistent regardless
-// of where the applicant's browser is.
+// Read the applicant_role radio group. President's spec 2026-05-20:
+// the form now offers Head / Member / Volunteer, but only Volunteer is
+// enabled in the UI right now. The server enforces Volunteer-only
+// regardless (defense-in-depth — a tampered HTML can't bypass).
+//
+// Previously this function auto-derived the type from the current
+// month (seasonal gate). That logic moved to the server now; the form
+// just reflects the user's pick.
 function currentApplicantType() {
-  const m = new Date().getUTCMonth(); // 0=Jan ... 11=Dec
-  return (m >= 0 && m <= 4) ? 'Member' : 'Volunteer';
+  return radioVal('applicant_role') || 'Volunteer';
 }
 
 async function doSubmit() {

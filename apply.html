@@ -35,6 +35,37 @@
   <div class="body" id="form-view">
     <p class="intro" data-i18n="apply.intro">يرجى تعبئة النموذج بدقّة — ستخدم البيانات لإصدار العضوية وشهادات الملحقية الثقافية.</p>
 
+    <!-- ── 0. Role picker ─────────────────────────────────────
+         President's spec 2026-05-20: applicants pick one of three
+         roles. Only Volunteer is enabled right now; Head + Member
+         are visible but disabled (with a "قريباً" / "Coming soon"
+         tag) so applicants understand the structure. Server
+         enforces Volunteer-only regardless of what gets posted —
+         a tampered HTML can't bypass the gate. -->
+    <div class="section">
+      <h3><span class="num">0</span> <span data-i18n="apply.s0.title">نوع التقديم</span></h3>
+      <div class="fg">
+        <label><span data-i18n="apply.s0.role_label">اختر نوع التقديم</span> <span class="req">*</span></label>
+        <div class="role-picker">
+          <label class="role-opt role-opt-disabled">
+            <input type="radio" name="applicant_role" value="Head" disabled/>
+            <span class="role-name" data-i18n="apply.s0.role_head">عضو إداري</span>
+            <span class="role-soon" data-i18n="apply.s0.coming_soon">قريباً</span>
+          </label>
+          <label class="role-opt role-opt-disabled">
+            <input type="radio" name="applicant_role" value="Member" disabled/>
+            <span class="role-name" data-i18n="apply.s0.role_member">عضو</span>
+            <span class="role-soon" data-i18n="apply.s0.coming_soon">قريباً</span>
+          </label>
+          <label class="role-opt">
+            <input type="radio" name="applicant_role" value="Volunteer" checked/>
+            <span class="role-name" data-i18n="apply.s0.role_volunteer">متطوع</span>
+          </label>
+        </div>
+        <div class="hint" data-i18n="apply.s0.role_hint">حالياً مفتوح التقديم للمتطوعين فقط. خياري "العضو" و"العضو الإداري" سيُفتحان لاحقاً.</div>
+      </div>
+    </div>
+
     <!-- ── 1. Identity ────────────────────────────────────── -->
     <div class="section">
       <h3><span class="num">1</span> <span data-i18n="apply.s1.title">بطاقة الهوية</span></h3>

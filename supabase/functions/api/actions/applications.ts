@@ -28,23 +28,22 @@ const APPLICATION_NOTIF_TO = 'info@ssamau.com';
 // Accepts the expanded apply-form-v2 payload — see migration 0005 for the
 // column list and apply.html for the canonical value sets.
 //
-// Seasonal applicant-type gate (added 2026-05-17, president's call):
-//   Jan 1 – May 31 → form accepts members + volunteers; body's
-//     `applicant_type` is honored. Defaults to 'Member' if not set
-//     (legacy form callers).
-//   Jun 1 – Dec 31 → server forces 'Volunteer' regardless of what the
-//     body claims. The form also hides member language client-side,
-//     but the server is the authority: a tampered POST during the
-//     volunteer window still lands as a volunteer.
+// Applicant-type gate. President's spec 2026-05-20: ONLY 'Volunteer' is
+// open for applications right now. 'Member' and 'Head' will be enabled
+// in future passes. The frontend disables those radios, but the server
+// is the authority — a tampered HTML POST still gets normalized to
+// 'Volunteer' here.
 //
-// `gateApplicantType()` returns the effective applicant_type for the
-// current UTC date. Pulled into a helper so the date logic can be unit-
-// tested in isolation if we ever add tests.
-function gateApplicantType(requested: unknown): 'Member' | 'Volunteer' {
-  const m = new Date().getUTCMonth(); // 0=Jan ... 11=Dec
-  const inMemberWindow = m >= 0 && m <= 4; // Jan(0) – May(4)
-  if (!inMemberWindow) return 'Volunteer';
-  return requested === 'Volunteer' ? 'Volunteer' : 'Member';
+// To enable Member or Head in the future, add them to ENABLED_TYPES.
+// The DB CHECK constraint already accepts all three values since the
+// 20260520_apply_role_picker migration.
+const ENABLED_TYPES = new Set<string>(['Volunteer']);
+type ApplicantType = 'Member' | 'Volunteer' | 'Head';
+
+function gateApplicantType(requested: unknown): ApplicantType {
+  const r = String(requested ?? '').trim();
+  if (ENABLED_TYPES.has(r)) return r as ApplicantType;
+  return 'Volunteer';
 }
 
 const applicationsSubmit: Handler = async (body, _user, req) => {

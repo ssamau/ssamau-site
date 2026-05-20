@@ -85,6 +85,17 @@ export default {
   'apply.page_title_volunteer': 'Volunteer with the Saudi Students Association in Melbourne',
   'apply.intro_volunteer':      'Member applications reopen at the start of next year. Until then, you can register as a volunteer — the same form gets you on the list for events the committees are running.',
 
+  // Section 0: Role picker (added 2026-05-20). Three options:
+  // Head (administrative member) / Member / Volunteer. Only Volunteer
+  // is selectable currently; the others render disabled.
+  'apply.s0.title':             'Application type',
+  'apply.s0.role_label':        'Pick your application type',
+  'apply.s0.role_head':         'Administrative member',
+  'apply.s0.role_member':       'Member',
+  'apply.s0.role_volunteer':    'Volunteer',
+  'apply.s0.coming_soon':       'Coming soon',
+  'apply.s0.role_hint':         'Applications are only open for volunteers right now. "Member" and "Administrative member" will open later.',
+
   // Section 1: Identity
   'apply.s1.title':             'Identity',
   'apply.s1.nid_label':         'National ID or residency number',

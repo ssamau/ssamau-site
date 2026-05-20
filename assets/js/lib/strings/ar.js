@@ -91,6 +91,17 @@ export default {
   'apply.page_title_volunteer': 'تطوّع مع نادي الطلبة السعوديين في ملبورن',
   'apply.intro_volunteer':      'تسجيل العضوية سيُفتح مجدداً بداية العام القادم. حتى ذلك الحين يمكنك التسجيل كمتطوع — نفس النموذج يضمّك إلى قائمة الفعاليات التي تنظمها اللجان.',
 
+  // Section 0: Role picker (added 2026-05-20). Three options:
+  // Head (عضو إداري) / Member (عضو) / Volunteer (متطوع). Only
+  // Volunteer is selectable currently; the others render disabled.
+  'apply.s0.title':             'نوع التقديم',
+  'apply.s0.role_label':        'اختر نوع التقديم',
+  'apply.s0.role_head':         'عضو إداري',
+  'apply.s0.role_member':       'عضو',
+  'apply.s0.role_volunteer':    'متطوع',
+  'apply.s0.coming_soon':       'قريباً',
+  'apply.s0.role_hint':         'حالياً مفتوح التقديم للمتطوعين فقط. خياري "العضو" و"العضو الإداري" سيُفتحان لاحقاً.',
+
   // Section 1: Identity
   'apply.s1.title':             'بطاقة الهوية',
   'apply.s1.nid_label':         'رقم الهوية الوطنية / الإقامة',

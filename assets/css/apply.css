@@ -241,3 +241,49 @@ body::before {
 }
 .cv-modal .acts .ok     { background: #1A5C2E; color: #fff; }
 .cv-modal .acts .cancel { background: #f3f4f6; color: #374151; }
+
+/* ─── Role picker (section 0) ───────────────────────────────────────
+ * President's spec 2026-05-20: applicants pick Head / Member / Volunteer.
+ * Only Volunteer is selectable right now; the other two render disabled
+ * with a "قريباً" badge to signal future enablement. */
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: .55rem;
+  margin-top: .35rem;
+}
+@media (max-width: 520px) {
+  .role-picker { grid-template-columns: 1fr; }
+}
+.role-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+  padding: .85rem .5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #fff;
+  text-align: center;
+  position: relative;
+  transition: border-color .15s, background .15s;
+}
+.role-opt input[type="radio"] { margin: 0; accent-color: #1A5C2E; }
+.role-opt .role-name { font-size: .9rem; font-weight: 700; color: #0e3a1c; }
+.role-opt:has(input:checked) {
+  border-color: #1A5C2E;
+  background: #e8f5e9;
+}
+.role-opt-disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+.role-opt-disabled .role-name { color: #6b7280; }
+.role-soon {
+  font-size: .65rem; font-weight: 700;
+  background: #fef3c7; color: #92400e;
+  padding: .12rem .5rem; border-radius: 999px;
+  margin-top: .15rem;
+}
