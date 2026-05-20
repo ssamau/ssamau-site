@@ -46,6 +46,11 @@ let _opps             = [];
 let _committeeMembers = [];
 let _committeeProjects = [];
 let _activeOpp        = null; // currently-open opportunity in assign modal
+// 2026-05-20: when set, the inline form is in edit mode for this
+// opportunity_id. The save button dispatches to opportunities.update
+// instead of .create. Cleared by toggleOpportunityCreateForm() on close
+// and by saveOpportunity() on success.
+let _editingOppId     = null;
 
 // ── LIST ─────────────────────────────────────────────────────────────
 export async function loadHeadOpportunities() {
@@ -72,6 +77,14 @@ export async function loadHeadOpportunities() {
     const label = STATUS_KEY[o.status] ? t(STATUS_KEY[o.status]) : (o.status || '—');
     const status = tag(label, STATUS_CLS[o.status] || 't-gr');
     const filled = `${o.attended_count || 0}/${o.headcount_needed || 0}`;
+    // "Done"/"Cancelled" opportunities are terminal — hide the mark-done
+    // button on those rows (clicking would be a no-op and confusing).
+    // Edit stays available so heads can correct typos / counts after the
+    // fact even on a finished opportunity.
+    const isTerminal = o.status === 'Done' || o.status === 'Cancelled';
+    const doneBtn = isTerminal
+      ? ''
+      : `<button class="btn-icon" data-action="hd.opps.markDone" data-id="${esc(o.opportunity_id)}" title="${esc(t('hp.opps.mark_done_title'))}">✅</button>`;
     return `<tr>
       <td><strong>${esc(o.role_name || '—')}</strong></td>
       <td>${proj}</td>
@@ -80,12 +93,14 @@ export async function loadHeadOpportunities() {
       <td>${status}</td>
       <td>
         <button class="btn-icon" data-action="hd.opps.assign.open" data-id="${esc(o.opportunity_id)}" title="${esc(t('hp.opps.assign_title'))}">👥</button>
+        <button class="btn-icon" data-action="hd.opps.edit.open" data-id="${esc(o.opportunity_id)}" title="${esc(t('hp.opps.edit_title'))}">✏️</button>
+        ${doneBtn}
       </td>
     </tr>`;
   }).join('');
 }
 
-// ─── Inline create-opportunity flow ─────────────────────────────────
+// ─── Inline create / edit opportunity flow ──────────────────────────
 // Toggle the form panel; populate the project dropdown the first time
 // it's opened. Filtered to the head's committee so a head can't (even
 // by accident) attach an opportunity to another committee's project —
@@ -98,6 +113,54 @@ export async function toggleOpportunityCreateForm() {
   if (willOpen && !_committeeProjects.length) {
     await _ensureCommitteeRoster();
     _populateProjectsDropdown('hd-opp-project', false);
+  }
+  // Closing the form always exits edit mode and clears the title +
+  // button labels back to create-mode defaults, so re-opening doesn't
+  // surprise the head with a half-filled "save edits" form.
+  if (!willOpen) _exitEditMode();
+}
+
+// Switch the inline form into edit mode for a specific opportunity.
+// Pre-fills every field from the cached opp data, swaps the save-button
+// label to "save edits", and stamps _editingOppId so saveOpportunity()
+// dispatches to opportunities.update instead of .create.
+export async function openOpportunityEdit(opportunityId) {
+  const opp = _opps.find(o => o.opportunity_id === opportunityId);
+  if (!opp) {
+    toast(t('hp.opps.err_not_found'), 'terr');
+    return;
+  }
+  const form = document.getElementById('hd-opps-create-form');
+  if (!form) return;
+  if (!_committeeProjects.length) {
+    await _ensureCommitteeRoster();
+    _populateProjectsDropdown('hd-opp-project', false);
+  }
+  sv('hd-opp-project',   opp.project_id || '');
+  sv('hd-opp-role',      opp.role_name || '');
+  sv('hd-opp-hours',     String(opp.estimated_hours ?? 0));
+  sv('hd-opp-headcount', String(opp.headcount_needed ?? 1));
+  sv('hd-opp-notes',     opp.notes || '');
+  form.style.display = '';
+  _enterEditMode(opportunityId);
+  // Scroll the form into view — for long opportunity lists the form
+  // sits at the top and the head's click is way below it.
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function _enterEditMode(opportunityId) {
+  _editingOppId = opportunityId;
+  const saveBtn = document.querySelector('[data-action="hd.opps.create"]');
+  if (saveBtn) {
+    saveBtn.textContent = '💾 ' + t('hp.opps.form_save_edit');
+  }
+}
+
+function _exitEditMode() {
+  _editingOppId = null;
+  const saveBtn = document.querySelector('[data-action="hd.opps.create"]');
+  if (saveBtn) {
+    saveBtn.textContent = '💾 ' + t('hp.opps.form_save');
   }
 }
 
@@ -129,6 +192,9 @@ function _populateProjectsDropdown(id, _includeAll) {
       }).join('');
 }
 
+// Save button handler — handles both create and edit, branching on
+// _editingOppId. The form layout is identical for both modes; only the
+// API action and the success toast differ.
 export async function createOpportunity() {
   const project_id     = gv('hd-opp-project');
   const role_name      = gv('hd-opp-role');
@@ -142,16 +208,27 @@ export async function createOpportunity() {
   const owning_committee_id = window.CURRENT_USER?.committee_id;
   if (!owning_committee_id) { toast(t('hp.opps.err_no_committee'), 'terr'); return; }
 
-  const res = await api('opportunities.create', {
-    data: {
-      project_id, role_name,
-      estimated_hours, headcount_needed,
-      owning_committee_id,
-      notes: notes || null,
-    },
-  });
+  const payload = {
+    project_id, role_name,
+    estimated_hours, headcount_needed,
+    owning_committee_id,
+    notes: notes || null,
+  };
+
+  let res;
+  if (_editingOppId) {
+    // Edit existing — opportunities.update takes { id, data }. Server
+    // enforces committee scope; the head can only edit their own
+    // committee's opportunities.
+    res = await api('opportunities.update', {
+      id:   _editingOppId,
+      data: payload,
+    });
+  } else {
+    res = await api('opportunities.create', { data: payload });
+  }
   if (!res || !res.success) return;
-  toast(t('hp.opps.success_created'));
+  toast(t(_editingOppId ? 'hp.opps.success_edited' : 'hp.opps.success_created'));
   // Reset + collapse form, refresh list.
   sv('hd-opp-role', '');
   sv('hd-opp-hours', '0');
@@ -159,6 +236,25 @@ export async function createOpportunity() {
   sv('hd-opp-notes', '');
   sv('hd-opp-project', '');
   document.getElementById('hd-opps-create-form').style.display = 'none';
+  _exitEditMode();
+  loadHeadOpportunities();
+}
+
+// Mark an opportunity as Done — the head's "this is wrapped up"
+// affordance. Single-field update via opportunities.update; the row's
+// status chip will switch to "منتهية" and the ✅ button disappears on
+// the next render.
+export async function markOpportunityDone(opportunityId) {
+  if (!opportunityId) return;
+  const opp = _opps.find(o => o.opportunity_id === opportunityId);
+  const label = opp?.role_name || opportunityId;
+  if (!confirm(t('hp.opps.confirm_done', { name: label }))) return;
+  const res = await api('opportunities.update', {
+    id: opportunityId,
+    data: { status: 'Done' },
+  });
+  if (!res || !res.success) return;
+  toast(t('hp.opps.success_done'));
   loadHeadOpportunities();
 }
 

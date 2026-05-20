@@ -628,7 +628,14 @@ export default {
   'hp.opps.err_role_required':  'Role name is required.',
   'hp.opps.err_headcount':      'Volunteers needed must be at least 1.',
   'hp.opps.err_no_committee':   'Couldn’t determine your committee.',
+  'hp.opps.err_not_found':      'Opportunity not found.',
+  'hp.opps.edit_title':         'Edit opportunity',
+  'hp.opps.mark_done_title':    'Mark as done',
+  'hp.opps.form_save_edit':     'Save edits',
+  'hp.opps.confirm_done':       'Mark "{name}" as done? Members will no longer see it.',
   'hp.opps.success_created':    '✅ Opportunity created.',
+  'hp.opps.success_edited':     '✅ Edits saved.',
+  'hp.opps.success_done':       '✅ Opportunity marked as done.',
 
   // Hours tab
   'hp.hours.card_title':        '⏱️ Hours for your committee members',

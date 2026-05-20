@@ -658,7 +658,14 @@ export default {
   'hp.opps.err_role_required':  'اسم الدور مطلوب',
   'hp.opps.err_headcount':      'عدد المطلوبين 1 على الأقل',
   'hp.opps.err_no_committee':   'لا يمكن تحديد لجنتك',
+  'hp.opps.err_not_found':      'تعذّر العثور على الفرصة',
+  'hp.opps.edit_title':         'تعديل الفرصة',
+  'hp.opps.mark_done_title':    'إنهاء الفرصة',
+  'hp.opps.form_save_edit':     'حفظ التعديلات',
+  'hp.opps.confirm_done':       'إنهاء فرصة "{name}"؟ لن تظهر للأعضاء بعد ذلك.',
   'hp.opps.success_created':    '✅ تم إنشاء الفرصة',
+  'hp.opps.success_edited':     '✅ تم حفظ التعديلات',
+  'hp.opps.success_done':       '✅ تم إنهاء الفرصة',
 
   // Hours tab
   'hp.hours.card_title':        '⏱️ ساعات أعضاء لجنتك',

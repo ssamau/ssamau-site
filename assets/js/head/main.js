@@ -33,6 +33,7 @@ import {
 import {
   loadHeadOpportunities,
   toggleOpportunityCreateForm, createOpportunity,
+  openOpportunityEdit, markOpportunityDone,
   openHeadOpportunityAssignments,
   addHeadAssignmentMember, addHeadAssignmentVolunteer,
   markHeadAssignmentAttendance, removeHeadAssignment,
@@ -217,6 +218,11 @@ document.addEventListener('click', (e) => {
     case 'hd.apps.reject':           rejectApplication(el.dataset.id); break;
     case 'hd.opps.toggleCreate':     toggleOpportunityCreateForm(); break;
     case 'hd.opps.create':           createOpportunity(); break;
+    // Edit a head's own opportunity (✏️ row button) — pre-fills the
+    // inline form. Mark Done (✅ row button) flips status='Done' via
+    // opportunities.update. Both gated by requireAdminScope server-side.
+    case 'hd.opps.edit.open':        openOpportunityEdit(el.dataset.id); break;
+    case 'hd.opps.markDone':         markOpportunityDone(el.dataset.id); break;
     // Opportunity assign modal — open from the 👥 row button, then
     // add member / add volunteer / remove. markAttendance is dispatched
     // from the change-event handler below (it's on a <select>).
