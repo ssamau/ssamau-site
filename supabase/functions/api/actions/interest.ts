@@ -60,13 +60,18 @@ const interestSubmit: Handler = async (body, user) => {
     }
   }
 
-  // Capacity-guard 2026-05-19 (president's spec): block expressing
-  // interest in a role that's already full. role_id IS NULL means the
-  // member chose "any role" — we skip the per-role cap check in that
-  // case because the head will place them in whichever role still has
-  // a slot. Only fires for the multi-role flow + when actually
-  // expressing interest (not withdrawing).
-  if (interested && opportunity_id && role_id !== null) {
+  // Capacity-guard: block expressing interest when there's no slot
+  // for this member. role_id !== null → check that specific role.
+  // role_id === null ("any role") → check the opportunity as a whole;
+  // getRoleCapacity sums needed across all roles and counts all
+  // assignments, so the guard fires when every role is at headcount.
+  //
+  // 2026-05-21: dropped the `role_id !== null` skip. Previously the
+  // "any role" path silently accepted interest on opportunities where
+  // every role was already filled, because no per-role check ran. Now
+  // a member who picks "any role" on a full opp gets err.business.role_full
+  // — same UX as picking a specific full role.
+  if (interested && opportunity_id) {
     const cap = await getRoleCapacity(opportunity_id, role_id);
     if (cap && cap.taken >= cap.needed) {
       throw httpErr('err.business.role_full', 409);

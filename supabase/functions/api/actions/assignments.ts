@@ -82,12 +82,21 @@ const assignmentsList: Handler = async (body, user) => {
   `;
 };
 
-// Capacity helper — counts confirmed assignments on a (opportunity,
-// role) pair and compares to the role's headcount_needed. Returns
-// { taken, needed } so callers can decide rejection vs warning.
-// Pass role_id=null to count opportunity-level (legacy single-role)
-// assignments — useful for opportunities created BEFORE the multi-
-// role refactor that never got a role_id assigned to existing rows.
+// Capacity helper — counts confirmed assignments and compares against
+// headcount. Returns { taken, needed } so callers can decide rejection
+// vs warning.
+//
+// Three modes by `role_id`:
+//   - integer → check that specific role: assignments on (opp, role_id)
+//     vs opportunity_roles.headcount_needed.
+//   - null + opportunity has role rows ("any role" on a multi-role opp):
+//     sum needed across ALL roles, count ALL assignments. A "full"
+//     opportunity is one where every role is at or over headcount.
+//     This is what the express-interest guard uses when the member
+//     picks "any role" — without it, full opportunities silently
+//     accepted new interest because the per-role check was skipped.
+//   - null + opportunity has NO role rows (legacy single-role opp):
+//     count role_id IS NULL assignments vs opportunities.headcount_needed.
 //
 // Exported so interest.ts can apply the same guard at the express-
 // interest stage (block before the head sees the request, not just
@@ -96,9 +105,28 @@ export async function getRoleCapacity(
   opportunity_id: string,
   role_id: number | null,
 ): Promise<{ taken: number; needed: number } | null> {
-  if (role_id === null || role_id === undefined) {
-    // No role specified — fall back to the opportunity-level legacy
-    // headcount on `opportunities.headcount_needed`.
+  if (role_id !== null && role_id !== undefined) {
+    const [role] = await sql`
+      SELECT headcount_needed FROM public.opportunity_roles
+      WHERE  id = ${role_id} AND opportunity_id = ${opportunity_id}
+    ` as Array<{ headcount_needed: number }>;
+    if (!role) return null;
+    const [{ taken }] = await sql`
+      SELECT COUNT(*)::int AS taken FROM public.assignments
+      WHERE  opportunity_id = ${opportunity_id} AND role_id = ${role_id}
+    ` as Array<{ taken: number }>;
+    return { taken, needed: Number(role.headcount_needed) || 1 };
+  }
+
+  // role_id is null/undefined.
+  const roles = await sql`
+    SELECT headcount_needed FROM public.opportunity_roles
+    WHERE  opportunity_id = ${opportunity_id}
+  ` as Array<{ headcount_needed: number }>;
+
+  if (roles.length === 0) {
+    // Legacy single-role opp: capacity on the opportunity row + only
+    // role_id IS NULL assignments count.
     const [opp] = await sql`
       SELECT headcount_needed FROM public.opportunities
       WHERE  opportunity_id = ${opportunity_id}
@@ -110,16 +138,16 @@ export async function getRoleCapacity(
     ` as Array<{ taken: number }>;
     return { taken, needed: Number(opp.headcount_needed) || 1 };
   }
-  const [role] = await sql`
-    SELECT headcount_needed FROM public.opportunity_roles
-    WHERE  id = ${role_id} AND opportunity_id = ${opportunity_id}
-  ` as Array<{ headcount_needed: number }>;
-  if (!role) return null;
+
+  // Multi-role opp on the "any role" path. Sum needed across all roles,
+  // count ALL assignments on this opportunity (role-specific + legacy
+  // null-role rows alike — they all consume opportunity capacity).
+  const needed = roles.reduce((s, r) => s + (Number(r.headcount_needed) || 0), 0);
   const [{ taken }] = await sql`
     SELECT COUNT(*)::int AS taken FROM public.assignments
-    WHERE  opportunity_id = ${opportunity_id} AND role_id = ${role_id}
+    WHERE  opportunity_id = ${opportunity_id}
   ` as Array<{ taken: number }>;
-  return { taken, needed: Number(role.headcount_needed) || 1 };
+  return { taken, needed };
 }
 
 const assignmentsAdd: Handler = async (body, user) => {
