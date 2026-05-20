@@ -117,8 +117,22 @@ export async function loadMemberProfile(memberId) {
         </tr></thead>
         <tbody>${hours.map(h => {
           const prj = DB.projects.find(p => p.project_id === h.project_id);
+          // 2026-05-20: rows can come from the attendance.meeting_hours
+          // union (committee meetings → no project_id, no DB.projects
+          // match). Fall back to the server-joined project_name, then
+          // to meeting_title (for committee-meeting attendance rows),
+          // then to em-dash. The previous code dropped to `h.project_id`
+          // which template-literal-stringified `null` as the literal
+          // word "null" in the cell.
+          const isAttendanceRow = h.source === 'attendance';
+          const projectName = (prj && prj.project_name)
+            || h.project_name
+            || (isAttendanceRow ? h.meeting_title : null);
+          const projectCell = projectName
+            ? esc(projectName) + (isAttendanceRow ? ` <span style="font-size:.65rem;color:var(--bl)">${esc(t('ap.att.badge_meeting'))}</span>` : '')
+            : '—';
           return `<tr>
-            <td>${prj ? esc(prj.project_name) : h.project_id}</td>
+            <td>${projectCell}</td>
             <td>${h.hours_before || 0}</td><td>${h.hours_during || 0}</td><td>${h.hours_after || 0}</td>
             <td><strong style="color:var(--g)">${h.total_hours || 0}</strong></td>
             <td style="font-size:.76rem">${esc(h.notes) || '—'}</td>
