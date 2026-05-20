@@ -55,11 +55,21 @@ export async function loadHours() {
     const statusLabel = STATUS_KEY[r.approval_status]
       ? t(STATUS_KEY[r.approval_status])
       : (r.approval_status || '');
+    // 2026-05-20: rows can come from the attendance tab (meetings or
+    // project attendance the head credited inline) — show the meeting
+    // title when there's no project name, and add a small meeting
+    // badge so the member knows where the hours came from.
+    const isAttendanceRow = r.source === 'attendance';
+    const projectName = r.project_name || (isAttendanceRow ? r.meeting_title : null);
+    const projectCell = projectName
+      ? `${esc(projectName)}${isAttendanceRow ? ` <span style="font-size:.65rem;color:var(--bl)">${esc(t('ap.att.badge_meeting'))}</span>` : ''}`
+      : (r.project_id || '—');
+    const dateValue = r.event_date || r.meeting_date || r.recorded_at;
     return `
     <tr>
-      <td>${esc(r.project_name) || r.project_id || '—'}</td>
+      <td>${projectCell}</td>
       <td>${esc(r.opportunity_role_name) || '—'}</td>
-      <td>${fmtDate(r.event_date || r.recorded_at) || '—'}</td>
+      <td>${fmtDate(dateValue) || '—'}</td>
       <td><strong>${r.total_hours || 0}</strong></td>
       <td><span class="hs-badge ${STATUS_CLASS[r.approval_status] || ''}">${esc(statusLabel)}</span></td>
     </tr>

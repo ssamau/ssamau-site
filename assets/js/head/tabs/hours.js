@@ -46,11 +46,24 @@ export async function loadHeadHours() {
 }
 
 function _renderRow(h) {
+  // 2026-05-20: rows can be union'd from attendance.meeting_hours. Show
+  // the meeting title + a "📅 لقاء" badge when there's no project, and
+  // suppress approval actions (those rows are FinalApproved by design
+  // and don't go through the head's approval queue).
+  const isAttendanceRow = h.source === 'attendance';
   const name = esc(h.member_preferred_name || h.member_full_name || h.member_id || '—');
-  const proj = h.project_name
-    ? `<div>${esc(h.project_name)}</div>
-       ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`
-    : `<span style="color:var(--tm)">${esc(h.project_id || '—')}</span>`;
+  let projInner;
+  if (h.project_name) {
+    projInner = `<div>${esc(h.project_name)}</div>
+       ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`;
+  } else if (isAttendanceRow && h.meeting_title) {
+    projInner = `<div>${esc(h.meeting_title)}</div>`;
+  } else {
+    projInner = `<span style="color:var(--tm)">${esc(h.project_id || '—')}</span>`;
+  }
+  const proj = projInner + (isAttendanceRow
+    ? `<div style="font-size:.66rem;color:var(--bl);margin-top:.1rem">${esc(t('ap.att.badge_meeting'))}</div>`
+    : '');
   const status = h.approval_status || 'Draft';
   const statusLabel = STATUS_KEY[status] ? t(STATUS_KEY[status]) : status;
   const statusTag = tag(statusLabel, STATUS_CLS[status] || 't-gr');
@@ -58,15 +71,18 @@ function _renderRow(h) {
   // Heads now own all three approval stages (primary, final, rollback)
   // for their committee — per 2026-05-16 permission revision. Different
   // buttons per status, all gated server-side via requireAdminScope.
+  // Attendance-sourced rows skip the action column (edit via attendance).
   const actions = [];
-  if (status === 'Draft') {
-    actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_primary'))}" data-action="hd.hours.primaryApprove" data-id="${rowId}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_reject'))}" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
-  } else if (status === 'PrimaryApproved') {
-    actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_final'))}" data-action="hd.hours.finalApprove" data-id="${rowId}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_reject'))}" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
-  } else if (status === 'FinalApproved') {
-    actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_rollback'))}" data-action="hd.hours.reject" data-id="${rowId}">↩️</button>`);
+  if (!isAttendanceRow) {
+    if (status === 'Draft') {
+      actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_primary'))}" data-action="hd.hours.primaryApprove" data-id="${rowId}">✅</button>`);
+      actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_reject'))}" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
+    } else if (status === 'PrimaryApproved') {
+      actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_final'))}" data-action="hd.hours.finalApprove" data-id="${rowId}">✅</button>`);
+      actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_reject'))}" data-action="hd.hours.reject" data-id="${rowId}">❌</button>`);
+    } else if (status === 'FinalApproved') {
+      actions.push(`<button class="btn-icon" title="${esc(t('hp.hours.action_rollback'))}" data-action="hd.hours.reject" data-id="${rowId}">↩️</button>`);
+    }
   }
   return `<tr>
     <td><strong>${name}</strong></td>

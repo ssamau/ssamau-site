@@ -203,12 +203,75 @@ const hoursReject: Handler = async (body, user) => {
   return { id };
 };
 
+// Returns hours from TWO sources, unioned so the admin / head hours
+// list can show everything that contributes to members.total_hours in
+// one place (2026-05-20 fix — the president was confused about why some
+// of his members had a non-zero total but no rows on the hours page).
+//
+//   * `hours` table — the approval-workflow rows (Draft / PrimaryApproved /
+//     FinalApproved / Rejected).
+//   * `attendance.meeting_hours` — credited directly by heads on the
+//     attendance tab (meeting attendance + project attendance after the
+//     bridge added in this commit). Always counts as FinalApproved
+//     because it bypasses the approval chain by design.
+//
+// The attendance side is suppressed when the caller filters by an
+// approval_status other than FinalApproved (since those rows would
+// never match anyway). `source` on each row tells the frontend whether
+// to show approval actions ('hours' → yes) or just a meeting badge
+// ('attendance' → no actions, edit goes via the attendance tab).
 const getMemberHours: Handler = async (body) => {
   const member_id = body.member_id as string | undefined;
   const project_id = body.project_id as string | undefined;
   const approval_status = body.approval_status as string | undefined;
+  const includeAttendance = !approval_status || approval_status === 'FinalApproved';
   return sql`
-    SELECT h.id AS hours_id, h.*,
+    WITH combined AS (
+      SELECT h.id            AS source_id,
+             'hours'::text   AS source,
+             h.id            AS hours_id,
+             h.member_id, h.project_id, h.volunteer_email,
+             h.participant_type, h.assignment_id,
+             h.hours_before, h.hours_during, h.hours_after, h.total_hours,
+             h.approval_status, h.recorded_at, h.recorded_by,
+             h.notes, h.rejected_reason,
+             h.primary_approver_id, h.primary_approved_at,
+             h.final_approver_id,   h.final_approved_at,
+             NULL::text      AS meeting_title,
+             NULL::date      AS meeting_date
+      FROM hours h
+      WHERE (h.notes IS DISTINCT FROM 'Deleted')
+        ${member_id       ? sql`AND h.member_id       = ${member_id}`       : sql``}
+        ${project_id      ? sql`AND h.project_id      = ${project_id}`      : sql``}
+        ${approval_status ? sql`AND h.approval_status = ${approval_status}` : sql``}
+      ${includeAttendance ? sql`
+        UNION ALL
+        SELECT a.id              AS source_id,
+               'attendance'::text AS source,
+               NULL::int          AS hours_id,
+               a.member_id, a.project_id, a.volunteer_email,
+               'Member'::text     AS participant_type,
+               NULL::int          AS assignment_id,
+               0::numeric, a.meeting_hours, 0::numeric, a.meeting_hours,
+               'FinalApproved'::text AS approval_status,
+               a.recorded_at, a.recorded_by,
+               COALESCE(a.notes, '')  AS notes,
+               NULL::text         AS rejected_reason,
+               NULL::int          AS primary_approver_id,
+               NULL::timestamptz  AS primary_approved_at,
+               NULL::int          AS final_approver_id,
+               NULL::timestamptz  AS final_approved_at,
+               a.meeting_title,
+               a.meeting_date
+        FROM attendance a
+        WHERE a.meeting_hours IS NOT NULL
+          AND a.meeting_hours > 0
+          AND a.attendance_status <> 'Deleted'
+          ${member_id  ? sql`AND a.member_id  = ${member_id}`  : sql``}
+          ${project_id ? sql`AND a.project_id = ${project_id}` : sql``}
+      ` : sql``}
+    )
+    SELECT c.*,
            p.project_name, p.event_date,
            m.full_name           AS member_full_name,
            m.preferred_name      AS member_preferred_name,
@@ -216,20 +279,16 @@ const getMemberHours: Handler = async (body) => {
            o.owning_committee_id AS opportunity_committee_id,
            pa.full_name          AS primary_approver_name,
            fa.full_name          AS final_approver_name
-    FROM hours h
-    LEFT JOIN projects     p  ON p.project_id     = h.project_id
-    LEFT JOIN members      m  ON m.member_id      = h.member_id
-    LEFT JOIN assignments  a  ON a.assignment_id  = h.assignment_id
-    LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
-    LEFT JOIN users        upa ON upa.id          = h.primary_approver_id
-    LEFT JOIN members      pa ON pa.member_id     = upa.member_id
-    LEFT JOIN users        ufa ON ufa.id          = h.final_approver_id
-    LEFT JOIN members      fa ON fa.member_id     = ufa.member_id
-    WHERE (h.notes IS DISTINCT FROM 'Deleted')
-      ${member_id       ? sql`AND h.member_id       = ${member_id}`       : sql``}
-      ${project_id      ? sql`AND h.project_id      = ${project_id}`      : sql``}
-      ${approval_status ? sql`AND h.approval_status = ${approval_status}` : sql``}
-    ORDER BY h.recorded_at DESC
+    FROM combined c
+    LEFT JOIN projects     p   ON p.project_id     = c.project_id
+    LEFT JOIN members      m   ON m.member_id      = c.member_id
+    LEFT JOIN assignments  asg ON asg.assignment_id = c.assignment_id
+    LEFT JOIN opportunities o  ON o.opportunity_id = asg.opportunity_id
+    LEFT JOIN users        upa ON upa.id           = c.primary_approver_id
+    LEFT JOIN members      pa  ON pa.member_id     = upa.member_id
+    LEFT JOIN users        ufa ON ufa.id           = c.final_approver_id
+    LEFT JOIN members      fa  ON fa.member_id     = ufa.member_id
+    ORDER BY c.recorded_at DESC
   `;
 };
 
@@ -374,17 +433,51 @@ const hoursRecordOwn: Handler = async (body, user) => {
 const hoursListOwn: Handler = async (_body, user) => {
   requireAuth(user);
   if (!user.member_id) throw httpErr('err.auth.no_member_link', 404);
+  // Same two-source union as getMemberHours — see the comment there for
+  // why attendance.meeting_hours rows are surfaced alongside `hours`.
+  // Hard-scoped to the caller's member_id; the renderer in
+  // member/tabs/hours.js uses `source` + `meeting_title` to badge
+  // meeting-sourced rows and to pick the right date column.
   return sql`
-    SELECT h.id AS hours_id, h.*,
+    WITH combined AS (
+      SELECT h.id             AS source_id,
+             'hours'::text    AS source,
+             h.id             AS hours_id,
+             h.member_id, h.project_id,
+             h.hours_before, h.hours_during, h.hours_after, h.total_hours,
+             h.approval_status, h.recorded_at,
+             h.notes, h.assignment_id,
+             NULL::text       AS meeting_title,
+             NULL::date       AS meeting_date
+      FROM hours h
+      WHERE h.member_id = ${user.member_id}
+        AND (h.notes IS DISTINCT FROM 'Deleted')
+      UNION ALL
+      SELECT a.id              AS source_id,
+             'attendance'::text AS source,
+             NULL::int          AS hours_id,
+             a.member_id, a.project_id,
+             0::numeric, a.meeting_hours, 0::numeric, a.meeting_hours,
+             'FinalApproved'::text AS approval_status,
+             a.recorded_at,
+             COALESCE(a.notes, '')  AS notes,
+             NULL::int          AS assignment_id,
+             a.meeting_title,
+             a.meeting_date
+      FROM attendance a
+      WHERE a.member_id = ${user.member_id}
+        AND a.meeting_hours IS NOT NULL
+        AND a.meeting_hours > 0
+        AND a.attendance_status <> 'Deleted'
+    )
+    SELECT c.*,
            p.project_name, p.event_date,
            o.role_name AS opportunity_role_name
-    FROM hours h
-    LEFT JOIN projects     p  ON p.project_id     = h.project_id
-    LEFT JOIN assignments  a  ON a.assignment_id  = h.assignment_id
-    LEFT JOIN opportunities o ON o.opportunity_id = a.opportunity_id
-    WHERE h.member_id = ${user.member_id}
-      AND (h.notes IS DISTINCT FROM 'Deleted')
-    ORDER BY h.recorded_at DESC
+    FROM combined c
+    LEFT JOIN projects     p   ON p.project_id     = c.project_id
+    LEFT JOIN assignments  asg ON asg.assignment_id = c.assignment_id
+    LEFT JOIN opportunities o  ON o.opportunity_id = asg.opportunity_id
+    ORDER BY c.recorded_at DESC
   `;
 };
 

@@ -48,6 +48,12 @@ export async function loadHours(projectId) {
 export function renderHoursRow(h) {
   const member  = DB.members.find(m => m.member_id === h.member_id);
   const project = DB.projects.find(p => p.project_id === h.project_id);
+  // 2026-05-20: rows can come from two sources — the regular `hours`
+  // table (approval workflow) or `attendance.meeting_hours` (counted
+  // directly, no approval stage). Attendance-sourced rows are marked
+  // with a "📅 لقاء" badge and don't get approve/reject/delete buttons
+  // here (edit goes via the attendance tab).
+  const isAttendanceRow = h.source === 'attendance';
   // Don't rely on participant_type string casing — older rows store
   // 'member' / 'volunteer' (lowercase) but the form sends 'Member' /
   // 'Volunteer' (capital). Check member_id presence directly: if there's
@@ -55,10 +61,23 @@ export function renderHoursRow(h) {
   const name = h.member_id
     ? (member ? esc(member.preferred_name || member.full_name) : esc(h.member_id))
     : esc(h.volunteer_email || h.volunteer_name || '—');
-  const projectCell = project
-    ? `<div style="font-weight:600">${esc(project.project_name)}</div>
-       ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`
-    : esc(h.project_id);
+  // Project cell: for project-linked rows show the project name + role
+  // (if any). For attendance rows with no project (committee meetings),
+  // fall back to meeting_title. The meeting badge then makes the source
+  // obvious to admin so they can find the corresponding attendance row.
+  let projectInner;
+  if (project) {
+    projectInner = `<div style="font-weight:600">${esc(project.project_name)}</div>
+       ${h.opportunity_role_name ? `<div style="font-size:.7rem;color:var(--tm)">${esc(h.opportunity_role_name)}</div>` : ''}`;
+  } else if (isAttendanceRow && h.meeting_title) {
+    projectInner = `<div style="font-weight:600">${esc(h.meeting_title)}</div>`;
+  } else {
+    projectInner = esc(h.project_id || '—');
+  }
+  const meetingBadge = isAttendanceRow
+    ? `<div style="font-size:.66rem;color:var(--bl);margin-top:.1rem">${esc(t('ap.att.badge_meeting'))}</div>`
+    : '';
+  const projectCell = projectInner + meetingBadge;
   const status = h.approval_status || 'Draft';
   const statusLabel = HOURS_STATUS_KEY[status] ? t(HOURS_STATUS_KEY[status]) : status;
 
@@ -73,16 +92,21 @@ export function renderHoursRow(h) {
   // The `ownsCommittee` check above already widens to "admin OR head
   // whose committee matches", so the same predicate gates every stage.
   const actions = [];
-  if (status === 'Draft' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_primary_title'))}" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
-  } else if (status === 'PrimaryApproved' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_final_title'))}" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
-    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
-  } else if (status === 'FinalApproved' && ownsCommittee) {
-    actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_rollback_title'))}" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
+  // Attendance-sourced rows have no hours_id and no approval state to
+  // mutate — leave the actions column empty so admins know to edit them
+  // from the attendance tab.
+  if (!isAttendanceRow) {
+    if (status === 'Draft' && ownsCommittee) {
+      actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_primary_title'))}" data-action="primaryApproveHours" data-id="${h.hours_id}">✅</button>`);
+      actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
+    } else if (status === 'PrimaryApproved' && ownsCommittee) {
+      actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_final_title'))}" data-action="finalApproveHours" data-id="${h.hours_id}">✅</button>`);
+      actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_reject_title'))}" data-action="rejectHours" data-id="${h.hours_id}">❌</button>`);
+    } else if (status === 'FinalApproved' && ownsCommittee) {
+      actions.push(`<button class="btn-icon" title="${esc(t('ap.hrs.row_rollback_title'))}" data-action="rejectHours" data-id="${h.hours_id}">↩️</button>`);
+    }
+    actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="${esc(t('ap.hrs.delete_target_name'))}">🗑️</button>`);
   }
-  actions.push(`<button class="btn-icon del" data-action="confirmDelete" data-type="hours" data-id="${h.hours_id}" data-name="${esc(t('ap.hrs.delete_target_name'))}">🗑️</button>`);
 
   const approverHint = h.primary_approver_name
     ? `<div style="font-size:.65rem;color:var(--tm);margin-top:.15rem">${esc(t('ap.hrs.approver_primary_label'))} ${esc(h.primary_approver_name)}${h.final_approver_name ? ` · ${esc(t('ap.hrs.approver_final_label'))} ${esc(h.final_approver_name)}` : ''}</div>`
