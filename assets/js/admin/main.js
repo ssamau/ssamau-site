@@ -90,6 +90,7 @@ import {
   populateHrsOpportunitySelect, onHrsOpportunityChange, onHrsAssignmentChange,
   primaryApproveHours, finalApproveHours, rejectHours,
 } from './tabs/hours.js';
+import { exportSacmReport } from './tabs/reports.js';
 import {
   loadAccounts, openAccountModal, openAccountModalForMember, editAccount,
   generateAccountPw, saveAccount, resetAccountPassword, sendPasswordResetEmail,
@@ -530,6 +531,9 @@ setHandlers({
   loadBulkAttGrid:        (el) => loadBulkAttGrid(el.value),
   loadCerts:              (el) => loadCerts(el.value),
   loadHours:              (el) => loadHours(el.value),
+  // SACM monthly report — XLSX download. Bare reference so `el` is
+  // passed through to withBusyButton inside the handler.
+  exportSacmReport,
   loadInterest:           (el) => loadInterest(el.value),
 
   // ── Interest triage workflow (per-row buttons + header toggle) ──

@@ -532,6 +532,10 @@
             <select class="filter-select" id="hours-project-filter" data-action="loadHours">
               <option value="" data-i18n="ap.hrs.filter_all_projects">كل المشاريع</option>
             </select>
+            <!-- SACM monthly report — admin/superadmin only. Wires to
+                 exportSacmReport in admin/tabs/reports.js which lazy-
+                 loads xlsx.mjs and builds a 2-sheet workbook. -->
+            <button class="btn btn-ol" data-action="exportSacmReport" data-i18n="ap.hrs.export_sacm" title="تصدير تقرير الساعات للملحقية (XLSX)">📊 تقرير الملحقية</button>
             <button class="btn btn-g" data-action="openModal" data-modal="hours" data-i18n="ap.hrs.add_btn">+ تسجيل ساعات</button>
           </div>
         </div>
