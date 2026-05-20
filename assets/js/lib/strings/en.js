@@ -1749,6 +1749,7 @@ export default {
 
   // ─── Common runtime messages ──────────────────────────────────────
   'common.loading':             'Loading...',
+  'common.sending':             'Sending...',
   'common.please_fill':         'Please enter both your identifier and password.',
   'common.network_error':       'Couldn’t reach the server. Try again.',
   'common.generic_error':       'Something went wrong. Try again.',

@@ -275,9 +275,10 @@ document.addEventListener('click', (e) => {
     case 'copyShownPin':             headCopyShownPin(); break;
     // Generic close-modal — the invite + profile modals dispatch this.
     case 'closeModal':               closeModal(el.dataset.modal); break;
-    // Emails / thanks tab — single + bulk.
-    case 'hd.thanks.send':           sendHeadThanks(); break;
-    case 'hd.thanks.bulkSend':       bulkSendHeadThanks(); break;
+    // Emails / thanks tab — single + bulk. Pass `el` through so the
+    // send button can be locked in flight (duplicate-send fix).
+    case 'hd.thanks.send':           sendHeadThanks(el); break;
+    case 'hd.thanks.bulkSend':       bulkSendHeadThanks(el); break;
     // Certificates tab — sub-tab switch, issue, bulk, verify, preview.
     case 'hd.certs.switchTab':       switchHeadCertTab(el.dataset.tab); break;
     case 'hd.certs.issue':           issueHeadCert(); break;

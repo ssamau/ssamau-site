@@ -78,6 +78,35 @@ export function toast(msg, cls = 'tok') {
   _toastTimer = setTimeout(() => el.className = '', 3200);
 }
 
+// withBusyButton — disables a button + swaps its label to a spinner
+// while an async action is in flight, then restores it. Two jobs in one:
+//   1. Re-entry guard: a button already running an action ignores the
+//      new click (returns undefined). This is THE duplicate-send fix —
+//      a panicky double-tap on "إرسال" no longer fires two API calls.
+//   2. UX: the user sees the button visibly disabled + loading so they
+//      know the click registered. Restores the original innerHTML on
+//      completion, even if the action throws.
+//
+// Falls back to a no-op wrapper when `btn` is null (e.g. caller wasn't
+// invoked by the dispatcher and didn't pass the button element) — so
+// existing callsites that don't get a button reference still work, just
+// without the busy-state UX.
+export async function withBusyButton(btn, busyLabel, fn) {
+  if (!btn) return fn();
+  if (btn.dataset.busy === '1') return;  // already in flight, drop
+  btn.dataset.busy = '1';
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  if (busyLabel) btn.innerHTML = busyLabel;
+  try {
+    return await fn();
+  } finally {
+    btn.dataset.busy = '';
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+}
+
 export function setApiStatus(state, text) {
   const el = document.getElementById('api-status');
   const tx = document.getElementById('api-status-text');

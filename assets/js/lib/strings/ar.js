@@ -1802,6 +1802,7 @@ export default {
 
   // ─── Common runtime messages ──────────────────────────────────────
   'common.loading':             'جاري التحميل...',
+  'common.sending':             'جاري الإرسال...',
   'common.please_fill':         'يرجى إدخال المعرّف وكلمة المرور',
   'common.network_error':       'تعذّر الاتصال بالخادم، حاول مجدداً',
   'common.generic_error':       'حدث خطأ، حاول مجدداً',

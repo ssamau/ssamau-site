@@ -8,7 +8,7 @@
 // UX never offers an option that will server-reject.
 
 import { esc, gv, sv, tag, setEl } from '../../lib/format.js';
-import { api, apiGet, toast, closeModal } from '../../lib/ui.js';
+import { api, apiGet, toast, closeModal, withBusyButton } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
 
 // Module-level caches so re-renders + language toggles don't refetch.
@@ -118,47 +118,54 @@ export function filterHeadThanks() {
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────────────
-export async function sendHeadThanks() {
-  _populateThanksSelects();
-  const mid = gv('hd-thx-mbr');
-  const m   = _members.find(mb => mb.member_id === mid);
-  const body = {
-    project_id:      gv('hd-thx-prj'),
-    member_id:       mid,
-    recipient_email: m ? (m.email || '') : '',
-    subject:         gv('hd-thx-sb'),
-    message:         gv('hd-thx-bd'),
-  };
-  if (!body.project_id) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
-  if (!body.recipient_email && body.member_id) {
-    toast(t('ap.eml.err_no_email'), 'twarn');
-    return;
-  }
-  const r = await api('thanks.send', body);
-  if (r && r.success && r.data) {
-    const st = r.data.status;
-    toast(st === 'Sent' ? t('ap.eml.success_sent') : t('ap.eml.fail_sent'), st === 'Sent' ? 'tok' : 'twarn');
-    closeModal('hd-thanks');
-    ['hd-thx-sb','hd-thx-bd'].forEach(id => sv(id, ''));
-    _refreshThanks(gv('hd-flt-thx-prj'));
-  }
+// `el` is the button the dispatcher called us with — passed through to
+// withBusyButton which guards against duplicate sends from a rapid
+// double-tap (the bug Faisal reproduced 2026-05-20).
+export async function sendHeadThanks(el) {
+  return withBusyButton(el, '⏳ ' + t('common.sending'), async () => {
+    _populateThanksSelects();
+    const mid = gv('hd-thx-mbr');
+    const m   = _members.find(mb => mb.member_id === mid);
+    const body = {
+      project_id:      gv('hd-thx-prj'),
+      member_id:       mid,
+      recipient_email: m ? (m.email || '') : '',
+      subject:         gv('hd-thx-sb'),
+      message:         gv('hd-thx-bd'),
+    };
+    if (!body.project_id) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
+    if (!body.recipient_email && body.member_id) {
+      toast(t('ap.eml.err_no_email'), 'twarn');
+      return;
+    }
+    const r = await api('thanks.send', body);
+    if (r && r.success && r.data) {
+      const st = r.data.status;
+      toast(st === 'Sent' ? t('ap.eml.success_sent') : t('ap.eml.fail_sent'), st === 'Sent' ? 'tok' : 'twarn');
+      closeModal('hd-thanks');
+      ['hd-thx-sb','hd-thx-bd'].forEach(id => sv(id, ''));
+      _refreshThanks(gv('hd-flt-thx-prj'));
+    }
+  });
 }
 
-export async function bulkSendHeadThanks() {
-  const pid = gv('hd-bthx-prj');
-  if (!pid) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
-  toast(t('ap.eml.bulk_sending'), 'twarn');
-  const r = await api('thanks.bulkSend', {
-    project_id: pid,
-    subject:    gv('hd-bthx-sb'),
-    message:    gv('hd-bthx-msg'),
+export async function bulkSendHeadThanks(el) {
+  return withBusyButton(el, '⏳ ' + t('common.sending'), async () => {
+    const pid = gv('hd-bthx-prj');
+    if (!pid) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
+    toast(t('ap.eml.bulk_sending'), 'twarn');
+    const r = await api('thanks.bulkSend', {
+      project_id: pid,
+      subject:    gv('hd-bthx-sb'),
+      message:    gv('hd-bthx-msg'),
+    });
+    if (r && r.success && r.data) {
+      const { sent = 0, failed = 0, count = 0 } = r.data;
+      toast(t('ap.eml.bulk_result', { sent, count, failed }), failed === 0 ? 'tok' : 'twarn');
+      closeModal('hd-bulk-thanks');
+      _refreshThanks(gv('hd-flt-thx-prj'));
+    }
   });
-  if (r && r.success && r.data) {
-    const { sent = 0, failed = 0, count = 0 } = r.data;
-    toast(t('ap.eml.bulk_result', { sent, count, failed }), failed === 0 ? 'tok' : 'twarn');
-    closeModal('hd-bulk-thanks');
-    _refreshThanks(gv('hd-flt-thx-prj'));
-  }
 }
 
 // Called by main.js openModal hook so the picker is fresh every time

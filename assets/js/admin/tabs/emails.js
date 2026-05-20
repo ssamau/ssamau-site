@@ -8,7 +8,7 @@
 
 import { DB } from '../../lib/state.js';
 import { esc, gv, tag, setEl, fmtDateTime } from '../../lib/format.js';
-import { api, toast, closeModal } from '../../lib/ui.js';
+import { api, toast, closeModal, withBusyButton } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
 
 // Thanks delivery-status enum → translation key. STATUS_COLORS isn't
@@ -82,57 +82,66 @@ export function renderThanks(list) {
   }).join('');
 }
 
-export async function saveThanks() {
-  // Edge Function `thanks.send` expects:
-  //   { project_id, member_id, recipient_email, subject, message }
-  // The admin form historically sent `email_subject` / `email_body` —
-  // those names date back to the Apps Script port and were never
-  // updated when SMTP delivery got wired in (PR #22). Result: the
-  // server saw subject/message as undefined, used defaults, AND
-  // recipient_email was always missing so sendEmail was skipped and
-  // no row even reached the DB (the upsert chain bailed early).
-  // Now sending the right names + looking up the member's email
-  // from DB.members.
-  const mid = gv('thx-mbr');
-  const m   = DB.members.find(mb => mb.member_id === mid);
-  const recipient_email = m ? (m.email || '') : '';
-  const body = {
-    project_id:       gv('thx-prj'),
-    member_id:        mid,
-    recipient_email,
-    subject:          gv('thx-sb'),
-    message:          gv('thx-bd'),
-  };
-  if (!body.project_id) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
-  if (!body.recipient_email && body.member_id) {
-    toast(t('ap.eml.err_no_email'), 'twarn');
-    return;
-  }
-  const r = await api('thanks.send', body);
-  if (r && r.success && r.data) {
-    const st = r.data.status;
-    toast(st === 'Sent' ? t('ap.eml.success_sent') : t('ap.eml.fail_sent'), st === 'Sent' ? 'tok' : 'twarn');
-    closeModal('thanks');
-    ['thx-sb','thx-bd'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    loadThanks('');
-  }
+// `el` is the button the dispatcher called us from. withBusyButton
+// disables it for the duration of the request — the duplicate-send fix
+// reported 2026-05-20 (rapid double-tap was firing two thanks.send
+// calls before the modal closed). Single source of truth for "is this
+// button still in flight" lives on btn.dataset.busy.
+export async function saveThanks(el) {
+  return withBusyButton(el, '⏳ ' + t('common.sending'), async () => {
+    // Edge Function `thanks.send` expects:
+    //   { project_id, member_id, recipient_email, subject, message }
+    // The admin form historically sent `email_subject` / `email_body` —
+    // those names date back to the Apps Script port and were never
+    // updated when SMTP delivery got wired in (PR #22). Result: the
+    // server saw subject/message as undefined, used defaults, AND
+    // recipient_email was always missing so sendEmail was skipped and
+    // no row even reached the DB (the upsert chain bailed early).
+    // Now sending the right names + looking up the member's email
+    // from DB.members.
+    const mid = gv('thx-mbr');
+    const m   = DB.members.find(mb => mb.member_id === mid);
+    const recipient_email = m ? (m.email || '') : '';
+    const body = {
+      project_id:       gv('thx-prj'),
+      member_id:        mid,
+      recipient_email,
+      subject:          gv('thx-sb'),
+      message:          gv('thx-bd'),
+    };
+    if (!body.project_id) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
+    if (!body.recipient_email && body.member_id) {
+      toast(t('ap.eml.err_no_email'), 'twarn');
+      return;
+    }
+    const r = await api('thanks.send', body);
+    if (r && r.success && r.data) {
+      const st = r.data.status;
+      toast(st === 'Sent' ? t('ap.eml.success_sent') : t('ap.eml.fail_sent'), st === 'Sent' ? 'tok' : 'twarn');
+      closeModal('thanks');
+      ['thx-sb','thx-bd'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+      loadThanks('');
+    }
+  });
 }
 
-export async function saveBulkThanks() {
-  const pid = gv('bthx-prj');
-  if (!pid) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
-  toast(t('ap.eml.bulk_sending'), 'twarn');
-  // bulkSend reads `subject` + `message` at top level, NOT inside an
-  // `options` nest — that nesting was the older Apps-Script-era shape.
-  const r = await api('thanks.bulkSend', {
-    project_id: pid,
-    subject:    gv('bthx-sb'),
-    message:    gv('bthx-msg'),
+export async function saveBulkThanks(el) {
+  return withBusyButton(el, '⏳ ' + t('common.sending'), async () => {
+    const pid = gv('bthx-prj');
+    if (!pid) { toast(t('ap.eml.err_pick_project'), 'twarn'); return; }
+    toast(t('ap.eml.bulk_sending'), 'twarn');
+    // bulkSend reads `subject` + `message` at top level, NOT inside an
+    // `options` nest — that nesting was the older Apps-Script-era shape.
+    const r = await api('thanks.bulkSend', {
+      project_id: pid,
+      subject:    gv('bthx-sb'),
+      message:    gv('bthx-msg'),
+    });
+    if (r && r.success && r.data) {
+      const { sent = 0, failed = 0, count = 0 } = r.data;
+      toast(t('ap.eml.bulk_result', { sent, count, failed }), failed === 0 ? 'tok' : 'twarn');
+      closeModal('bulk-thanks');
+      loadThanks('');
+    }
   });
-  if (r && r.success && r.data) {
-    const { sent = 0, failed = 0, count = 0 } = r.data;
-    toast(t('ap.eml.bulk_result', { sent, count, failed }), failed === 0 ? 'tok' : 'twarn');
-    closeModal('bulk-thanks');
-    loadThanks('');
-  }
 }
