@@ -122,7 +122,14 @@ async function doSubmit() {
           password:    pw1,
         });
 
-    if (!result.success) throw new Error(result.error || 'Activation failed');
+    // 2026-05-21: defensive null guard. callApi returns null on
+    // non-JSON responses + on 401s (server returns 401 for a bad
+    // PIN — `auth.signup.completeByPin` throws err.auth.invalid_credentials).
+    // Without this guard the page crashed with "Cannot read properties
+    // of null" before the user saw the real error. The allowlist fix
+    // in lib/api.js prevents the 401-redirect now, but the null guard
+    // stays as defense-in-depth.
+    if (!result || !result.success) throw new Error(result?.error || 'Activation failed');
 
     // Clear the URL query string so refreshing doesn't replay the token.
     history.replaceState(null, '', window.location.pathname);

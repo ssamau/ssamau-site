@@ -89,9 +89,15 @@ export async function callApi(action, params = {}) {
 
   if (resp.status === 401) {
     clearSession();
-    // Only redirect from authenticated pages — public pages (index, apply)
-    // should surface the error to their own UI instead.
-    if (!/^\/(index\.html|apply\.html|login\.html)?$/i.test(window.location.pathname)) {
+    // Only redirect from authenticated pages — public / pre-auth pages
+    // (index, apply, login, signup, reset-password) get 401s as
+    // domain-specific failures (wrong PIN, expired reset link, etc.),
+    // not "session expired". Redirecting them to login.html turns a
+    // recoverable user error into a confusing page navigation + a
+    // synchronous null-deref crash in the caller. Adding signup +
+    // reset-password to the allowlist 2026-05-21 (iOS testing
+    // surfaced the signup-PIN crash).
+    if (!/^\/(index\.html|apply\.html|login\.html|signup\.html|reset-password\.html)?$/i.test(window.location.pathname)) {
       window.location.href = 'login.html';
     }
     return null;
