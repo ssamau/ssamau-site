@@ -168,11 +168,37 @@ const thanksList: Handler = async (body, user) => {
   const committeeFilter = isHead && !project_id && !member_id
     ? sql`AND p.owning_committee_id = ${user!.committee_id}`
     : sql``;
+  // sent_by_username + the LATERAL hours subquery feed the admin list
+  // view (commit 0674e69's siblings). The hours number is the member's
+  // total recorded hours for THIS project — sums FinalApproved
+  // `hours` rows plus credited `attendance.meeting_hours`, the same
+  // two-source rule recomputeMemberTotalHours uses globally. Lets
+  // admins eyeball whether the thank-you matched the hours the member
+  // actually earned without bouncing to the hours tab.
   return sql`
-    SELECT t.*, m.full_name, m.preferred_name, p.project_name
+    SELECT t.*,
+           m.full_name, m.preferred_name,
+           p.project_name,
+           u.username AS sent_by_username,
+           COALESCE((
+             SELECT SUM(h.total_hours)
+             FROM hours h
+             WHERE h.member_id   = t.member_id
+               AND h.project_id  = t.project_id
+               AND h.approval_status = 'FinalApproved'
+           ), 0) +
+           COALESCE((
+             SELECT SUM(a.meeting_hours)
+             FROM attendance a
+             WHERE a.member_id   = t.member_id
+               AND a.project_id  = t.project_id
+               AND a.meeting_hours IS NOT NULL
+               AND a.attendance_status <> 'Deleted'
+           ), 0) AS recorded_hours
     FROM thanks_emails t
     LEFT JOIN members  m ON m.member_id  = t.member_id
     LEFT JOIN projects p ON p.project_id = t.project_id
+    LEFT JOIN users    u ON u.id          = t.sent_by
     WHERE 1=1
       ${project_id ? sql`AND t.project_id = ${project_id}` : sql``}
       ${member_id  ? sql`AND t.member_id  = ${member_id}`  : sql``}

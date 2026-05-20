@@ -7,7 +7,7 @@
 // counts since partial failures are normal at that scale.
 
 import { DB } from '../../lib/state.js';
-import { esc, gv, tag, setEl } from '../../lib/format.js';
+import { esc, gv, tag, setEl, fmtDateTime } from '../../lib/format.js';
 import { api, toast, closeModal } from '../../lib/ui.js';
 import { t } from '../../lib/i18n.js';
 
@@ -22,15 +22,21 @@ const THX_STATUS_KEY = {
 };
 
 // ── EMAILS / THANKS ──────────────────────────────────────────
+// Field names below match thanks_emails columns directly (status,
+// subject, recipient_email, sent_at). An earlier port from Apps Script
+// left this file reading sent_status / email_subject / participant_type
+// / volunteer_email / hours_included — none of which exist on the
+// table — so every row rendered as em-dashes regardless of actual data.
+// 2026-05-20 fix.
 export async function loadThanks(pid) {
   const d = await api('thanks.list', { project_id: pid });
   if (!d) return;
   const list = d.data || [];
   renderThanks(list);
   setEl('thx-total',   list.length);
-  setEl('thx-sent',    list.filter(row => row.sent_status === 'Sent').length);
-  setEl('thx-pending', list.filter(row => row.sent_status === 'Pending').length);
-  setEl('thx-failed',  list.filter(row => row.sent_status === 'Failed').length);
+  setEl('thx-sent',    list.filter(row => row.status === 'Sent').length);
+  setEl('thx-pending', list.filter(row => row.status === 'Pending').length);
+  setEl('thx-failed',  list.filter(row => row.status === 'Failed').length);
 }
 
 export function renderThanks(list) {
@@ -40,20 +46,38 @@ export function renderThanks(list) {
   // Local var name `row` (not `t`) so we don't shadow the imported i18n
   // helper inside the map callback.
   tb.innerHTML = list.map(row => {
+    // Resolve display name in this order: joined member (server returns
+    // preferred_name / full_name), then DB.members lookup (covers
+    // members not in the current page's cache), then recipient_email,
+    // then em-dash. Always works for both member and external-email
+    // recipients without a synthetic participant_type flag.
     const m  = DB.members.find(mb => mb.member_id === row.member_id);
     const p  = DB.projects.find(pr => pr.project_id === row.project_id);
-    const nm = row.participant_type === 'Member'
-      ? esc(m ? (m.preferred_name || m.full_name) : row.member_id)
-      : esc(row.volunteer_email || '—');
-    const stCls   = row.sent_status === 'Sent' ? 't-g' : row.sent_status === 'Failed' ? 't-r' : 't-y';
-    const stLabel = THX_STATUS_KEY[row.sent_status] ? t(THX_STATUS_KEY[row.sent_status]) : row.sent_status;
+    const memberName = row.preferred_name || row.full_name
+                     || (m ? (m.preferred_name || m.full_name) : '');
+    const nm = memberName
+      ? `<strong>${esc(memberName)}</strong>${row.recipient_email ? `<div style="font-size:.66rem;color:var(--tm);direction:ltr">${esc(row.recipient_email)}</div>` : ''}`
+      : (row.recipient_email
+          ? `<span dir="ltr">${esc(row.recipient_email)}</span>`
+          : '—');
+    const stCls   = row.status === 'Sent' ? 't-g' : row.status === 'Failed' ? 't-r' : 't-y';
+    const stLabel = THX_STATUS_KEY[row.status] ? t(THX_STATUS_KEY[row.status]) : (row.status || '—');
+    const hrs = (row.recorded_hours != null && Number(row.recorded_hours) > 0)
+      ? `<strong style="color:var(--g)">${Number(row.recorded_hours)}</strong>`
+      : '—';
+    const projectName = row.project_name || (p ? p.project_name : row.project_id) || '—';
+    const sentBy = row.sent_by_username ? esc(row.sent_by_username) : '—';
+    const sentAt = row.sent_at ? fmtDateTime(row.sent_at) : '';
     return `<tr>
-      <td><strong>${nm}</strong></td>
-      <td style="font-size:.76rem">${esc(p ? p.project_name : row.project_id)}</td>
-      <td style="font-size:.75rem;max-width:140px;overflow:hidden;text-overflow:ellipsis">${esc(row.email_subject || '—')}</td>
-      <td>${row.hours_included ? '✅' : '—'}</td>
+      <td>${nm}</td>
+      <td style="font-size:.76rem">${esc(projectName)}</td>
+      <td style="font-size:.75rem;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(row.subject || '—')}</td>
+      <td>${hrs}</td>
       <td>${tag(stLabel, stCls)}</td>
-      <td style="font-size:.71rem;color:var(--tm)">${String(row.sent_at || '').split('T')[0] || '—'}</td>
+      <td style="font-size:.71rem;color:var(--tm);line-height:1.4">
+        ${sentAt ? `<div>${sentAt}</div>` : '<div>—</div>'}
+        <div>${esc(t('ap.eml.sent_by_lbl'))}: ${sentBy}</div>
+      </td>
     </tr>`;
   }).join('');
 }

@@ -757,9 +757,19 @@
       <div id="hd-att-member-section">
         <div class="fg">
           <label data-i18n="hp.att.lbl_member">العضو</label>
-          <select id="hd-att-member">
-            <option value="" data-i18n="hp.att.member_pick">— اختر العضو —</option>
-          </select>
+          <div style="display:flex;gap:.4rem;align-items:stretch">
+            <select id="hd-att-member" style="flex:1">
+              <option value="" data-i18n="hp.att.member_pick">— اختر العضو —</option>
+            </select>
+            <!-- Self-log shortcut (2026-05-20). Answers the president's
+                 question: "how can a head log hours for themselves?"
+                 Click sets the dropdown to the head's own member_id so
+                 the same form path records their hours. -->
+            <button type="button" id="hd-att-pick-self" class="btn btn-ol btn-sm"
+                    data-i18n="hp.att.pick_self_btn"
+                    title="سجّل ساعاتي على هذه المبادرة"
+                    style="font-size:.72rem;white-space:nowrap;flex-shrink:0">👤 سجّل لنفسي</button>
+          </div>
         </div>
       </div>
 

@@ -245,7 +245,7 @@ const getMemberHours: Handler = async (body) => {
 // Everything that records/edits/approves hours OR records meeting
 // attendance with hours must call this with the affected member_id
 // (or no-op on null) so the cache stays consistent.
-async function recomputeMemberTotalHours(member_id: string | null | undefined): Promise<void> {
+export async function recomputeMemberTotalHours(member_id: string | null | undefined): Promise<void> {
   if (!member_id) return;
   await sql`
     UPDATE members SET total_hours = (

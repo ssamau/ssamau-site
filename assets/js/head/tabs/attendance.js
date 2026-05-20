@@ -211,6 +211,31 @@ export async function openHeadAttendanceModal(attendanceId) {
     .filter(m => m.status !== 'Inactive')
     .filter(m => myCommittee ? m.committee_id === myCommittee : true);
   _populateAttDropdowns();
+  // Bind the "log for myself" shortcut (2026-05-20). Idempotent —
+  // re-binding on every modal open is fine because addEventListener
+  // dedupes identical fn refs, but to be safe we replace the node
+  // first which clears any prior listeners cleanly.
+  const selfBtn = document.getElementById('hd-att-pick-self');
+  if (selfBtn) {
+    const fresh = selfBtn.cloneNode(true);
+    selfBtn.parentNode.replaceChild(fresh, selfBtn);
+    fresh.addEventListener('click', () => {
+      const myId = window.CURRENT_USER?.member_id;
+      if (!myId) return;
+      // If the head isn't already in the dropdown (e.g. their member row
+      // sits in a different committee from the one they're assigned to
+      // moderate), inject them so the select.value assignment lands.
+      const sel = document.getElementById('hd-att-member');
+      if (sel && !sel.querySelector(`option[value="${myId}"]`)) {
+        const meName = window.CURRENT_USER?.name || myId;
+        const opt = document.createElement('option');
+        opt.value = myId;
+        opt.textContent = meName;
+        sel.appendChild(opt);
+      }
+      sv('hd-att-member', myId);
+    });
+  }
 
   // Pre-fill in edit mode. Done AFTER dropdowns hydrate so the
   // select.value = ... lines have options to land on. The cached
@@ -311,10 +336,15 @@ function _syncAttModeUi() {
   const meet = document.getElementById('hd-att-meeting-section');
   if (proj) proj.style.display = mode === 'project' ? '' : 'none';
   if (meet) meet.style.display = mode === 'meeting' ? '' : 'none';
-  // Hours field only makes sense for ad-hoc meetings — project-linked
-  // attendance gets its hours via the opportunity+hours flow, not here.
+  // Hours field is now available in BOTH modes (2026-05-20, fix for the
+  // president's "people attended a مبادرة but got no hours" report). The
+  // previous behaviour hid the field for project mode, on the assumption
+  // that project hours would flow via the opportunity+assignment path —
+  // but heads were marking attendance directly without that path, so the
+  // hours never landed. Letting them set hours inline solves both
+  // intentional and accidental gaps.
   const hoursWrap = document.getElementById('hd-att-hours-wrap');
-  if (hoursWrap) hoursWrap.style.display = mode === 'meeting' ? '' : 'none';
+  if (hoursWrap) hoursWrap.style.display = '';
 }
 function _syncAttAttendeeUi() {
   const ty = _radioValue('hd-att-attendee-type') || 'member';
@@ -354,9 +384,10 @@ export async function saveHeadAttendance() {
     body.meeting_date       = mdate;
     body.meeting_start_time = mtime;
     body.meeting_location   = gv('hd-att-meeting-location') || null;
-    const hrs = (gv('hd-att-hours') || '').trim();
-    if (hrs !== '') body.meeting_hours = Number(hrs);
   }
+  // Hours apply to both modes — picked up from the same single input.
+  const hrs = (gv('hd-att-hours') || '').trim();
+  if (hrs !== '') body.meeting_hours = Number(hrs);
 
   if (attType === 'member') {
     const mid = gv('hd-att-member');

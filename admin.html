@@ -512,10 +512,11 @@
               <th data-i18n="ap.att.col_type">النوع</th>
               <th data-i18n="ap.att.col_status">حالة الحضور</th>
               <th data-i18n="ap.att.col_date">تاريخ الحضور</th>
+              <th data-i18n="ap.att.col_hours">الساعات</th>
               <th data-i18n="ap.att.col_checker">سجّله</th>
               <th data-i18n="ap.att.col_actions">إجراءات</th>
             </tr></thead>
-            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="7" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
+            <tbody id="attendance-tbody"><tr class="empty-row"><td colspan="8" data-i18n="common.loading">جاري التحميل…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1414,6 +1415,7 @@
         </div>
         <div class="fg"><label data-i18n="ap.att.lbl_date">تاريخ الحضور</label><input id="att-date" type="date"/></div>
       </div>
+      <div class="fg"><label data-i18n="ap.att.lbl_hours">الساعات التطوعية</label><input id="att-hours" type="number" step="0.25" min="0" max="24" placeholder="0" dir="ltr"/></div>
       <div class="fg"><label data-i18n="ap.att.lbl_checker">سجّله</label><select id="att-checker"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
       <div class="fg"><label data-i18n="ap.att.lbl_notes">ملاحظات</label><textarea id="att-notes"></textarea></div>
     </div>
