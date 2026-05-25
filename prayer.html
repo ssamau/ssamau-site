@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>أوقات صلاة عيد الأضحى — نادي الطلبة السعوديين في ملبورن</title>
+<meta name="description" content="أوقات صلاة عيد الأضحى ١٤٤٧ هـ — الأربعاء 27 مايو 2026، مساجد ملبورن. Eid Al-Adha prayer times across Melbourne mosques."/>
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/prayer.css"/>
+<link rel="icon" type="image/png" href="assets/img/logo-200.png"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1A5C2E" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0e3a1c" media="(prefers-color-scheme: dark)"/>
+</head>
+<body>
+
+<!--
+  Eid Al-Adha 2026 prayer-times page.
+  Standalone seasonal poster-style page — no nav chrome, no JS.
+  Hardcoded for Eid 1447 H. To roll over for the next Eid: swap the
+  <h1>, .date, .hijri lines and the mosque cards. CSS lives in
+  assets/css/prayer.css. The /prayer clean URL is wired in
+  netlify.toml (rewrite to /prayer.html).
+
+  Map links: each mosque card includes a Google Maps query that
+  resolves to the correct place. Cards where the underlying venue
+  is ambiguous (e.g. 1st Narre Warren Scout Hall — multiple Scout
+  halls in that suburb) intentionally omit the map link until the
+  exact address is confirmed.
+-->
+
+  <div class="container">
+
+    <header class="hero">
+      <img class="logo" src="assets/img/logo-200.png" alt="نادي الطلبة السعوديين في ملبورن">
+      <div class="ornament"></div>
+      <h1>أوقات صلاة عيد الأضحى</h1>
+      <div class="date">الأربعاء 27 مايو 2026</div>
+      <div class="hijri">10 ذو الحجة 1447 هـ &middot; بحسب إعلان ANIC</div>
+    </header>
+
+    <!-- ── NORTH ────────────────────────────────────────────────── -->
+    <section class="region">
+      <div class="region-label">
+        <span class="region-en">N O R T H</span>
+        <span class="region-ar">شمال ملبورن</span>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">ICMG Brunswick Mosque</div>
+          <div class="mosque-address">660 Sydney Rd, Brunswick</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=ICMG+Brunswick+Mosque+660+Sydney+Rd+Brunswick" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">8:15 AM</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Coburg Islamic Centre</div>
+          <div class="mosque-address">CIC / Fatih · 31 Nicholson St, Coburg</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Coburg+Islamic+Centre+31+Nicholson+St+Coburg" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time tbc">TBC</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Preston Mosque</div>
+          <div class="mosque-address">Umar bin Al-Khattab · 90 Cramer St, Preston</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Omar+Bin+Al+Khattab+Mosque+90+Cramer+St+Preston" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time tbc">TBC</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Elsedeaq Heidelberg Mosque</div>
+          <div class="mosque-address">32 Elliott St, Heidelberg Heights</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Elsedeaq+Heidelberg+Mosque+32+Elliott+St" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time tbc">TBC</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">La Trobe Mosque</div>
+          <div class="mosque-address">5 The Agora, Bundoora</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=La+Trobe+Mosque+5+The+Agora+Bundoora" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time approx">~7:50</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">MyCentre Mosque</div>
+          <div class="mosque-address">IISNA · 31 Kraft Ct, Broadmeadows</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=MyCentre+Mosque+IISNA+31+Kraft+Ct+Broadmeadows" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">7:40 AM</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">ICMG Meadow Heights</div>
+          <div class="mosque-address">15-17 Hudson Cct, Meadow Heights</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=ICMG+Meadow+Heights+Mosque+15-17+Hudson+Circuit" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">8:10 AM</div>
+      </div>
+    </section>
+
+    <!-- ── CBD & WEST ───────────────────────────────────────────── -->
+    <section class="region">
+      <div class="region-label">
+        <span class="region-en">C B D &nbsp; & &nbsp; W E S T</span>
+        <span class="region-ar">وسط ملبورن وغربها</span>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">ICV at Flagstaff Gardens</div>
+          <div class="mosque-address">Flagstaff Gardens, West Melbourne</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Flagstaff+Gardens+West+Melbourne" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">7:45 AM</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">The Junction</div>
+          <div class="mosque-address">Swinburne · 660A Glenferrie Rd, Hawthorn</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Swinburne+University+Multi+Faith+Centre+660A+Glenferrie+Rd+Hawthorn" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">8:00 AM</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Melbourne Grand Mosque</div>
+          <div class="mosque-address">MGM · 70 Wootten Rd, Tarneit</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Melbourne+Grand+Mosque+70+Wootten+Rd+Tarneit" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">7:45+</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Australian Islamic Centre</div>
+          <div class="mosque-address">AIC · 23-27 Blenheim Rd, Newport</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Australian+Islamic+Centre+23-27+Blenheim+Rd+Newport" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time tbc">TBC</div>
+      </div>
+    </section>
+
+    <!-- ── SOUTH-EAST ───────────────────────────────────────────── -->
+    <section class="region">
+      <div class="region-label">
+        <span class="region-en">S O U T H - E A S T</span>
+        <span class="region-ar">جنوب وجنوب شرق ملبورن</span>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">Minaret College Mosque</div>
+          <div class="mosque-address">38 Lewis St, Springvale VIC 3171</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Minaret+College+Mosque+38+Lewis+St+Springvale" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">8:10 AM</div>
+      </div>
+
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">ICMG Emir Sultan Mosque</div>
+          <div class="mosque-address">139 Cleeland St, Dandenong</div>
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=ICMG+Emir+Sultan+Mosque+139+Cleeland+St+Dandenong" target="_blank" rel="noopener">خريطة · Map</a>
+        </div>
+        <div class="time">8:15 AM</div>
+      </div>
+
+      <!--
+        1st Narre Warren Scout Hall — address intentionally blank +
+        no map link. Multiple Scout halls exist in the area
+        (Narre Warren, Narre Warren North, Narre Warren South); the
+        exact venue is pending confirmation from the president.
+        Update both the .mosque-address and the .map-link href when
+        the address lands.
+      -->
+      <div class="card">
+        <div class="mosque">
+          <div class="mosque-name">1st Narre Warren Scout Hall</div>
+          <div class="mosque-address">&nbsp;</div>
+        </div>
+        <div class="time">8:30 AM</div>
+      </div>
+    </section>
+
+    <!-- ── Footer ───────────────────────────────────────────────── -->
+    <div class="footer">
+      <div class="ornament"></div>
+      <div class="hashtag">#النادي_السعودي_في_ملبورن_2026</div>
+      <a class="back-link" href="index.html">← العودة إلى الصفحة الرئيسية</a>
+    </div>
+
+  </div>
+</body>
+</html>

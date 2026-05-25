@@ -44,6 +44,21 @@
   status = 200
   force = true
 
+# Vanity short-url for the Eid prayer-times page. Lets the president
+# share "ssamau.com/prayer" verbally / in WhatsApp without the .html
+# suffix. Rewrite (status 200) keeps the URL stable in the address bar;
+# a 301 redirect would also work but the rewrite is friendlier for
+# screenshots + linkshares.
+[[redirects]]
+  from = "/prayer"
+  to = "/prayer.html"
+  status = 200
+
+[[redirects]]
+  from = "/prayer/"
+  to = "/prayer.html"
+  status = 200
+
 # Vanity short-url for cert verification. The cert card footer shows
 # "ssamau.com/verify" as the verification URL — the president typed
 # that bare URL and got a Netlify 404 on 2026-05-15. Map it (with and
