@@ -178,6 +178,42 @@ h1 {
 }
 .back-link:hover { color: var(--green); }
 
+/* ── GoPray app section ──────────────────────────────────────── */
+.app-section {
+  margin: 1rem 0 1.75rem;
+}
+.footer-call {
+  color: var(--green);
+  font-weight: 700;
+  font-size: .95rem;
+  margin-bottom: .25rem;
+}
+.footer-app-name {
+  color: var(--muted);
+  font-size: .85rem;
+  margin-bottom: 1rem;
+}
+.app-badges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .85rem;
+  flex-wrap: wrap;
+}
+.app-badges a {
+  display: inline-block;
+  transition: opacity .15s;
+  /* Force LTR inside the badge row so the App Store / Google Play
+     order doesn't visually reverse on this RTL page. */
+  direction: ltr;
+}
+.app-badges a:hover { opacity: .85; }
+.app-badges img {
+  height: 46px;
+  width: auto;
+  display: block;
+}
+
 /* ── Mobile tweaks ────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .container { padding: 1.5rem 1rem 2.5rem; }
@@ -187,4 +223,5 @@ h1 {
   .time { font-size: .9rem; padding: .45rem .85rem; min-width: 72px; }
   .mosque-name { font-size: .95rem; }
   .mosque-address { font-size: .78rem; }
+  .app-badges img { height: 40px; }
 }
