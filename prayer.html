@@ -44,12 +44,16 @@
       Mosque cards are <a> elements (whole-card click → Google Maps).
       Order within each region: by prayer time, earliest first; TBC
       mosques last. Region order: NORTH → CBD & WEST → SOUTH-EAST →
-      EAST. Data source: SSAM_Mosques_Data_2026.xlsx (president's
-      sheet), Maps URLs taken verbatim from column L (the disambiguating
-      queries he tuned). Status pill classes:
+      EAST. Data source: SSAM Mosques Data Latest.xlsx (president's
+      v3 sheet, 2026-05-26 — adds three time columns: takbeerat,
+      prayer, additional sessions). Maps URLs taken verbatim from
+      column N. Status pill classes:
         - .time            (default green)   → confirmed
-        - .time.tentative  (yellow)          → time announced but unverified for 2026
-        - .time.tbc        (beige)           → time not announced — pill text becomes "موعد لاحقاً"
+        - .time.tentative  (yellow)          → unused on current data; kept for future
+        - .time.tbc        (beige)           → unused on current data; kept for future
+      Optional .mosque-extras line under the address surfaces
+      takbeerat time and/or extra sessions / imam info — rendered
+      only when at least one is present in the spreadsheet.
     -->
 
     <!-- ── NORTH ────────────────────────────────────────────────── -->
@@ -89,6 +93,16 @@
         <div class="time">8:00 AM</div>
       </a>
 
+      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Elsedeaq+Heidelberg+Mosque+32+Elliott+St+Heidelberg+Heights" target="_blank" rel="noopener">
+        <div class="mosque">
+          <div class="mosque-name">Elsedeaq Heidelberg Mosque</div>
+          <div class="mosque-address">32 Elliott Street, Heidelberg Heights 3081</div>
+          <div class="mosque-extras">التكبيرات 7:00 AM · فعاليات 9:00 AM</div>
+          <span class="map-hint">خريطة · Map</span>
+        </div>
+        <div class="time">8:00 AM</div>
+      </a>
+
       <a class="card" href="https://www.google.com/maps/search/?api=1&query=ICMG+Meadow+Heights+Mosque+15+Hudson+Circuit+Meadow+Heights" target="_blank" rel="noopener">
         <div class="mosque">
           <div class="mosque-name">ICMG Meadow Heights</div>
@@ -112,20 +126,11 @@
       <a class="card" href="https://www.google.com/maps/search/?api=1&query=Coburg+Islamic+Centre+31+Nicholson+St+Coburg" target="_blank" rel="noopener">
         <div class="mosque">
           <div class="mosque-name">Coburg Islamic Centre</div>
-          <div class="mosque-detail">CIC / Fatih</div>
+          <div class="mosque-detail">CIC · Fātih Mosque</div>
           <div class="mosque-address">31 Nicholson Street, Coburg 3058</div>
           <span class="map-hint">خريطة · Map</span>
         </div>
-        <div class="time tbc">موعد لاحقاً</div>
-      </a>
-
-      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Elsedeaq+Heidelberg+Mosque+32+Elliott+St+Heidelberg+Heights" target="_blank" rel="noopener">
-        <div class="mosque">
-          <div class="mosque-name">Elsedeaq Heidelberg Mosque</div>
-          <div class="mosque-address">32 Elliott Street, Heidelberg Heights 3081</div>
-          <span class="map-hint">خريطة · Map</span>
-        </div>
-        <div class="time tbc">موعد لاحقاً</div>
+        <div class="time">8:15 AM</div>
       </a>
     </section>
 
@@ -149,23 +154,20 @@
       <a class="card" href="https://www.google.com/maps/search/?api=1&query=Melbourne+Grand+Mosque+70+Wootten+Rd+Tarneit" target="_blank" rel="noopener">
         <div class="mosque">
           <div class="mosque-name">Melbourne Grand Mosque</div>
-          <div class="mosque-detail">MGM</div>
+          <div class="mosque-detail">MGM · Werribee Islamic Centre</div>
           <div class="mosque-address">70 Wootten Road, Tarneit 3029</div>
+          <div class="mosque-extras">جلسات 2/3/4: 8:45 · 9:45 · 10:45 AM</div>
           <span class="map-hint">خريطة · Map</span>
         </div>
         <div class="time">7:45 AM</div>
       </a>
 
-      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Swinburne+University+Multi-Faith+Centre+660A+Glenferrie+Rd+Hawthorn" target="_blank" rel="noopener">
-        <div class="mosque">
-          <div class="mosque-name">The Junction</div>
-          <div class="mosque-detail">Swinburne University Multi-Faith Centre</div>
-          <div class="mosque-address">660A Glenferrie Road, Hawthorn 3122</div>
-          <span class="map-hint">خريطة · Map</span>
-        </div>
-        <div class="time">8:00 AM</div>
-      </a>
-
+      <!--
+        The Junction (Swinburne Multi-Faith Centre) dropped in the
+        v3 spreadsheet — no longer listed by the president. Removed
+        from the page accordingly. Earlier card markup is in git
+        history (commit f84b266).
+      -->
       <a class="card" href="https://www.google.com/maps/search/?api=1&query=Australian+Islamic+Centre+23-27+Blenheim+Rd+Newport" target="_blank" rel="noopener">
         <div class="mosque">
           <div class="mosque-name">Australian Islamic Centre</div>
@@ -173,7 +175,7 @@
           <div class="mosque-address">23-27 Blenheim Road, Newport 3015</div>
           <span class="map-hint">خريطة · Map</span>
         </div>
-        <div class="time tbc">موعد لاحقاً</div>
+        <div class="time">8:30 AM</div>
       </a>
     </section>
 
@@ -184,34 +186,45 @@
         <span class="region-ar">جنوب وجنوب شرق ملبورن</span>
       </div>
 
-      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Minaret+College+Springvale+Campus+38+Lewis+St" target="_blank" rel="noopener">
+      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Monash+University+Sports+Complex+Stadium+Clayton" target="_blank" rel="noopener">
         <div class="mosque">
-          <div class="mosque-name">Minaret College Mosque</div>
-          <div class="mosque-detail">Springvale Campus</div>
-          <div class="mosque-address">38 Lewis Street, Springvale 3171</div>
+          <div class="mosque-name">Monash University</div>
+          <div class="mosque-detail">MUIS · Monash University Islamic Society</div>
+          <div class="mosque-address">Sports Complex Stadium, Clayton 3168</div>
+          <div class="mosque-extras">التكبيرات 7:45 AM · الإمام: الشيخ د. أبو عمر</div>
           <span class="map-hint">خريطة · Map</span>
         </div>
-        <div class="time">8:10 AM</div>
+        <div class="time">8:00 AM</div>
       </a>
 
       <a class="card" href="https://www.google.com/maps/search/?api=1&query=ICMG+Emir+Sultan+Mosque+139+Cleeland+St+Dandenong" target="_blank" rel="noopener">
         <div class="mosque">
           <div class="mosque-name">ICMG Emir Sultan Mosque</div>
-          <div class="mosque-detail">ICMG</div>
+          <div class="mosque-detail">ICMG · 2 sessions</div>
           <div class="mosque-address">139 Cleeland Street, Dandenong 3175</div>
+          <div class="mosque-extras">الجلسة الثانية: 9:30 AM</div>
           <span class="map-hint">خريطة · Map</span>
         </div>
-        <div class="time">8:15 AM</div>
+        <div class="time">8:00 AM</div>
+      </a>
+
+      <a class="card" href="https://www.google.com/maps/search/?api=1&query=Minaret+College+Springvale+Campus+36-38+Lewis+St" target="_blank" rel="noopener">
+        <div class="mosque">
+          <div class="mosque-name">Minaret College Mosque</div>
+          <div class="mosque-detail">Springvale Campus</div>
+          <div class="mosque-address">36-38 Lewis Street, Springvale 3171</div>
+          <div class="mosque-extras">التكبيرات 8:10 AM</div>
+          <span class="map-hint">خريطة · Map</span>
+        </div>
+        <div class="time">8:30 AM</div>
       </a>
 
       <!--
-        1st Narre Warren Scout Hall left off the page — no street
-        address in the source data, multiple Scout halls in the
-        Narre Warren area (Narre Warren proper, North, South), so
-        the suburb-level Maps query would land on a generic result
-        rather than the specific hall hosting the prayer. Re-add
-        when the president confirms the street address. Earlier
-        card markup is in git history (commit 7ffd730).
+        1st Narre Warren Scout Hall intentionally omitted — president's
+        v3 spreadsheet has the row but the `address` column is still "—"
+        (only suburb + postcode). User asked to keep it off the page
+        until a street address lands. Re-add point + card markup
+        reference: commit 7ffd730.
       -->
     </section>
 

@@ -159,6 +159,22 @@ h1 {
   color: var(--muted);
   margin-top: .1rem;
 }
+/*
+  Optional sub-line under the address, used when the spreadsheet
+  has takbeerat time and/or extra session / imam info. Set to
+  direction: rtl so the Arabic labels (التكبيرات, الإمام, جلسة ...)
+  read naturally; embedded English times (e.g. "7:00 AM") render
+  L-to-R within the run via the bidirectional algorithm. Slightly
+  warmer color than .mosque-address to separate it visually from
+  the plain address line above.
+*/
+.mosque-extras {
+  font-size: .78rem;
+  color: #7a5d10;
+  margin-top: .35rem;
+  direction: rtl;
+  text-align: left;
+}
 .map-hint {
   display: inline-block;
   margin-top: .45rem;
