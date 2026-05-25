@@ -291,6 +291,14 @@ h1 {
   width: auto;
   display: block;
 }
+/* Google Play's "Get it on" badge is shipped at 646×250 with thick
+   built-in clear-space padding (Google brand guideline), so at the
+   same `height` it looks visibly smaller than Apple's 119×40 badge.
+   Compensate by sizing the Play badge taller so the visible logo +
+   text inside it match the visual weight of the App Store badge. */
+.app-badges img[alt^="Get"] {
+  height: 64px;
+}
 
 /* ── Mobile tweaks ────────────────────────────────────────────── */
 @media (max-width: 480px) {
@@ -302,6 +310,7 @@ h1 {
   .mosque-name { font-size: .95rem; }
   .mosque-address { font-size: .78rem; }
   .app-badges img { height: 40px; }
+  .app-badges img[alt^="Get"] { height: 56px; }
   .celebration-cards { grid-template-columns: 1fr; }
   .celebration-head h2 { font-size: 1.4rem; }
 }
