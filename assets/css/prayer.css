@@ -97,9 +97,22 @@ h1 {
 }
 
 /* ── Mosque card ──────────────────────────────────────────────── */
+/*
+  Grid layout: time pill anchors the right edge of each card; mosque
+  info (English name + address + map link) fills the left.
+  In RTL containers, column 1 lays out at the visual right and
+  column 2 at the visual left. We keep HTML order <mosque><time>
+  for screen-reader sensibility (name first, then time) and use
+  `order` to flip the visual grid placement — time → column 1
+  (right, narrow auto width), mosque → column 2 (left, fills 1fr).
+  This was the missing RTL-feel piece the president flagged: with
+  the previous mosque-on-right layout, the dominant English name
+  text was on the right and made the eye scan LTR despite the
+  page being dir="rtl".
+*/
 .card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 1rem;
   background: var(--paper);
@@ -110,6 +123,7 @@ h1 {
   box-shadow: 0 1px 2px rgba(0,0,0,.025);
 }
 .mosque {
+  order: 2;
   direction: ltr;
   text-align: left;
 }
@@ -136,6 +150,7 @@ h1 {
 .map-link::before { content: '📍 '; }
 
 .time {
+  order: 1;
   background: var(--green);
   color: #fff;
   padding: .55rem 1.05rem;
