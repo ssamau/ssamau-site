@@ -1,31 +1,55 @@
 #!/usr/bin/env bash
 #
-# Pre-commit hook: i18n key parity.
+# Pre-commit hook. Two checks, both opt-in based on what's staged:
 #
-# Only runs when one of the i18n catalog files is in the staged diff —
-# the check itself is cheap (~150ms), but skipping it on unrelated
-# commits keeps the feedback loop tight.
+#   1. i18n key parity — runs when ar.js or en.js is in the staged diff.
+#      Catches keys added to one language but not the other.
+#
+#   2. SCHEMA refresh reminder — runs when a file under
+#      supabase/migrations/ is staged but db/SCHEMA.md is NOT. Warns
+#      (does not block) so you can choose to either regenerate via
+#      `npm run dump:schema` or commit anyway and refresh later.
 #
 # Activation:  git config core.hooksPath scripts/git-hooks
+#              (or `npm run install:hooks`)
 # Bypass once: git commit --no-verify
-#              (use sparingly — the script catches real bugs)
+#              (use sparingly — both checks catch real bugs)
 
 set -e
 
-# Only run if the staged diff actually touches an i18n catalog. `git
-# diff --cached --name-only` lists everything in the staged set; grep
-# returns 0 only when there's a hit.
-STAGED_I18N=$(git diff --cached --name-only --diff-filter=ACMR | grep -E 'assets/js/lib/strings/(ar|en)\.js' || true)
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
 
-if [ -z "$STAGED_I18N" ]; then
-  exit 0
+# ── 1. i18n parity ───────────────────────────────────────────────────
+STAGED_I18N=$(echo "$STAGED" | grep -E 'assets/js/lib/strings/(ar|en)\.js' || true)
+
+if [ -n "$STAGED_I18N" ]; then
+  echo "→ Running i18n parity check (catalog files staged)..."
+  if ! node scripts/check-i18n-parity.mjs; then
+    echo ""
+    echo "Aborting commit. Fix the parity issues above and re-stage, or"
+    echo "use 'git commit --no-verify' if you intentionally want to ship"
+    echo "the divergence (and immediately follow up to restore parity)."
+    exit 1
+  fi
 fi
 
-echo "→ Running i18n parity check (catalog files staged)..."
-if ! node scripts/check-i18n-parity.mjs; then
+# ── 2. SCHEMA refresh reminder ───────────────────────────────────────
+# A migration changes the database shape; db/SCHEMA.md is the
+# human-readable reference. They should stay in sync.
+STAGED_MIGRATIONS=$(echo "$STAGED" | grep -E '^supabase/migrations/.+\.sql$' || true)
+STAGED_SCHEMA=$(echo "$STAGED"     | grep -E '^db/SCHEMA\.md$'                || true)
+
+if [ -n "$STAGED_MIGRATIONS" ] && [ -z "$STAGED_SCHEMA" ]; then
   echo ""
-  echo "Aborting commit. Fix the parity issues above and re-stage, or"
-  echo "use 'git commit --no-verify' if you intentionally want to ship"
-  echo "the divergence (and immediately follow up to restore parity)."
-  exit 1
+  echo "⚠ Migration(s) staged but db/SCHEMA.md was not:"
+  echo "$STAGED_MIGRATIONS" | sed 's/^/    /'
+  echo ""
+  echo "  Run: DATABASE_URL=... npm run dump:schema"
+  echo "  then: git add db/SCHEMA.md"
+  echo ""
+  echo "  Continuing without it (warning only — not blocking). To"
+  echo "  silence this check on a migration that doesn't change column"
+  echo "  shape (data-only migrations, RLS-only changes), commit with"
+  echo "  --no-verify."
+  echo ""
 fi

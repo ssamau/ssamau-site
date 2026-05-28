@@ -1,0 +1,188 @@
+#!/usr/bin/env node
+// scripts/dump-schema.mjs
+//
+// Regenerates db/SCHEMA.md from the live database. Used as a quick
+// reference so a session doesn't have to round-trip to
+// information_schema every time it wants to recall a column name.
+//
+// Usage:
+//   DATABASE_URL=postgres://... npm run dump:schema
+//
+// Where to get DATABASE_URL:
+//   Supabase Dashboard → Settings → Database → Connection string
+//   (use the "URI" tab; the pooled or direct URL both work)
+//
+// .env.local is read automatically if it sets DATABASE_URL. The .env*
+// files are gitignored — never commit a real connection string. The
+// service-role key + JWT_SECRET live in Supabase project secrets,
+// not in this repo.
+
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import postgres from 'postgres';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(HERE, '..');
+
+// ── Load .env.local if present (DATABASE_URL only; we don't shell-execute) ─
+function loadDotenv() {
+  const p = resolve(REPO_ROOT, '.env.local');
+  try {
+    const text = readFileSync(p, 'utf8');
+    for (const line of text.split('\n')) {
+      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      if (!(m[1] in process.env)) {
+        // Strip surrounding quotes if present
+        const val = m[2].replace(/^['"]|['"]$/g, '');
+        process.env[m[1]] = val;
+      }
+    }
+  } catch { /* no .env.local — fine */ }
+}
+loadDotenv();
+
+const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!CONN) {
+  console.error('✗ Set DATABASE_URL to a Postgres connection string.');
+  console.error('  Supabase Dashboard → Settings → Database → Connection string.');
+  console.error('  Tip: put it in .env.local (gitignored) so you don\'t have to');
+  console.error('  re-export it every shell.');
+  process.exit(1);
+}
+
+const sql = postgres(CONN, {
+  prepare: false,
+  ssl: 'require',
+  // Read-only query — keep the pool small and exit promptly.
+  max: 1,
+  idle_timeout: 1,
+});
+
+try {
+  const cols = await sql`
+    SELECT
+      table_schema, table_name, column_name,
+      data_type
+        || CASE WHEN character_maximum_length IS NOT NULL
+                THEN '(' || character_maximum_length || ')' ELSE '' END AS type,
+      is_nullable,
+      COALESCE(column_default, '') AS default_val,
+      COALESCE(is_generated, 'NEVER') AS is_generated,
+      ordinal_position
+    FROM information_schema.columns
+    WHERE table_schema IN ('public', 'private')
+    ORDER BY table_schema, table_name, ordinal_position
+  `;
+
+  const constraints = await sql`
+    SELECT
+      tc.table_schema, tc.table_name, tc.constraint_type,
+      string_agg(kcu.column_name, ',' ORDER BY kcu.ordinal_position) AS cols
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu USING (constraint_schema, constraint_name, table_schema, table_name)
+    WHERE tc.table_schema IN ('public','private')
+      AND tc.constraint_type IN ('PRIMARY KEY','UNIQUE')
+    GROUP BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name
+    ORDER BY tc.table_schema, tc.table_name
+  `;
+
+  const fks = await sql`
+    SELECT
+      tc.table_schema, tc.table_name, kcu.column_name AS col,
+      ccu.table_schema AS ref_schema, ccu.table_name AS ref_table, ccu.column_name AS ref_col
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu USING (constraint_schema, constraint_name, table_schema, table_name)
+    JOIN information_schema.constraint_column_usage ccu USING (constraint_schema, constraint_name)
+    WHERE tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_schema IN ('public','private')
+    ORDER BY tc.table_schema, tc.table_name, kcu.ordinal_position
+  `;
+
+  // Build lookups
+  const byTable = new Map();
+  for (const r of cols) {
+    const key = `${r.table_schema}.${r.table_name}`;
+    if (!byTable.has(key)) byTable.set(key, []);
+    byTable.get(key).push(r);
+  }
+  const pkByTable = new Map();
+  const uniquesByTable = new Map();
+  for (const c of constraints) {
+    const key = `${c.table_schema}.${c.table_name}`;
+    if (c.constraint_type === 'PRIMARY KEY') pkByTable.set(key, c.cols);
+    else {
+      if (!uniquesByTable.has(key)) uniquesByTable.set(key, []);
+      uniquesByTable.get(key).push(c.cols);
+    }
+  }
+  const fkByCol = new Map();
+  for (const f of fks) {
+    fkByCol.set(`${f.table_schema}.${f.table_name}.${f.col}`, f);
+  }
+
+  // Migration count + latest migration filename for the header
+  const migDir = resolve(REPO_ROOT, 'supabase/migrations');
+  const migFiles = readdirSync(migDir).filter(f => f.endsWith('.sql')).sort();
+  const migCount = migFiles.length;
+  const latestMig = migFiles[migFiles.length - 1] || 'unknown';
+
+  // Render markdown
+  const lines = [];
+  lines.push('# SSAM database schema');
+  lines.push('');
+  lines.push('Generated by `npm run dump:schema` (script at `scripts/dump-schema.mjs`).');
+  lines.push(`Based on ${migCount} applied migrations through \`${latestMig}\`.`);
+  lines.push('');
+  lines.push('Schemas dumped: `public` (application tables) and `private` (auth lockout state).');
+  lines.push('`auth` and `storage` are Supabase-managed and intentionally excluded.');
+  lines.push('');
+  lines.push('**Refresh:** Run `npm run dump:schema` after any migration. The pre-commit hook');
+  lines.push('warns when migrations are staged without a matching SCHEMA.md update.');
+  lines.push('');
+  lines.push('Notation:');
+  lines.push('- **PK** marks a primary-key column.');
+  lines.push('- **UQ** marks a column under a UNIQUE constraint.');
+  lines.push('- **FK → schema.table.col** marks a foreign-key reference.');
+  lines.push('- *generated* in the default column = computed by Postgres; never include in INSERT.');
+  lines.push('');
+  lines.push('---');
+
+  const sortedKeys = [...byTable.keys()].sort();
+  for (const key of sortedKeys) {
+    const [sch, tbl] = key.split('.');
+    const tcols = byTable.get(key);
+    const pkCols = new Set((pkByTable.get(key) || '').split(',').filter(Boolean));
+    const uqCols = new Set();
+    for (const u of (uniquesByTable.get(key) || [])) {
+      for (const c of u.split(',')) uqCols.add(c);
+    }
+    lines.push('');
+    lines.push(`## \`${sch}.${tbl}\` (${tcols.length} cols)`);
+    lines.push('');
+    lines.push('| Column | Type | Nullable | Default | Notes |');
+    lines.push('|---|---|---|---|---|');
+    for (const r of tcols) {
+      const col = r.column_name;
+      const notes = [];
+      if (pkCols.has(col)) notes.push('**PK**');
+      if (uqCols.has(col) && !pkCols.has(col)) notes.push('**UQ**');
+      const fk = fkByCol.get(`${sch}.${tbl}.${col}`);
+      if (fk) notes.push(`**FK** → \`${fk.ref_schema}.${fk.ref_table}.${fk.ref_col}\``);
+      if (r.is_generated && r.is_generated !== 'NEVER') notes.push('*generated*');
+      let def = (r.default_val || '').trim();
+      if (def.length > 60) def = def.slice(0, 57) + '...';
+      const defMd = def ? `\`${def}\`` : '—';
+      const nullable = r.is_nullable === 'YES' ? 'YES' : 'NO';
+      const notesMd = notes.join(' · ');
+      lines.push(`| \`${col}\` | \`${r.type}\` | ${nullable} | ${defMd} | ${notesMd} |`);
+    }
+  }
+
+  const out = resolve(REPO_ROOT, 'db/SCHEMA.md');
+  writeFileSync(out, lines.join('\n') + '\n');
+  console.log(`✓ Wrote ${out} — ${byTable.size} tables across public + private.`);
+} finally {
+  await sql.end();
+}

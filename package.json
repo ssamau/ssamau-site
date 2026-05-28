@@ -12,7 +12,8 @@
     "admin:create": "node db/create-admin.js",
     "auth:backfill": "node db/auth-backfill.js",
     "check:i18n": "node scripts/check-i18n-parity.mjs",
-    "install:hooks": "git config core.hooksPath scripts/git-hooks && echo 'Hooks active — pre-commit runs check:i18n on staged catalog changes.'"
+    "dump:schema": "node scripts/dump-schema.mjs",
+    "install:hooks": "git config core.hooksPath scripts/git-hooks && echo 'Hooks active — pre-commit runs check:i18n + SCHEMA-refresh reminder on staged migrations.'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
