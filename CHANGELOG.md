@@ -9,6 +9,57 @@ Newest first.
 
 ---
 
+## [Web] 2026-05-28 · certificate print dimensions + require role on issuance (ticket SUP_BNYPAHUK)
+
+Two independent fixes from the same admin support ticket:
+
+- **1A — certificate print dimensions.** The print block in
+  `assets/css/cert.css` was locking `.cert-sheet` to `285mm × 198mm`
+  on the assumption that the browser would always honour
+  `@page { margin: 6mm }`. Safari and any user who picked a custom
+  margin in their print dialog were getting a sheet sized for a
+  printable rectangle the browser wasn't actually providing → cert
+  came out scaled-down with large whitespace, or cropped. Reporter:
+  "the certificate is excellent, but its dimensions need adjusting —
+  when printing, the certificate doesn't come out with correct
+  dimensions."
+  Fix: `.cert-sheet` now uses `width: 100%; height: 100%;
+  aspect-ratio: auto; margin: 0` in print, so it fills whatever
+  printable rectangle the browser actually allocates after the @page
+  margins / user-overridden margins / browser defaults. The cqi-based
+  internal typography rescales with the new container width. Verified
+  by previewing the cert at an A4-landscape pixel viewport (1123×794
+  at 96 DPI) — the screen render fills the rectangle exactly, with
+  the proportions print will produce.
+
+- **1B — require role on cert issuance.** `certsIssue` and
+  `certsBulkIssue` in `supabase/functions/api/actions/certs.ts` were
+  silently inserting `NULL` when `role` was missing or blank. President's
+  rule via the same ticket: "either the person's committee role or a
+  specific role must be written, but we should not issue anything
+  without a role." Both handlers now trim the incoming role and throw
+  `err.required.cert_role` (400) if it's empty. Server is the
+  authoritative gate — covers the web admin form, the iOS app (which
+  already guards client-side in build 87), and any future caller.
+  Existing rows with `role IS NULL` are unaffected; the gate only
+  applies to new issuances.
+
+- New error code `err.required.cert_role` with matching entries in
+  `assets/js/lib/strings/{ar,en}.js` — pre-commit parity check passes
+  (1643 keys both sides).
+- Edge function deployed; grep confirms 2 occurrences of the new code
+  in the live bundle (one per handler).
+- No schema or migration changes.
+
+**iOS impact:**
+- 1A: none. The certificate is rendered by the web template only;
+  iOS never produces the cert document itself.
+- 1B: client already guards (build 87). The new `err.required.cert_role`
+  will surface as a raw code in any older iOS build that issues a
+  cert with an empty role — until iOS regens `Localizable.strings`
+  from `assets/js/lib/strings/{ar,en}.js` on its next build. No
+  Codable / response-shape changes.
+
 ## [Web] 2026-05-21 · fix off-by-one in hours → attendance meeting join
 
 - `getMemberHours` and `hours.listOwn` extract the attendance id

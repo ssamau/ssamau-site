@@ -330,25 +330,33 @@
    * the user hits Cmd+P / "Save as PDF". The on-screen sheet is
    * already A4-proportioned (297×210 aspect), so print mostly just
    * needs to drop the shadow + force the gold accents into colour
-   * output. The width is pinned to 100% of the printable area so
-   * the sheet fills the page (the 6mm @page margin gives the
-   * physical edge breathing room). */
+   * output. */
   @media print {
     @page { size: A4 landscape; margin: 6mm; }
-    body { background: #fff; margin: 0; }
-    .cert-stage { padding: 0; min-height: auto; background: #fff; }
+    html, body { background: #fff; margin: 0; height: 100%; }
+    .cert-stage { padding: 0; min-height: 0; background: #fff; height: 100%; }
     .cert-actions, .login-card, .cert-close-bar, .cert-close-floating { display: none !important; }
     .cert-sheet {
-      /* Lock to A4 landscape minus the @page margin (297×210 → 285×198
-       * with a 6mm margin all sides). Both dimensions set explicitly
-       * so the sheet exactly fills the printable area instead of
-       * being computed off `aspect-ratio` (which at 297/210 would
-       * overshoot the 198mm height ceiling). */
-      width: 285mm;
-      height: 198mm;
+      /* Fill 100% of whatever printable area the browser actually
+       * gives us, instead of a hardcoded 285×198mm that assumed
+       * @page margin: 6mm would always be honoured. Safari (which
+       * frequently ignores @page) and any user who picks a custom
+       * margin in their print dialog were getting a sheet sized for
+       * a printable area the browser wasn't actually providing —
+       * cert came out scaled-down with large whitespace or cropped.
+       * (ticket SUP_BNYPAHUK 2026-05-28.) `aspect-ratio: auto`
+       * overrides the on-screen 297/210 lock so the sheet adapts
+       * to the printable rectangle exactly, whatever it is. The
+       * cqi-based internal typography rescales with the new
+       * container width — same visual layout, just locked to the
+       * page. */
+      width:  100%;
+      height: 100%;
+      aspect-ratio: auto;
+      margin: 0;
       box-shadow: none;
       page-break-after: avoid;
     }
     /* Force the gold accents to print in colour. */
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   }

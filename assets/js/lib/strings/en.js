@@ -1686,6 +1686,7 @@ export default {
   'err.required.storage_fields':    'filename, contentType, and base64Data are required.',
   'err.required.project_storage_fields': 'project_id, filename, contentType, and base64Data are required.',
   'err.required.cert_code':         'cert_code is required.',
+  'err.required.cert_role':         'Role is required — certificates cannot be issued without a role (the recipient\'s committee role, or a role specific to the event).',
 
   // — Business-logic violations —
   'err.business.assignment_not_yours':  'This assignment doesn’t belong to you.',

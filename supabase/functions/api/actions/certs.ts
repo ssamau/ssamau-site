@@ -127,13 +127,21 @@ const certsIssue: Handler = async (body, user) => {
   const data = (body.data ?? body) as Record<string, unknown>;
   await ensureProjectScope(user, data.project_id);
   await ensureMemberScope(user, data.member_id);
+  // Role is mandatory (ticket SUP_BNYPAHUK 2026-05-28, president's
+  // direction: "either the person's committee role or a specific
+  // role must be written, but we should not issue anything without a
+  // role"). Server is the authoritative gate — covers the web admin
+  // form, the iOS app (which already guards client-side in build 87),
+  // and any other future caller.
+  const role = typeof data.role === 'string' ? data.role.trim() : '';
+  if (!role) throw httpErr('err.required.cert_role', 400);
   const code = shortId('CRT', 8);
   const [r] = await sql`
     INSERT INTO certificates (cert_code, member_id, project_id, recipient_name, recipient_email,
                               role, hours, issued_by)
     VALUES (${code}, ${data.member_id || null}, ${data.project_id},
             ${data.recipient_name || null}, ${data.recipient_email || null},
-            ${data.role || null}, ${data.hours || null}, ${user!.id})
+            ${role}, ${data.hours || null}, ${user!.id})
     RETURNING id
   ` as Array<{ id: number }>;
 
@@ -146,7 +154,7 @@ const certsIssue: Handler = async (body, user) => {
     to:            (data.recipient_email as string) || null,
     recipientName: (data.recipient_name as string)  || '—',
     projectName:   project?.project_name             || String(data.project_id || ''),
-    role:          (data.role as string)             || '—',
+    role,
     hours:         (data.hours as number | string)   ?? '—',
     certCode:      code,
   });
@@ -158,7 +166,11 @@ const certsBulkIssue: Handler = async (body, user) => {
   requireAuth(user);
   const project_id = body.project_id as string | undefined;
   await ensureProjectScope(user, project_id);
-  const role = body.role as string | undefined;
+  // Role is mandatory on the bulk path too — same rule, same code
+  // as certsIssue (ticket SUP_BNYPAHUK 2026-05-28). A blank bulk
+  // role would have silently inserted NULL on every participant.
+  const role = typeof body.role === 'string' ? body.role.trim() : '';
+  if (!role) throw httpErr('err.required.cert_role', 400);
   const participants = await sql`
     SELECT pa.member_id, pa.volunteer_name, pa.volunteer_email,
            m.full_name, m.preferred_name, m.email AS member_email,
@@ -196,7 +208,7 @@ const certsBulkIssue: Handler = async (body, user) => {
                                 role, hours, issued_by)
       VALUES (${code}, ${p.member_id || null}, ${project_id},
               ${recipientName}, ${recipientEmail},
-              ${role || null}, ${p.hours || 0}, ${user!.id})
+              ${role}, ${p.hours || 0}, ${user!.id})
     `;
     count++;
     if (recipientEmail) {
@@ -204,7 +216,7 @@ const certsBulkIssue: Handler = async (body, user) => {
         to:            recipientEmail,
         recipientName,
         projectName,
-        role:          role || '—',
+        role,
         hours:         p.hours || 0,
         certCode:      code,
       });

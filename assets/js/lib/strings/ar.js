@@ -1739,6 +1739,7 @@ export default {
   'err.required.storage_fields':    'filename و contentType و base64Data مطلوبة',
   'err.required.project_storage_fields': 'project_id و filename و contentType و base64Data مطلوبة',
   'err.required.cert_code':         'رمز الشهادة مطلوب (cert_code)',
+  'err.required.cert_role':         'الدور مطلوب — لا يمكن إصدار الشهادة بدون دور (دور اللجنة أو دور محدد للفعالية)',
 
   // — Business-logic violations —
   'err.business.assignment_not_yours':  'هذا الإسناد لا يخصّك',
