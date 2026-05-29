@@ -1692,6 +1692,7 @@ export default {
   'err.business.assignment_not_yours':  'This assignment doesn’t belong to you.',
   'err.business.withdraw_after_assigned': 'Your participation has been confirmed by the committee head. To withdraw, contact them directly.',
   'err.business.role_full':             'This role is full — no more slots available. Pick a different role.',
+  'err.business.project_not_complete':  'Certificates can\'t be issued for a project until it\'s finished — set project_status to "Completed" first.',
   'err.rate.too_many_applications':     'Too many applications submitted from this device in the past hour. Please try later.',
   'err.rate.duplicate_application':     'An application with this ID was already submitted in the past 24 hours. Contact admin if you haven’t received a reply.',
   'err.rate.too_many_resets':           'Too many password-reset requests recently. Please try again in a moment.',

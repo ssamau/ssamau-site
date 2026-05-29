@@ -22,13 +22,57 @@ import { sendEmail } from '../_email.ts';
 // owned by their committee, and only on members of their committee.
 // Admin/superadmin pass through. NULL member_id is allowed (volunteer-
 // only certs); project scope is the gate in that case.
-async function ensureProjectScope(user: any, project_id: unknown): Promise<void> {
+async function ensureProjectScope(user: any, project_id: unknown): Promise<{ project_status: string }> {
   if (!project_id) throw httpErr('err.required.project_id', 400);
   const [proj] = await sql`
-    SELECT owning_committee_id FROM public.projects WHERE project_id = ${project_id}
-  ` as Array<{ owning_committee_id: string | null }>;
+    SELECT owning_committee_id, project_status FROM public.projects WHERE project_id = ${project_id}
+  ` as Array<{ owning_committee_id: string | null; project_status: string }>;
   if (!proj) throw httpErr('err.notfound.project', 404);
   requireAdminScope(user, proj.owning_committee_id);
+  return { project_status: proj.project_status };
+}
+
+// Cert issuance is only valid on FINISHED projects (ticket SUP_3RT6RJRC
+// 2026-05-28, admin's direction: "incomplete events are getting
+// certificates issued on them — that's wrong"). 'Completed' is the
+// canonical done value in the projects.project_status enum
+// (alongside Planned / Planning / Active). list/verify paths skip
+// this gate — only issuance writes.
+function requireProjectCompleted(project_status: string): void {
+  if (project_status !== 'Completed') {
+    throw httpErr('err.business.project_not_complete', 409, { status: project_status });
+  }
+}
+
+// Cert hours are GOVERNED — never accepted as free-typed admin input
+// (ticket SUP_3RT6RJRC 2026-05-28, admin's direction: "when issuing
+// certificates you can type the volunteer hours; they should be
+// linked/governed rather than freely typed"). The source of truth is
+// the member's FinalApproved hours for this specific project, matching
+// what recomputeMemberTotalHours in hours.ts aggregates into
+// members.total_hours — so cert.hours and the profile-total
+// contribution from this project are equal by construction. No
+// double-count risk because the cert doesn't write to the hours
+// table, it just reads the existing approved tally.
+//
+// Volunteers without a member_id get 0 hours — they have no rows in
+// the hours table to draw from. The cert can still be issued (the
+// admin chose to recognise their participation); hours just isn't
+// the right metric for them.
+async function deriveMemberHours(
+  member_id: string | null | undefined,
+  project_id: string,
+): Promise<number> {
+  if (!member_id) return 0;
+  const [row] = await sql`
+    SELECT COALESCE(SUM(total_hours), 0)::numeric AS hours
+    FROM public.hours
+    WHERE member_id = ${member_id}
+      AND project_id = ${project_id}
+      AND approval_status = 'FinalApproved'
+      AND (notes IS DISTINCT FROM 'Deleted')
+  ` as Array<{ hours: string }>;
+  return Number(row?.hours ?? 0);
 }
 async function ensureMemberScope(user: any, member_id: unknown): Promise<void> {
   if (!member_id) return;
@@ -125,7 +169,8 @@ async function tryDeliverCert(opts: {
 const certsIssue: Handler = async (body, user) => {
   requireAuth(user);
   const data = (body.data ?? body) as Record<string, unknown>;
-  await ensureProjectScope(user, data.project_id);
+  const { project_status } = await ensureProjectScope(user, data.project_id);
+  requireProjectCompleted(project_status);
   await ensureMemberScope(user, data.member_id);
   // Role is mandatory (ticket SUP_BNYPAHUK 2026-05-28, president's
   // direction: "either the person's committee role or a specific
@@ -135,13 +180,23 @@ const certsIssue: Handler = async (body, user) => {
   // and any other future caller.
   const role = typeof data.role === 'string' ? data.role.trim() : '';
   if (!role) throw httpErr('err.required.cert_role', 400);
+
+  // Cert hours are server-derived from the FinalApproved hours rows
+  // for this (member, project). See deriveMemberHours comment above
+  // for the full rationale + double-count avoidance. Any `data.hours`
+  // value from the client is ignored — admins can't override.
+  const hours = await deriveMemberHours(
+    (data.member_id as string | undefined) || null,
+    String(data.project_id),
+  );
+
   const code = shortId('CRT', 8);
   const [r] = await sql`
     INSERT INTO certificates (cert_code, member_id, project_id, recipient_name, recipient_email,
                               role, hours, issued_by)
     VALUES (${code}, ${data.member_id || null}, ${data.project_id},
             ${data.recipient_name || null}, ${data.recipient_email || null},
-            ${role}, ${data.hours || null}, ${user!.id})
+            ${role}, ${hours}, ${user!.id})
     RETURNING id
   ` as Array<{ id: number }>;
 
@@ -155,22 +210,29 @@ const certsIssue: Handler = async (body, user) => {
     recipientName: (data.recipient_name as string)  || '—',
     projectName:   project?.project_name             || String(data.project_id || ''),
     role,
-    hours:         (data.hours as number | string)   ?? '—',
+    hours,
     certCode:      code,
   });
 
-  return { id: r.id, cert_code: code };
+  return { id: r.id, cert_code: code, hours };
 };
 
 const certsBulkIssue: Handler = async (body, user) => {
   requireAuth(user);
   const project_id = body.project_id as string | undefined;
-  await ensureProjectScope(user, project_id);
+  const { project_status } = await ensureProjectScope(user, project_id);
+  requireProjectCompleted(project_status);
   // Role is mandatory on the bulk path too — same rule, same code
   // as certsIssue (ticket SUP_BNYPAHUK 2026-05-28). A blank bulk
   // role would have silently inserted NULL on every participant.
   const role = typeof body.role === 'string' ? body.role.trim() : '';
   if (!role) throw httpErr('err.required.cert_role', 400);
+  // 2026-05-28 (ticket SUP_3RT6RJRC): the LEFT JOIN onto hours now
+  // filters by approval_status = 'FinalApproved' AND notes IS DISTINCT
+  // FROM 'Deleted' — same predicate as recomputeMemberTotalHours and
+  // the single-issue path's deriveMemberHours(). Previously the JOIN
+  // counted every row regardless of approval state (Draft, Rejected,
+  // PrimaryApproved all summed), which inflated bulk-cert hours.
   const participants = await sql`
     SELECT pa.member_id, pa.volunteer_name, pa.volunteer_email,
            m.full_name, m.preferred_name, m.email AS member_email,
@@ -178,6 +240,7 @@ const certsBulkIssue: Handler = async (body, user) => {
     FROM participants pa
     LEFT JOIN members m ON m.member_id = pa.member_id
     LEFT JOIN hours   h ON h.project_id = pa.project_id AND h.member_id = pa.member_id
+                        AND h.approval_status = 'FinalApproved'
                         AND h.notes IS DISTINCT FROM 'Deleted'
     WHERE pa.project_id = ${project_id}
       AND NOT EXISTS (

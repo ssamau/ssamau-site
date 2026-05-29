@@ -9,6 +9,79 @@ Newest first.
 
 ---
 
+## [Web] 2026-05-28 · cert issuance: complete-project gate + governed hours (ticket SUP_3RT6RJRC)
+
+Three fixes around volunteer-hours integrity on certificates, all in
+`supabase/functions/api/actions/certs.ts`.
+
+- **2A — gate on project completion.** `certsIssue` and `certsBulkIssue`
+  used to accept any project in scope, regardless of `project_status`.
+  Reporter: "incomplete events are getting certificates issued on
+  them — that's wrong." Now both paths throw
+  `err.business.project_not_complete` (409) when the project's
+  `project_status` is anything other than `Completed`. The error
+  envelope carries the actual status in `errorParams.status` so the
+  client can surface it to the admin (e.g. "this project is still
+  Planned / Active / Planning"). `certsList` and `certsVerify` are
+  unchanged — only issuance writes are gated.
+
+- **2B — cert hours are governed, not free-typed.** Source of truth
+  for cert hours is now the member's `FinalApproved` hours rows for
+  this specific project, matching the predicate
+  `recomputeMemberTotalHours` uses to maintain `members.total_hours`:
+  `approval_status = 'FinalApproved' AND notes IS DISTINCT FROM
+  'Deleted'`. Both handlers ignore any client-supplied `hours` and
+  derive the value server-side via a new private helper
+  `deriveMemberHours(member_id, project_id)`. The bulk path's LEFT
+  JOIN onto `hours` previously summed every row regardless of
+  approval state (Draft, PrimaryApproved, Rejected all counted) —
+  fixed to the same predicate. Volunteers without a `member_id`
+  (volunteer-only certs) get `hours = 0`: they have no rows in the
+  `hours` table to draw from, and the cert still issues — hours
+  just isn't the right metric for them.
+
+- **2C — profile total reflects cert hours, no double-count.** Under
+  2B's rule, `certificates.hours` for a given (member, project) is
+  EXACTLY the slice of that member's profile total
+  (`members.total_hours`, maintained by
+  `recomputeMemberTotalHours`) contributed by that project — they're
+  the same SQL aggregate. Issuing a cert doesn't write to the `hours`
+  table and doesn't trigger a recompute, so no second tally can form;
+  the cert and the profile reference one source of truth by
+  construction. (The old free-typed `hours` column on `certificates`
+  rows that were issued before this change is left in place — those
+  rows pre-date the new rule and the profile total has always come
+  from `hours`/`members.total_hours`, not from the cert column, so
+  there's nothing to backfill.)
+
+New error code `err.business.project_not_complete` with matching
+entries in `assets/js/lib/strings/{ar,en}.js`. Pre-commit parity
+check passes (1644 keys each side). No DB schema change.
+
+Live smoke-tested as `apple_reviewer` (head of Events / COM_007):
+- Issue against `PRJ_APLREV2` (Planned) → rejected with
+  `err.business.project_not_complete`, `errorParams.status = "Planned"`.
+- Issue against `PRJ_APLREV1` (Completed) with client `hours: 99` →
+  cert created with derived `hours: 0` (member has no FinalApproved
+  hours for that project). Test cert cleaned up post-verify.
+
+**iOS impact:**
+- **2A — needs follow-up on iOS.** The cert-issue project picker
+  should filter to `project_status = 'Completed'` only, or surface a
+  disabled-with-hint state for non-completed projects. Without this,
+  iOS admins will see ineligible projects, pick one, and get a 409
+  toast. The error code surfaces cleanly via the existing
+  localizeError flow once iOS regens `Localizable.strings` from
+  these catalogs.
+- **2B — needs follow-up on iOS.** The cert-issue hours field can
+  drop free input. Either remove it from the form entirely (server
+  is authoritative, the value will be 0 for volunteers and the
+  member's FinalApproved sum otherwise), or convert it to a
+  read-only display populated from a preview lookup. The server now
+  silently ignores whatever the client sends.
+- 2C: no iOS work; the profile total endpoint already reads
+  `members.total_hours` which has always been the source of truth.
+
 ## [Web] 2026-05-28 · certificate print dimensions + require role on issuance (ticket SUP_BNYPAHUK)
 
 Two independent fixes from the same admin support ticket:

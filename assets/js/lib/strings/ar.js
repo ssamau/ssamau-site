@@ -1745,6 +1745,7 @@ export default {
   'err.business.assignment_not_yours':  'هذا الإسناد لا يخصّك',
   'err.business.withdraw_after_assigned': 'تم تأكيد مشاركتك في هذه الفرصة من قِبَل رئيس اللجنة. للانسحاب تواصل معه مباشرة.',
   'err.business.role_full':             'هذا الدور ممتلئ — لم تعد فيه أماكن متاحة. اختر دوراً آخر.',
+  'err.business.project_not_complete':  'لا يمكن إصدار شهادات لمشروع قبل اكتماله — يجب أن تكون حالة المشروع "Completed" أولاً.',
   'err.rate.too_many_applications':     'تم إرسال عدد كبير من الطلبات من هذا الجهاز خلال الساعة الماضية. حاول لاحقاً.',
   'err.rate.duplicate_application':     'سبق إرسال طلب بهذا الرقم خلال الـ٢٤ ساعة الماضية. تواصل مع الإدارة إن لم يصلك رد.',
   'err.rate.too_many_resets':           'تم طلب إعادة تعيين كلمة المرور عدة مرات مؤخراً. حاول مرة أخرى بعد قليل.',
