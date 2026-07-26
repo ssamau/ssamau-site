@@ -401,10 +401,118 @@ const headAttendanceDelete: Handler = async (body, user) => {
   return { attendance_id: id, deleted: true };
 };
 
+// Bulk sibling of headAttendanceRecord: one shared project/meeting
+// header + many attendee rows, inserted in a single call. Behaves
+// exactly like calling head.attendance.record once per row — same
+// validation, same columns, same hours crediting — so a head can take
+// attendance for a whole event/meeting at once. The per-member recompute
+// is the identical inline formula the single-record handler uses, run
+// once per touched member at the end; it recomputes the absolute total
+// (idempotent), so the result equals N single records. No change to the
+// hours math.
+const headAttendanceBulkRecord: Handler = async (body, user) => {
+  const committee_id = await resolveHeadCommittee(user, body.committee_id as string | null | undefined);
+
+  const project_id    = (body.project_id as string | undefined) || null;
+  const meetingRaw    = (body.meeting ?? null) as Record<string, unknown> | null;
+  const meeting_title = ((meetingRaw?.title as string | undefined) || '').trim() || null;
+
+  // Exactly one of project_id / meeting (same rule as the single path).
+  if ((project_id && meeting_title) || (!project_id && !meeting_title)) {
+    throw httpErr('err.business.attendance_project_xor_meeting', 400);
+  }
+
+  // Validate the shared header once (mirrors headAttendanceRecord).
+  if (project_id) {
+    const [proj] = await sql`
+      SELECT owning_committee_id FROM public.projects WHERE project_id = ${project_id}
+    ` as Array<{ owning_committee_id: string | null }>;
+    if (!proj) throw httpErr('err.notfound.project', 404);
+    if (proj.owning_committee_id && proj.owning_committee_id !== committee_id) {
+      throw httpErr('err.access.committee_scope', 403);
+    }
+  }
+  let meeting_type: string | null = null, meeting_date: string | null = null;
+  let meeting_start_time: string | null = null, meeting_location: string | null = null;
+  if (meeting_title) {
+    meeting_type       = (meetingRaw?.type as string) || null;
+    meeting_date       = (meetingRaw?.date as string) || null;
+    meeting_start_time = (meetingRaw?.start_time as string) || null;
+    meeting_location   = (meetingRaw?.location as string) || null;
+    if (!meeting_type || !meeting_date || !meeting_start_time) {
+      throw httpErr('err.required.meeting_fields', 400);
+    }
+  }
+
+  const rows = Array.isArray(body.rows) ? body.rows as Array<Record<string, unknown>> : [];
+  if (!rows.length) throw httpErr('err.required.attendance_rows', 400);
+
+  const touched = new Set<string>();
+  let count = 0;
+  for (const row of rows) {
+    const member_id      = (row.member_id as string | undefined) || null;
+    const volunteer_name = ((row.volunteer_name as string | undefined) || '').trim() || null;
+    if (!member_id && !volunteer_name) continue; // skip empty rows
+
+    // Member-attendance: verify the member is in this committee
+    // (volunteer rows skip this, same as the single path).
+    if (member_id) {
+      const [m] = await sql`
+        SELECT committee_id FROM public.members WHERE member_id = ${member_id}
+      ` as Array<{ committee_id: string | null }>;
+      if (!m) throw httpErr('err.notfound.member', 404);
+      if (m.committee_id !== committee_id) throw httpErr('err.access.member_committee_scope', 403);
+    }
+
+    // Per-row hours guard, identical bounds to the single path.
+    let meeting_hours: number | null = null;
+    if (row.meeting_hours != null && row.meeting_hours !== '') {
+      const n = Number(row.meeting_hours);
+      if (!Number.isFinite(n) || n < 0 || n > 24) throw httpErr('err.business.hours_out_of_range', 400);
+      meeting_hours = n;
+    }
+    const status = (row.attendance_status as string | undefined) || 'Present';
+
+    await sql`
+      INSERT INTO public.attendance (
+        project_id, member_id, volunteer_name, volunteer_email,
+        attendance_status, notes, recorded_by,
+        meeting_title, meeting_type, meeting_date, meeting_start_time,
+        meeting_location, meeting_hours
+      ) VALUES (
+        ${project_id}, ${member_id}, ${volunteer_name}, ${(row.volunteer_email as string) || null},
+        ${status}, ${(row.notes as string) || null}, ${user!.id},
+        ${meeting_title}, ${meeting_type}, ${meeting_date}, ${meeting_start_time},
+        ${meeting_location}, ${meeting_hours}
+      )
+    `;
+    count++;
+    if (member_id && meeting_hours && meeting_hours > 0) touched.add(member_id);
+  }
+
+  // Recompute each touched member once — identical formula to
+  // headAttendanceRecord (absolute, idempotent recompute).
+  for (const mid of touched) {
+    await sql`
+      UPDATE public.members SET total_hours = (
+        SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${mid} AND approval_status = 'FinalApproved'
+      ) + (
+        SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${mid} AND meeting_hours IS NOT NULL
+      )
+      WHERE member_id = ${mid}
+    `;
+  }
+
+  return { count };
+};
+
 export const headActions: Record<string, Handler> = {
-  'head.dashboardSummary':  headDashboardSummary,
-  'head.attendance.list':   headAttendanceList,
-  'head.attendance.record': headAttendanceRecord,
-  'head.attendance.update': headAttendanceUpdate,
-  'head.attendance.delete': headAttendanceDelete,
+  'head.dashboardSummary':      headDashboardSummary,
+  'head.attendance.list':       headAttendanceList,
+  'head.attendance.record':     headAttendanceRecord,
+  'head.attendance.bulkRecord': headAttendanceBulkRecord,
+  'head.attendance.update':     headAttendanceUpdate,
+  'head.attendance.delete':     headAttendanceDelete,
 };

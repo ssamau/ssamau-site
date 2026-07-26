@@ -417,6 +417,7 @@
         <div class="card-head">
           <h3 data-i18n="hp.att.card_title">✅ سجل الحضور</h3>
           <div class="card-head-right">
+            <button class="btn btn-ol btn-sm" data-action="hd.attendance.bulkOpen" data-i18n="hp.att.bulk_btn">👥 حضور جماعي</button>
             <button class="btn btn-g btn-sm" data-action="hd.attendance.open" data-i18n="hp.att.add_btn">➕ تسجيل حضور</button>
           </div>
         </div>
@@ -828,6 +829,75 @@
     <div class="modal-footer">
       <button class="btn btn-ol btn-sm" data-action="hd.attendance.close" data-i18n="hp.att.cancel_btn">إلغاء</button>
       <button class="btn btn-g btn-sm" data-action="hd.attendance.save" id="hd-att-save-btn" data-i18n="hp.att.save_btn">💾 تسجيل الحضور</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BULK ATTENDANCE MODAL ══════════ -->
+<!-- One shared project/meeting header + a checklist of committee members,
+     all recorded with a shared status + optional shared hours in a single
+     head.attendance.bulkRecord call (== N single records). -->
+<div class="overlay" id="ov-hd-att-bulk">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-i18n="hp.att.bulk_modal_title">👥 تسجيل حضور جماعي</h3>
+      <button class="modal-close" data-action="hd.attendance.bulkClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label data-i18n="hp.att.mode_label" style="font-weight:700;margin-bottom:.4rem">نوع التسجيل</label>
+        <label class="fg-check" style="margin-bottom:.3rem">
+          <input type="radio" name="hd-batt-mode" value="project" data-action="hd.attendance.bulkModeChange" checked/>
+          <span data-i18n="hp.att.mode_project">مشروع/فعالية موجود</span>
+        </label>
+        <label class="fg-check">
+          <input type="radio" name="hd-batt-mode" value="meeting" data-action="hd.attendance.bulkModeChange"/>
+          <span data-i18n="hp.att.mode_meeting">اجتماع مخصص</span>
+        </label>
+      </div>
+
+      <div id="hd-batt-project-section">
+        <div class="fg"><label data-i18n="hp.att.lbl_project">المشروع</label>
+          <select id="hd-batt-project"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+      </div>
+
+      <div id="hd-batt-meeting-section" style="display:none">
+        <div class="fg"><label data-i18n="hp.att.lbl_meeting_title">عنوان الاجتماع</label>
+          <input id="hd-batt-meeting-title" type="text" data-i18n-placeholder="hp.att.ph_meeting_title" placeholder="مثل: اجتماع تنسيق فعالية اليوم الوطني"/></div>
+        <div class="fg-row">
+          <div class="fg"><label data-i18n="hp.att.lbl_meeting_type">نوع الاجتماع</label>
+            <select id="hd-batt-meeting-type"><option value="Online" data-i18n="hp.att.meeting_type_online">عن بُعد</option><option value="InPerson" data-i18n="hp.att.meeting_type_inperson">حضوري</option></select></div>
+          <div class="fg"><label data-i18n="hp.att.lbl_meeting_date">تاريخ الاجتماع</label><input id="hd-batt-meeting-date" type="date"/></div>
+          <div class="fg"><label data-i18n="hp.att.lbl_meeting_time">وقت البداية</label><input id="hd-batt-meeting-time" type="time"/></div>
+        </div>
+        <div class="fg"><label data-i18n="hp.att.lbl_meeting_location">الموقع (اختياري)</label>
+          <input id="hd-batt-meeting-location" type="text" data-i18n-placeholder="hp.att.ph_meeting_location" placeholder="مثل: Docklands Community Hub أو رابط Zoom"/></div>
+      </div>
+
+      <div class="fg-row">
+        <div class="fg" style="flex:1"><label data-i18n="hp.att.bulk_status_label">الحالة للجميع</label>
+          <select id="hd-batt-status">
+            <option value="Present" data-i18n="hp.att.status_present">حضر</option>
+            <option value="Absent"  data-i18n="hp.att.status_absent">غاب</option>
+            <option value="Late"    data-i18n="hp.att.status_late">تأخر</option>
+            <option value="Excused" data-i18n="hp.att.status_excused">معذور</option>
+          </select></div>
+        <div class="fg" style="flex:1"><label data-i18n="hp.att.bulk_hours_label">الساعات للجميع (اختياري)</label>
+          <input id="hd-batt-hours" type="number" min="0" max="24" step="0.5"/></div>
+      </div>
+
+      <div class="fg">
+        <label style="font-weight:700" data-i18n="hp.att.bulk_members_label">الأعضاء الحاضرون</label>
+        <label class="fg-check" style="margin:.35rem 0">
+          <input type="checkbox" id="hd-batt-all" data-action="hd.attendance.bulkToggleAll"/>
+          <span data-i18n="hp.att.bulk_select_all">تحديد الكل</span>
+        </label>
+        <div id="hd-batt-members" style="max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:.5rem"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol btn-sm" data-action="hd.attendance.bulkClose" data-i18n="hp.att.cancel_btn">إلغاء</button>
+      <button class="btn btn-g btn-sm" data-action="hd.attendance.bulkSave" id="hd-batt-save-btn" data-i18n="hp.att.bulk_save_btn">💾 تسجيل الحضور</button>
     </div>
   </div>
 </div>

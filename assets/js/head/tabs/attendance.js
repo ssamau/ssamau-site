@@ -420,3 +420,112 @@ export async function saveHeadAttendance() {
     if (btn) { btn.disabled = false; btn.textContent = restoreLabel; }
   }
 }
+
+// ─── Bulk attendance (2026-07-27) ────────────────────────────────────
+// One shared project/meeting header + a checklist of committee members,
+// recorded with a shared status + optional shared hours in a single
+// head.attendance.bulkRecord call (behaves like N single records — same
+// validation + hours crediting server-side).
+export async function openHeadBulkAttendance() {
+  const modeProj = document.querySelector('input[name="hd-batt-mode"][value="project"]');
+  if (modeProj) modeProj.checked = true;
+  sv('hd-batt-project', '');
+  sv('hd-batt-meeting-title', '');
+  sv('hd-batt-meeting-type', 'Online');
+  sv('hd-batt-meeting-date', '');
+  sv('hd-batt-meeting-time', '');
+  sv('hd-batt-meeting-location', '');
+  sv('hd-batt-status', 'Present');
+  sv('hd-batt-hours', '');
+  const allCb = document.getElementById('hd-batt-all');
+  if (allCb) allCb.checked = false;
+  _syncBulkModeUi();
+  const box = document.getElementById('hd-batt-members');
+  if (box) box.innerHTML = `<div style="color:var(--tm);font-size:.8rem">${esc(t('common.loading'))}</div>`;
+  document.getElementById('ov-hd-att-bulk')?.classList.add('open');
+
+  const myCommittee = window.CURRENT_USER?.committee_id;
+  const [pRes, mRes] = await Promise.all([api('getProjects'), api('getMembers')]);
+  const projects = (pRes && pRes.success ? pRes.data : []) || [];
+  const members = ((mRes && mRes.success ? mRes.data : []) || [])
+    .filter(m => m.status !== 'Inactive')
+    .filter(m => myCommittee ? m.committee_id === myCommittee : true);
+
+  const psel = document.getElementById('hd-batt-project');
+  if (psel) {
+    psel.innerHTML = `<option value="">${esc(t('ap.prj.choose'))}</option>` +
+      projects
+        .filter(p => !myCommittee || p.owning_committee_id === myCommittee)
+        .map(p => `<option value="${esc(p.project_id)}">${esc(p.project_name)}</option>`).join('');
+  }
+  if (box) {
+    box.innerHTML = members.length
+      ? members.map(m => `<label class="fg-check" style="display:flex;gap:.5rem;padding:.25rem 0">
+          <input type="checkbox" class="hd-batt-mcb" value="${esc(m.member_id)}"/>
+          <span>${esc(m.preferred_name || m.full_name)}</span></label>`).join('')
+      : `<div style="color:var(--tm);font-size:.8rem">${esc(t('hp.att.empty'))}</div>`;
+  }
+}
+
+export function onHeadBulkModeChange() { _syncBulkModeUi(); }
+function _syncBulkModeUi() {
+  const mode = document.querySelector('input[name="hd-batt-mode"]:checked')?.value || 'project';
+  const proj = document.getElementById('hd-batt-project-section');
+  const meet = document.getElementById('hd-batt-meeting-section');
+  if (proj) proj.style.display = mode === 'project' ? '' : 'none';
+  if (meet) meet.style.display = mode === 'meeting' ? '' : 'none';
+}
+
+export function toggleAllBulkMembers(el) {
+  const on = !!(el && el.checked);
+  document.querySelectorAll('.hd-batt-mcb').forEach(cb => { cb.checked = on; });
+}
+
+export function closeHeadBulkAttendance() {
+  document.getElementById('ov-hd-att-bulk')?.classList.remove('open');
+}
+
+export async function saveHeadBulkAttendance() {
+  const mode    = document.querySelector('input[name="hd-batt-mode"]:checked')?.value || 'project';
+  const status  = gv('hd-batt-status') || 'Present';
+  const hoursRaw = (gv('hd-batt-hours') || '').trim();
+  const meeting_hours = hoursRaw === '' ? undefined : Number(hoursRaw);
+
+  const checked = Array.from(document.querySelectorAll('.hd-batt-mcb:checked')).map(cb => cb.value);
+  if (!checked.length) { toast(t('hp.att.bulk_none_selected'), 'twarn'); return; }
+
+  const payload = {
+    rows: checked.map(member_id => ({
+      member_id,
+      attendance_status: status,
+      ...(meeting_hours !== undefined ? { meeting_hours } : {}),
+    })),
+  };
+
+  if (mode === 'project') {
+    const pid = gv('hd-batt-project');
+    if (!pid) { toast(t('hp.att.err_pick_project'), 'twarn'); return; }
+    payload.project_id = pid;
+  } else {
+    const title = (gv('hd-batt-meeting-title') || '').trim();
+    if (!title) { toast(t('hp.att.err_meeting_title'), 'twarn'); return; }
+    const type = gv('hd-batt-meeting-type'), date = gv('hd-batt-meeting-date'), time = gv('hd-batt-meeting-time');
+    if (!type || !date || !time) { toast(t('hp.att.err_meeting_meta'), 'twarn'); return; }
+    payload.meeting = { title, type, date, start_time: time, location: gv('hd-batt-meeting-location') || null };
+  }
+
+  const btn = document.getElementById('hd-batt-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = t('common.loading'); }
+  try {
+    const res = await api('head.attendance.bulkRecord', payload);
+    if (!res || !res.success) {
+      toast(localizeError(res?.error, res?.errorParams) || t('common.generic_error'), 'twarn');
+      return;
+    }
+    toast(t('hp.att.bulk_success', { count: res.count || 0 }), 'tok');
+    closeHeadBulkAttendance();
+    await loadHeadAttendance();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('hp.att.bulk_save_btn'); }
+  }
+}
