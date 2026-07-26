@@ -625,6 +625,7 @@ export default {
   'hp.opps.lead':               'الفرص الخاصة بلجنتك. الفرصة الجديدة تخص لجنتك تلقائياً.',
   'hp.opps.form_project_label': 'المشروع/الفعالية',
   'hp.opps.form_project_placeholder': '— اختر المشروع —',
+  'hp.opps.form_project_external': 'خارج لجنتك',
   'hp.opps.form_role_label':    'اسم الدور',
   'hp.opps.form_role_placeholder': 'مثال: منسق لوجستي',
   'hp.opps.form_hours_label':   'الساعات التقديرية',
