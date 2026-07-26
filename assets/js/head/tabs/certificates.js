@@ -113,8 +113,39 @@ export function filterHeadCerts() {
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────────────
+// Toggle the head issue form between "registered member" and "volunteer
+// by name+email" modes (mirrors the admin tab). Volunteer certs carry no
+// member_id — the certificates table + certs.issue already allow that.
+export function onHeadCertRcptTypeChange() {
+  const type = document.querySelector('input[name="hd-cert-rcpt-type"]:checked')?.value || 'member';
+  const memSec = document.getElementById('hd-cert-member-section');
+  const volSec = document.getElementById('hd-cert-volunteer-section');
+  if (memSec) memSec.style.display = type === 'member'    ? '' : 'none';
+  if (volSec) volSec.style.display = type === 'volunteer' ? '' : 'none';
+}
+
 export async function issueHeadCert() {
-  const pid = gv('hd-cert-proj-sel');
+  const pid  = gv('hd-cert-proj-sel');
+  const type = document.querySelector('input[name="hd-cert-rcpt-type"]:checked')?.value || 'member';
+
+  // Volunteer path — no member_id; free-typed name + email + role, hours
+  // omitted (server derives 0 for member-less certs; hours are governed-
+  // only per ticket SUP_3RT6RJRC). project_id still gates on Completed
+  // + own-committee scope server-side, same as the member path.
+  if (type === 'volunteer') {
+    const recipient_name  = (gv('hd-cert-vol-name')  || '').trim();
+    const recipient_email = (gv('hd-cert-vol-email') || '').trim();
+    const role            = (gv('hd-cert-vol-role')  || '').trim();
+    if (!pid || !recipient_name || !role) { toast(t('ap.cert.err_vol_required'), 'twarn'); return; }
+    const r = await api('certs.issue', { project_id: pid, recipient_name, recipient_email, role });
+    if (r && r.success) {
+      toast(recipient_email ? t('ap.cert.success_issue_emailed') : t('ap.cert.success_issue_no_email'));
+      _refreshCerts('');
+      switchHeadCertTab('list');
+    }
+    return;
+  }
+
   const mid = gv('hd-cert-mbr-sel');
   if (!pid || !mid) { toast(t('ap.cert.err_required'), 'twarn'); return; }
   const m = _members.find(mb => mb.member_id === mid);

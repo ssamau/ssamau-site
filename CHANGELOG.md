@@ -9,6 +9,36 @@ Newest first.
 
 ---
 
+## [Web] 2026-07-27 · issue certificates to volunteers by name + email (no member/registry)
+
+Meeting request: issue a certificate to a volunteer who is not a club
+member and has no account, using just their name + email.
+
+- **Client-only change.** No server or schema change: `certificates.member_id`
+  is already nullable, `recipient_name`/`recipient_email` are already
+  request fields on `certs.issue`, and every issuance gate
+  (`project Completed`, `role required`, hours-governance) is already
+  member-id-agnostic. The admin/head cert-issue forms simply gained a
+  "recipient type" toggle (registered member vs volunteer). Volunteer
+  mode sends `{ project_id, recipient_name, recipient_email, role }` with
+  **no** `member_id`.
+- Hours are intentionally omitted for volunteer certs — a member-less
+  cert has no governed hours source, and cert hours are governed-only
+  (ticket SUP_3RT6RJRC). Server derives 0. Project must still be
+  `Completed` and a role is still required (unchanged gates).
+- Files: `admin.html`, `head.html` (form + radios), `admin/tabs/certificates.js`,
+  `head/tabs/certificates.js` (`onCertRcptTypeChange` / `onHeadCertRcptTypeChange`
+  + volunteer branch in `issueCert`/`issueHeadCert`), dispatch wiring in
+  `admin/main.js` + `head/main.js`, new `ap.cert.*` strings (AR+EN), `sw.js`
+  cache bump to `v79`.
+- **iOS impact:** none. iOS never issues certificates (admin/head-only).
+  A volunteer cert has no `member_id`, so it never appears in any member's
+  `certs.listOwn`; `certs.verify` already renders member-less certs. No new
+  error codes. New strings are staff-portal-only — regenerate
+  `Localizable.strings` only if you want them, nothing depends on them on iOS.
+
+---
+
 ## [Web] 2026-05-28 · cert issuance: complete-project gate + governed hours (ticket SUP_3RT6RJRC)
 
 Three fixes around volunteer-hours integrity on certificates, all in

@@ -557,9 +557,21 @@
       <div class="tab-content" id="hd-cert-tab-issue">
         <div class="card"><div class="card-head"><h3 data-i18n="ap.cert.issue_card_title">🏅 إصدار شهادة جديدة</h3></div>
           <div class="card-body">
+            <div class="fg" style="margin-bottom:.85rem">
+              <label data-i18n="ap.cert.lbl_recipient_type">المُستلِم</label>
+              <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:.35rem">
+                <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;cursor:pointer"><input type="radio" name="hd-cert-rcpt-type" value="member" checked data-action="hd.certs.rcptType"/> <span data-i18n="ap.cert.rcpt_member">عضو مسجّل</span></label>
+                <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;cursor:pointer"><input type="radio" name="hd-cert-rcpt-type" value="volunteer" data-action="hd.certs.rcptType"/> <span data-i18n="ap.cert.rcpt_volunteer">متطوّع (بالاسم والإيميل)</span></label>
+              </div>
+            </div>
             <div class="fg-row">
               <div class="fg"><label><span data-i18n="ap.cert.lbl_project">المشروع</span> <span class="required">*</span></label><select id="hd-cert-proj-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
-              <div class="fg"><label><span data-i18n="ap.cert.lbl_member">العضو</span> <span class="required">*</span></label><select id="hd-cert-mbr-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+              <div class="fg" id="hd-cert-member-section"><label><span data-i18n="ap.cert.lbl_member">العضو</span> <span class="required">*</span></label><select id="hd-cert-mbr-sel"><option value="" data-i18n="ap.prj.choose">— اختر —</option></select></div>
+            </div>
+            <div class="fg-row" id="hd-cert-volunteer-section" style="display:none">
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_vol_name">اسم المتطوّع</span> <span class="required">*</span></label><input id="hd-cert-vol-name" data-i18n-placeholder="ap.cert.ph_vol_name" placeholder="الاسم الكامل"/></div>
+              <div class="fg"><label data-i18n="ap.cert.lbl_vol_email">الإيميل (اختياري)</label><input id="hd-cert-vol-email" type="email" dir="ltr" data-i18n-placeholder="ap.cert.ph_vol_email" placeholder="name@example.com"/></div>
+              <div class="fg"><label><span data-i18n="ap.cert.lbl_vol_role">الدور</span> <span class="required">*</span></label><input id="hd-cert-vol-role" data-i18n-placeholder="ap.cert.ph_vol_role" placeholder="مثال: تنظيم، استقبال، تصوير"/></div>
             </div>
             <div style="margin-top:1rem"><button class="btn btn-g" data-action="hd.certs.issue" data-i18n="ap.cert.issue_btn">🏅 إصدار</button></div>
           </div>

@@ -70,6 +70,7 @@ import {
 import {
   loadHeadCertificates, switchHeadCertTab, filterHeadCerts,
   issueHeadCert, bulkIssueHeadCerts, verifyHeadCert, previewHeadCertCard,
+  onHeadCertRcptTypeChange,
 } from './tabs/certificates.js';
 // Reuse the member-portal self-edit profile module — same form, same
 // uploaders, same backend endpoints. The "my-profile" tab on head.html
@@ -335,6 +336,10 @@ document.addEventListener('change', (e) => {
   if (thxFlt) { filterHeadThanks(); return; }
   const certFlt = e.target.closest('[data-action="hd.certs.filter"]');
   if (certFlt) { filterHeadCerts(); return; }
+  // Cert issue form — recipient-type radios (member vs volunteer) flip
+  // which sub-section (member select vs name/email/role) is visible.
+  const certRcpt = e.target.closest('[data-action="hd.certs.rcptType"]');
+  if (certRcpt) { onHeadCertRcptTypeChange(); return; }
   // Attendance-status dropdown inside the assign modal — change-event
   // because <select> doesn't bubble click for value-changes.
   const attMark = e.target.closest('[data-action="hd.opps.assign.markAttendance"]');

@@ -115,7 +115,7 @@ import {
 } from './tabs/emails.js';
 import {
   loadCerts, switchCertTab, issueCert, saveBulkCerts,
-  previewCertCard, verifyCert,
+  previewCertCard, verifyCert, onCertRcptTypeChange,
 } from './tabs/certificates.js';
 import { attachTypeaheadByIds } from '../lib/typeahead.js';
 
@@ -465,6 +465,7 @@ setHandlers({
   appAccept, appAssignCommittee, appReject, appRequestInterview,
   submitInviteAsMember,
   issueCert, verifyCert,
+  onCertRcptType: onCertRcptTypeChange,
   onHrsAssignmentChange, onHrsOpportunityChange, onOppRolePreset,
   // Multi-role opportunity row management — bare references because each
   // takes (el, event) directly from the dispatcher.
