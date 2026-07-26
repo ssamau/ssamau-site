@@ -64,6 +64,7 @@ import {
   editHeadAttendance, deleteHeadAttendance,
   openHeadBulkAttendance, closeHeadBulkAttendance, saveHeadBulkAttendance,
   onHeadBulkModeChange, toggleAllBulkMembers,
+  confirmSelfAttendance, rejectSelfAttendance,
 } from './tabs/attendance.js';
 import {
   loadHeadEmails, sendHeadThanks, bulkSendHeadThanks, filterHeadThanks,
@@ -267,6 +268,8 @@ document.addEventListener('click', (e) => {
     case 'hd.attendance.bulkOpen':   openHeadBulkAttendance(); break;
     case 'hd.attendance.bulkClose':  closeHeadBulkAttendance(); break;
     case 'hd.attendance.bulkSave':   saveHeadBulkAttendance(); break;
+    case 'hd.attendance.confirmSelf': confirmSelfAttendance(el.dataset.id); break;
+    case 'hd.attendance.rejectSelf':  rejectSelfAttendance(el.dataset.id); break;
     case 'hd.attendance.edit':       editHeadAttendance(el.dataset.id); break;
     case 'hd.attendance.delete':     deleteHeadAttendance(el.dataset.id); break;
     // Members tab — view profile, view uploaded file, invite portal

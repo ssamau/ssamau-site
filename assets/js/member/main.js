@@ -42,6 +42,7 @@ import {
   onUploaderChange, submitUploader, deleteUploader,
 } from './tabs/profile.js';
 import { loadHours } from './tabs/hours.js';
+import { loadSelfAttendance, submitSelfAttendance } from './tabs/self-attendance.js';
 // Shared support module — available from the member sidebar so members
 // can fire a bug report from anywhere. The inbox view is admin-only.
 import {
@@ -118,6 +119,7 @@ const loaderMap = {
   hours:         loadHours,
   opportunities: loadOpportunities,
   assignments:   loadAssignments,
+  attendance:    loadSelfAttendance,
 };
 setLoaders(loaderMap);
 // Same loaderMap drives the topbar refresh button. refreshData looks
@@ -242,6 +244,7 @@ setHandlers({
   // ── Hardcoded-string args ─────────────────────────────────────────
   showPage:          (el) => showPage(el.dataset.page),
   setTheme:          (el) => setTheme(el.dataset.value),
+  'mp.att.submit':   submitSelfAttendance,
   // Generic modal close — every overlay's ✕ + cancel buttons fire this
   // with data-modal="<id-suffix>". The support modal in particular was
   // unreachable on this portal until 2026-05-21 because closeModal was

@@ -19,6 +19,7 @@ export const PAGE_TITLES = {
   hours:         'mp.title.hours',
   opportunities: 'mp.title.opportunities',
   assignments:   'mp.title.assignments',
+  attendance:    'mp.title.attendance',
 };
 
 // Loader dispatch — filled in by main.js after every tab module has been

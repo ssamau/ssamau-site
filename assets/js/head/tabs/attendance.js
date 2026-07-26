@@ -132,15 +132,27 @@ function renderRow(a) {
   // to users.id; we compare against window.CURRENT_USER.id which the
   // auth layer wrote at session restore. Other heads' rows show an
   // em-dash so the column stays uniform-width.
+  // Member self-recorded attendance awaiting this head's confirmation:
+  // offer confirm / reject instead of edit / delete.
+  const pendingSelf = !!a.self_recorded && a.confirmation_status === 'Pending';
   const mine = Number(a.recorded_by) === Number(_myUserId());
-  const actions = mine
-    ? `<button class="btn-icon edit" data-action="hd.attendance.edit" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_edit_title'))}">✏️</button>
-       <button class="btn-icon del"  data-action="hd.attendance.delete" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_delete_title'))}">🗑️</button>`
-    : '<span style="color:var(--tm)">—</span>';
+  let actions;
+  if (pendingSelf) {
+    actions = `<button class="btn-icon" data-action="hd.attendance.confirmSelf" data-id="${a.attendance_id}" title="${esc(t('hp.att.confirm_title'))}">✅</button>
+       <button class="btn-icon" data-action="hd.attendance.rejectSelf" data-id="${a.attendance_id}" title="${esc(t('hp.att.reject_title'))}">❌</button>`;
+  } else {
+    actions = mine
+      ? `<button class="btn-icon edit" data-action="hd.attendance.edit" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_edit_title'))}">✏️</button>
+         <button class="btn-icon del"  data-action="hd.attendance.delete" data-id="${a.attendance_id}" title="${esc(t('hp.att.row_delete_title'))}">🗑️</button>`
+      : '<span style="color:var(--tm)">—</span>';
+  }
+  const selfChip = pendingSelf
+    ? `<div style="font-size:.66rem;color:var(--wn,#b8860b);margin-top:.1rem">⏳ ${esc(t('hp.att.pending_badge'))}${a.proposed_hours != null ? ` · ${esc(String(a.proposed_hours))} ${esc(t('mp.hours.hours_unit'))}` : ''}</div>`
+    : '';
 
   return `<tr>
     <td><strong>${attendee}</strong></td>
-    <td>${context}</td>
+    <td>${context}${selfChip}</td>
     <td style="font-size:.78rem">${when || '—'}</td>
     <td>${statusTag}</td>
     <td>${hoursCell}</td>
@@ -483,6 +495,31 @@ export function toggleAllBulkMembers(el) {
 
 export function closeHeadBulkAttendance() {
   document.getElementById('ov-hd-att-bulk')?.classList.remove('open');
+}
+
+// Confirm / reject a member's self-recorded attendance. Confirm credits
+// the proposed hours (server copies proposed_hours → meeting_hours and
+// recomputes); reject leaves hours uncredited.
+export async function confirmSelfAttendance(id) {
+  const res = await api('attendance.confirm', { id: Number(id) });
+  if (res && res.success) {
+    toast(t('hp.att.confirm_success'), 'tok');
+    loadHeadAttendance();
+  } else {
+    toast(localizeError(res?.error, res?.errorParams) || t('common.generic_error'), 'twarn');
+  }
+}
+
+export async function rejectSelfAttendance(id) {
+  const reason = prompt(t('hp.att.reject_prompt'));
+  if (reason === null) return;
+  const res = await api('attendance.reject', { id: Number(id), reason: reason || undefined });
+  if (res && res.success) {
+    toast(t('hp.att.reject_success'), 'tok');
+    loadHeadAttendance();
+  } else {
+    toast(localizeError(res?.error, res?.errorParams) || t('common.generic_error'), 'twarn');
+  }
 }
 
 export async function saveHeadBulkAttendance() {

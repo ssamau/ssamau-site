@@ -8,6 +8,7 @@
 
 import { sql } from '../_sql.ts';
 import {
+  httpErr, requireAuth, requireAdminScope,
   type Handler,
 } from '../_helpers.ts';
 import { recomputeMemberTotalHours } from './hours.ts';
@@ -309,10 +310,132 @@ const updateAttendance: Handler = async (body, user) => {
   return { id };
 };
 
+// ─── MEMBER SELF-ATTENDANCE (2026-07-27) ─────────────────────────────
+// Members record their own attendance for a project; a head/admin
+// confirms before it counts. A Pending row keeps meeting_hours NULL and
+// stores the member's claim in proposed_hours, so the existing hours
+// recompute (which sums attendance.meeting_hours WHERE NOT NULL) never
+// credits an unconfirmed row. On confirm we copy proposed_hours into
+// meeting_hours and run the SAME inline recompute the head handlers use
+// (FinalApproved hours + attendance.meeting_hours) — no change to the
+// hours math. RLS doesn't protect these (Edge Function is service-role),
+// so each handler self-scopes in code.
+const attendanceRecordOwn: Handler = async (body, user) => {
+  requireAuth(user);
+  if (!user!.member_id) throw httpErr('err.auth.no_member_link', 404);
+  const data = (body.data ?? body) as Record<string, unknown>;
+  const project_id = (data.project_id as string | undefined) || null;
+  if (!project_id) throw httpErr('err.required.project_id', 400);
+  const [proj] = await sql`SELECT project_id FROM public.projects WHERE project_id = ${project_id}` as Array<{ project_id: string }>;
+  if (!proj) throw httpErr('err.notfound.project', 404);
+
+  let proposed_hours: number | null = null;
+  if (data.hours != null && data.hours !== '') {
+    const n = Number(data.hours);
+    if (!Number.isFinite(n) || n < 0 || n > 24) throw httpErr('err.business.hours_out_of_range', 400);
+    proposed_hours = n;
+  }
+
+  // One outstanding self-record per (member, project).
+  const [dup] = await sql`
+    SELECT id FROM public.attendance
+    WHERE member_id = ${user!.member_id} AND project_id = ${project_id}
+      AND self_recorded = true AND confirmation_status = 'Pending' LIMIT 1
+  ` as Array<{ id: number }>;
+  if (dup) throw httpErr('err.business.attendance_already_pending', 409);
+
+  const [r] = await sql`
+    INSERT INTO public.attendance (
+      project_id, member_id, attendance_status, notes, recorded_by,
+      self_recorded, confirmation_status, proposed_hours
+    ) VALUES (
+      ${project_id}, ${user!.member_id}, 'Present', ${(data.notes as string) || null}, ${user!.id},
+      true, 'Pending', ${proposed_hours}
+    ) RETURNING id
+  ` as Array<{ id: number }>;
+  return { attendance_id: r.id };
+};
+
+const attendanceListOwn: Handler = async (_body, user) => {
+  requireAuth(user);
+  if (!user!.member_id) throw httpErr('err.auth.no_member_link', 404);
+  return await sql`
+    SELECT a.id, a.project_id, p.project_name, a.attendance_status,
+           a.confirmation_status, a.proposed_hours, a.meeting_hours,
+           a.rejected_reason, a.confirmed_at, a.recorded_at, a.notes
+    FROM public.attendance a
+    LEFT JOIN public.projects p ON p.project_id = a.project_id
+    WHERE a.member_id = ${user!.member_id} AND a.self_recorded = true
+    ORDER BY a.recorded_at DESC
+  `;
+};
+
+const attendanceConfirmOwn: Handler = async (body, user) => {
+  const id = Number(body.id);
+  if (!Number.isFinite(id)) throw httpErr('err.required.id', 400);
+  const [row] = await sql`
+    SELECT a.id, a.member_id, a.confirmation_status, a.proposed_hours, m.committee_id
+    FROM public.attendance a
+    LEFT JOIN public.members m ON m.member_id = a.member_id
+    WHERE a.id = ${id}
+  ` as Array<{ id: number; member_id: string | null; confirmation_status: string; proposed_hours: string | null; committee_id: string | null }>;
+  if (!row) throw httpErr('err.notfound.attendance', 404);
+  requireAdminScope(user, row.committee_id);
+  if (row.confirmation_status !== 'Pending') throw httpErr('err.business.attendance_not_pending', 409);
+
+  await sql`
+    UPDATE public.attendance
+       SET confirmation_status = 'Confirmed', confirmed_by = ${user!.id},
+           confirmed_at = now(), meeting_hours = proposed_hours
+     WHERE id = ${id}
+  `;
+  // Same inline recompute the head handlers use — FinalApproved hours +
+  // attendance.meeting_hours — so the member's total stays consistent.
+  if (row.member_id && row.proposed_hours && Number(row.proposed_hours) > 0) {
+    await sql`
+      UPDATE public.members SET total_hours = (
+        SELECT COALESCE(SUM(total_hours), 0) FROM public.hours
+          WHERE member_id = ${row.member_id} AND approval_status = 'FinalApproved'
+      ) + (
+        SELECT COALESCE(SUM(meeting_hours), 0) FROM public.attendance
+          WHERE member_id = ${row.member_id} AND meeting_hours IS NOT NULL
+      )
+      WHERE member_id = ${row.member_id}
+    `;
+  }
+  return { attendance_id: id, confirmed: true };
+};
+
+const attendanceRejectOwn: Handler = async (body, user) => {
+  const id = Number(body.id);
+  if (!Number.isFinite(id)) throw httpErr('err.required.id', 400);
+  const [row] = await sql`
+    SELECT a.confirmation_status, m.committee_id
+    FROM public.attendance a
+    LEFT JOIN public.members m ON m.member_id = a.member_id
+    WHERE a.id = ${id}
+  ` as Array<{ confirmation_status: string; committee_id: string | null }>;
+  if (!row) throw httpErr('err.notfound.attendance', 404);
+  requireAdminScope(user, row.committee_id);
+  if (row.confirmation_status !== 'Pending') throw httpErr('err.business.attendance_not_pending', 409);
+  await sql`
+    UPDATE public.attendance
+       SET confirmation_status = 'Rejected', confirmed_by = ${user!.id},
+           confirmed_at = now(), rejected_reason = ${(body.reason as string) || null}
+     WHERE id = ${id}
+  `;
+  // meeting_hours stays NULL — never credited. No recompute needed.
+  return { attendance_id: id, rejected: true };
+};
+
 export const attendanceActions: Record<string, Handler> = {
   'recordAttendance':       recordAttendance,
   'attendance.bulkRecord':  attendanceBulkRecord,
   'attendance.list':        attendanceList,
   'getAttendance':          getAttendance,
   'updateAttendance':       updateAttendance,
+  'attendance.recordOwn':   attendanceRecordOwn,
+  'attendance.listOwn':     attendanceListOwn,
+  'attendance.confirm':     attendanceConfirmOwn,
+  'attendance.reject':      attendanceRejectOwn,
 };
