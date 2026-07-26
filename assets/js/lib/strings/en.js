@@ -595,6 +595,7 @@ export default {
   'hp.opps.lead':               'Opportunities for your committee. New opportunities are automatically scoped to you.',
   'hp.opps.form_project_label': 'Project / event',
   'hp.opps.form_project_placeholder': '— Choose project —',
+  'hp.opps.form_project_external': 'another committee',
   'hp.opps.form_role_label':    'Role name',
   'hp.opps.form_role_placeholder': 'e.g. Logistics coordinator',
   'hp.opps.form_hours_label':   'Estimated hours',

@@ -102,9 +102,12 @@ export async function loadHeadOpportunities() {
 
 // ─── Inline create / edit opportunity flow ──────────────────────────
 // Toggle the form panel; populate the project dropdown the first time
-// it's opened. Filtered to the head's committee so a head can't (even
-// by accident) attach an opportunity to another committee's project —
-// the server still rejects that, but pre-filtering keeps the UI honest.
+// it's opened. The dropdown lists ALL projects (2026-07-27, president's
+// direction: a head may add volunteer opportunities to any project,
+// including admin-created / other-committee ones). Projects outside the
+// head's own committee are annotated in the dropdown. The created
+// opportunity is still owned by the head's committee (owning_committee_id
+// below), so downstream assignment/hours scoping stays with the head.
 export async function toggleOpportunityCreateForm() {
   const form = document.getElementById('hd-opps-create-form');
   if (!form) return;
@@ -171,7 +174,10 @@ async function _ensureCommitteeRoster() {
     apiGet('getProjects'),
   ]);
   _committeeMembers  = (mRes?.data || []).filter(m => m.status !== 'Inactive' && (!myCommittee || m.committee_id === myCommittee));
-  _committeeProjects = (pRes?.data || []).filter(p => !myCommittee || p.owning_committee_id === myCommittee);
+  // All projects — a head can attach an opportunity to any project
+  // (own committee, admin/unscoped, or another committee's). The
+  // dropdown annotates the ones outside the head's committee.
+  _committeeProjects = (pRes?.data || []);
 }
 
 function _populateProjectsDropdown(id, _includeAll) {
@@ -185,10 +191,15 @@ function _populateProjectsDropdown(id, _includeAll) {
     if (da !== db) return db.localeCompare(da);
     return (a.project_name || '').localeCompare(b.project_name || '', sortLang);
   });
+  const myCommittee = window.CURRENT_USER?.committee_id;
   sel.innerHTML = `<option value="">${esc(t('hp.opps.form_project_placeholder'))}</option>`
     + projects.map(p => {
         const date = p.event_date ? ` (${fmtDate(p.event_date).replace(/<[^>]+>/g, '')})` : '';
-        return `<option value="${esc(p.project_id)}">${esc(p.project_name)}${esc(date)}</option>`;
+        // Flag projects outside the head's own committee so it's clear
+        // they belong to admin / another committee.
+        const external = (!myCommittee || p.owning_committee_id !== myCommittee)
+          ? ` — ${t('hp.opps.form_project_external')}` : '';
+        return `<option value="${esc(p.project_id)}">${esc(p.project_name)}${esc(date)}${esc(external)}</option>`;
       }).join('');
 }
 

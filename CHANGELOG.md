@@ -9,6 +9,27 @@ Newest first.
 
 ---
 
+## [Web] 2026-07-27 · heads can add opportunities to any project
+
+Committee heads' create-opportunity project dropdown was filtered to
+their own committee's projects. Per the president's direction, a head may
+now attach volunteer opportunities to **any** project — including
+admin-created / unscoped / other-committee ones.
+
+- **Client-only, no API change.** `opportunities.create` already gates on
+  the *opportunity's* `owning_committee_id` (the head's own committee),
+  never the project's — so the server already permitted this; the only
+  block was the UI filter.
+- `assets/js/head/tabs/opportunities.js`: the project dropdown now lists
+  all projects; those outside the head's own committee are annotated
+  (`hp.opps.form_project_external`, AR+EN). The created opportunity is
+  still `owning_committee_id` = the head's committee, so assignment/hours
+  scoping stays with the head. `sw.js` → `v81`.
+- **iOS impact:** none. iOS never calls `opportunities.create` (members
+  only view / express interest). No API or error-code change.
+
+---
+
 ## [Web] 2026-07-27 · bulk attendance for committee heads
 
 Committee heads can now record attendance for many committee members at
