@@ -732,6 +732,15 @@ export default {
   'hp.att.lbl_notes':           'Notes (optional)',
   'hp.att.save_btn':            '💾 Record attendance',
   'hp.att.cancel_btn':          'Cancel',
+  'hp.att.bulk_btn':            '👥 Bulk attendance',
+  'hp.att.bulk_modal_title':    '👥 Bulk attendance',
+  'hp.att.bulk_status_label':   'Status for all',
+  'hp.att.bulk_hours_label':    'Hours for all (optional)',
+  'hp.att.bulk_members_label':  'Attendees',
+  'hp.att.bulk_select_all':     'Select all',
+  'hp.att.bulk_save_btn':       '💾 Record attendance',
+  'hp.att.bulk_none_selected':  'Select at least one attendee.',
+  'hp.att.bulk_success':        '✅ Recorded attendance for {count}',
   // Toasts + errors
   'hp.att.err_pick_project':    'Pick a project.',
   'hp.att.err_meeting_title':   'Meeting title is required.',
@@ -1760,6 +1769,7 @@ export default {
   // — Head-attendance tab (2026-05-16) —
   'err.business.attendance_project_xor_meeting': 'Pick either a project OR an ad-hoc meeting — not both.',
   'err.required.meeting_fields': 'Meeting type, date, and start time are required for ad-hoc meetings.',
+  'err.required.attendance_rows': 'No attendees were selected to record.',
   'err.business.hours_out_of_range': 'Hours must be between 0 and 24.',
 
   // ─── Common runtime messages ──────────────────────────────────────

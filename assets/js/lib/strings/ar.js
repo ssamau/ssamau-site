@@ -762,6 +762,15 @@ export default {
   'hp.att.lbl_notes':           'ملاحظات (اختياري)',
   'hp.att.save_btn':            '💾 تسجيل الحضور',
   'hp.att.cancel_btn':          'إلغاء',
+  'hp.att.bulk_btn':            '👥 حضور جماعي',
+  'hp.att.bulk_modal_title':    '👥 تسجيل حضور جماعي',
+  'hp.att.bulk_status_label':   'الحالة للجميع',
+  'hp.att.bulk_hours_label':    'الساعات للجميع (اختياري)',
+  'hp.att.bulk_members_label':  'الأعضاء الحاضرون',
+  'hp.att.bulk_select_all':     'تحديد الكل',
+  'hp.att.bulk_save_btn':       '💾 تسجيل الحضور',
+  'hp.att.bulk_none_selected':  'اختر عضواً واحداً على الأقل',
+  'hp.att.bulk_success':        '✅ تم تسجيل حضور {count}',
   // Toasts + errors
   'hp.att.err_pick_project':    'اختر مشروعاً',
   'hp.att.err_meeting_title':   'عنوان الاجتماع مطلوب',
@@ -1813,6 +1822,7 @@ export default {
   // — Head-attendance tab (2026-05-16) —
   'err.business.attendance_project_xor_meeting': 'حدّد المشروع أو اجتماعاً مخصصاً — وليس كليهما.',
   'err.required.meeting_fields': 'نوع الاجتماع والتاريخ ووقت البداية مطلوبة للاجتماعات المخصصة.',
+  'err.required.attendance_rows': 'لم يُحدَّد أي حاضر لتسجيله.',
   'err.business.hours_out_of_range': 'عدد الساعات يجب أن يكون بين 0 و 24.',
 
   // ─── Common runtime messages ──────────────────────────────────────

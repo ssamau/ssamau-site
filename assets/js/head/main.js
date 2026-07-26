@@ -62,6 +62,8 @@ import {
   loadHeadAttendance, openHeadAttendanceModal, closeHeadAttendanceModal,
   saveHeadAttendance, onHeadAttModeChange, onHeadAttAttendeeChange,
   editHeadAttendance, deleteHeadAttendance,
+  openHeadBulkAttendance, closeHeadBulkAttendance, saveHeadBulkAttendance,
+  onHeadBulkModeChange, toggleAllBulkMembers,
 } from './tabs/attendance.js';
 import {
   loadHeadEmails, sendHeadThanks, bulkSendHeadThanks, filterHeadThanks,
@@ -262,6 +264,9 @@ document.addEventListener('click', (e) => {
     case 'hd.attendance.open':       openHeadAttendanceModal(); break;
     case 'hd.attendance.close':      closeHeadAttendanceModal(); break;
     case 'hd.attendance.save':       saveHeadAttendance(); break;
+    case 'hd.attendance.bulkOpen':   openHeadBulkAttendance(); break;
+    case 'hd.attendance.bulkClose':  closeHeadBulkAttendance(); break;
+    case 'hd.attendance.bulkSave':   saveHeadBulkAttendance(); break;
     case 'hd.attendance.edit':       editHeadAttendance(el.dataset.id); break;
     case 'hd.attendance.delete':     deleteHeadAttendance(el.dataset.id); break;
     // Members tab — view profile, view uploaded file, invite portal
@@ -346,6 +351,11 @@ document.addEventListener('change', (e) => {
   if (attMark) { markHeadAssignmentAttendance(attMark.dataset.id, attMark.value); return; }
   // Attendance tab radios — mode (project vs meeting) + attendee type
   // (member vs volunteer) flip which sub-section of the form is visible.
+  // Bulk-attendance modal: mode radios + select-all checkbox.
+  const bmode = e.target.closest('[data-action="hd.attendance.bulkModeChange"]');
+  if (bmode) { onHeadBulkModeChange(); return; }
+  const btoggle = e.target.closest('[data-action="hd.attendance.bulkToggleAll"]');
+  if (btoggle) { toggleAllBulkMembers(btoggle); return; }
   const att = e.target.closest('[data-action="hd.attendance.modeChange"], [data-action="hd.attendance.attendeeChange"]');
   if (att) {
     const a = att.dataset.action;

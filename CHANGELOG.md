@@ -9,6 +9,35 @@ Newest first.
 
 ---
 
+## [Web] 2026-07-27 · bulk attendance for committee heads
+
+Committee heads can now record attendance for many committee members at
+once, instead of one-by-one.
+
+- **New action `head.attendance.bulkRecord`** (`supabase/functions/api/actions/head.ts`).
+  Body: `{ committee_id?, project_id? | meeting:{title,type,date,start_time,location}, rows:[{ member_id | volunteer_name+volunteer_email, attendance_status?, meeting_hours?, notes? }] }`.
+  Returns `{ count }`.
+- **Behaves exactly like N calls to `head.attendance.record`** — same
+  header validation (project XOR meeting, committee scoping on the
+  project + each member), same attendance-row columns, and the **same
+  inline hours-recompute formula** run once per touched member at the
+  end. The recompute is the absolute/idempotent one already used by the
+  single-record handler, so a bulk save credits identical hours to doing
+  the rows individually. **No change to the hours math.**
+- New error code `err.required.attendance_rows` (AR+EN). Reuses the
+  existing attendance error codes otherwise.
+- Frontend: a "👥 حضور جماعي / Bulk attendance" button + modal in the
+  head attendance tab (`head.html`, `assets/js/head/tabs/attendance.js`,
+  dispatch in `assets/js/head/main.js`) — shared project/meeting header +
+  a committee-member checklist + shared status/hours. New `hp.att.bulk_*`
+  strings (AR+EN). `sw.js` → `v80`. The existing single-record flow is
+  untouched.
+- **iOS impact:** none. Attendance recording is a head/admin capability;
+  the iOS app is member-only and has no head console. New action + error
+  code are not on any iOS path.
+
+---
+
 ## [Web] 2026-07-27 · issue certificates to volunteers by name + email (no member/registry)
 
 Meeting request: issue a certificate to a volunteer who is not a club
