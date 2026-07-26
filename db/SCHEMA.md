@@ -43,6 +43,15 @@ Notation:
 | `updated_at` | `timestamp with time zone` | NO | `now()` |  |
 | `total_hours` | `numeric` | NO | `0` |  |
 
+## `public.app_settings` (4 cols)
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| `key` | `text` | NO | — | **PK** (e.g. `handover_lock`) |
+| `value` | `jsonb` | NO | `'{}'::jsonb` | e.g. `{"locked": true, "locked_at": ..., "reason": ...}` |
+| `updated_by` | `integer` | YES | — | **FK** → `public.users.id` |
+| `updated_at` | `timestamp with time zone` | NO | `now()` |  |
+
 ## `public.assignments` (12 cols)
 
 | Column | Type | Nullable | Default | Notes |

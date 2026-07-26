@@ -9,6 +9,46 @@ Newest first.
 
 ---
 
+## [Web] 2026-07-27 · handover lock + full-data export (governance)
+
+A committee-handover toolkit for admins: export everything, and freeze the
+whole system so data can't change during a transition.
+
+- **Migration `20260727130001_app_settings_handover_lock.sql`** — new
+  `app_settings` key/value table (RLS on, no policies → Edge Function only),
+  seeded with `handover_lock = {locked:false}`.
+- **New actions** (`actions/system.ts`): `system.getLockState` (PUBLIC —
+  so every client/portal can show the banner), `system.lock` / `system.unlock`
+  (admin+superadmin, require a typed confirmation phrase `SSAM-HANDOVER<year>`,
+  same phrase for both), `system.exportAll` (admin — full dump, excludes
+  `users.password_hash`/tokens + the private schema).
+- **⚠️ Server-side write freeze.** When locked, the dispatcher (`index.ts`,
+  right after the auth gate) rejects every action **not** on an explicit
+  read/session/support/management allowlist (`ACTIONS_ALLOWED_DURING_LOCK`
+  in `_helpers.ts`) with **`err.locked.handover` (HTTP 423)**. Fail-CLOSED
+  (unlisted ⇒ blocked while locked); `isHandoverLocked()` fails OPEN on a DB
+  error so a hiccup can't freeze prod. Only non-allowlisted (write) actions
+  pay the extra state lookup. Verified in prod: while locked, a write
+  (`applications.submit`) returns `err.locked.handover` and a read
+  (`getMembers`) still succeeds; unlocked, writes flow normally.
+- **Enforced for ALL clients including iOS** — the freeze is server-side, so
+  iOS writes are blocked identically while locked, with no iOS lock UI.
+- Frontend (web only): admin **Handover** tab (export → multi-sheet `.xlsx`
+  via vendored SheetJS at `assets/js/lib/vendor/xlsx.mjs`; lock/unlock with a
+  warning + GitHub-style type-to-confirm) and a red lock **banner** on
+  admin/head/member portals (`assets/js/lib/handover-banner.js`) driven by the
+  public `system.getLockState`. New `ap.handover.*` + `common.handover_banner`
+  strings + `err.locked.handover` / `err.locked.bad_confirm` (AR+EN). `sw.js`
+  → `v83`.
+- **iOS impact:** **new error code `err.locked.handover` (HTTP 423)** — iOS
+  should localize it and, on any write that returns it, show "system locked
+  for handover" and treat the app as read-only. Optionally call the public
+  `system.getLockState` on launch to show a banner. No other iOS change; the
+  lock/export/unlock UI is web-only. `err.locked.bad_confirm` is web-only
+  (iOS never calls lock/unlock).
+
+---
+
 ## [Web] 2026-07-27 · member self-attendance (head/admin confirmation)
 
 Members can record their own attendance for an event; a head or admin

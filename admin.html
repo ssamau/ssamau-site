@@ -99,6 +99,9 @@
     <div class="sb-item" data-page="my-profile" data-action="showPage">
       <span class="sb-ic">🪪</span><span data-i18n="ap.sb.tab_my_profile">ملفي الشخصي</span>
     </div>
+    <div class="sb-item" data-page="handover" data-action="showPage">
+      <span class="sb-ic">🔑</span><span data-i18n="ap.sb.handover">التسليم والنسخ الاحتياطي</span>
+    </div>
     <!-- Support: opens the bug-report modal directly (not a routed
          tab). Available to every authenticated user; superadmin-only
          inbox tab is added below the divider. -->
@@ -769,6 +772,82 @@
 </div><!-- /#app -->
 
 <!-- ══════════ SUPPORT TICKET DETAIL MODAL (superadmin) ══════════ -->
+    <!-- ══════════ HANDOVER & BACKUP ══════════ -->
+    <div class="page" id="page-handover">
+      <div class="card">
+        <div class="card-head"><h3 data-i18n="ap.handover.status_title">🔑 حالة النظام</h3></div>
+        <div class="card-body"><div id="handover-status"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-head"><h3 data-i18n="ap.handover.export_title">📦 تصدير جميع البيانات</h3></div>
+        <div class="card-body">
+          <p style="font-size:.82rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="ap.handover.export_hint">
+            نزّل نسخة كاملة من بيانات النادي (الأعضاء، الساعات، الحضور، المشاريع، الشهادات، وغيرها) في ملف Excel — احتفظ بها قبل التسليم.</p>
+          <button class="btn btn-g btn-sm" id="handover-export-btn" data-action="ap.handover.export" data-i18n="ap.handover.export_btn">📦 تصدير Excel</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-head"><h3 data-i18n="ap.handover.lock_title">🔒 قفل البيانات للتسليم</h3></div>
+        <div class="card-body">
+          <p style="font-size:.82rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="ap.handover.lock_hint">
+            قفل التسليم يجمّد كل التعديلات على مستوى النظام بالكامل (الويب والتطبيق) — تبقى البيانات للقراءة فقط ولا يمكن لأحد تعديلها حتى يُفكّ القفل.</p>
+          <button class="btn btn-warn btn-sm" id="handover-lock-btn" data-action="ap.handover.openLock" data-i18n="ap.handover.lock_btn">🔒 تفعيل القفل</button>
+          <button class="btn btn-ol btn-sm" id="handover-unlock-btn" data-action="ap.handover.openUnlock" style="display:none" data-i18n="ap.handover.unlock_btn">🔓 فكّ القفل</button>
+        </div>
+      </div>
+    </div>
+
+<!-- Lock confirm (type-to-confirm, GitHub-style) -->
+<div class="overlay" id="ov-handover-lock">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="ap.handover.lock_modal_title">🔒 تأكيد قفل التسليم</h3>
+      <button class="modal-close" data-action="ap.handover.closeModals">✕</button></div>
+    <div class="modal-body">
+      <div style="background:var(--dnb,#fbeaea);border:1px solid rgba(180,20,30,.3);border-radius:8px;padding:.85rem;font-size:.82rem;line-height:1.7;margin-bottom:.9rem">
+        <strong data-i18n="ap.handover.lock_warn_title">سيؤدي القفل إلى ما يلي:</strong>
+        <ul style="margin:.4rem 1rem 0 1rem;padding:0">
+          <li data-i18n="ap.handover.lock_warn_1">تجميد كل الإضافات والتعديلات والحذف في النظام — بما في ذلك الأعضاء والساعات.</li>
+          <li data-i18n="ap.handover.lock_warn_2">يشمل الويب والتطبيق (iOS) معاً — لا أحد يستطيع الكتابة.</li>
+          <li data-i18n="ap.handover.lock_warn_3">تبقى القراءة والتصدير وتسجيل الدخول تعمل بشكل طبيعي.</li>
+          <li data-i18n="ap.handover.lock_warn_4">لا يمكن فكّ القفل إلا من قبل الإدارة بنفس التأكيد.</li>
+        </ul>
+      </div>
+      <label style="font-size:.82rem;display:block;margin-bottom:.35rem">
+        <span data-i18n="ap.handover.confirm_prompt">للتأكيد، اكتب</span>
+        <code id="handover-confirm-phrase-label" style="direction:ltr;background:var(--bg-soft);padding:.1rem .4rem;border-radius:4px;border:1px solid var(--bd);font-weight:700"></code>
+      </label>
+      <input id="handover-confirm-input" dir="ltr" data-action="ap.handover.lockInput" data-event="input" style="font-family:monospace;letter-spacing:.05em" autocomplete="off"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol btn-sm" data-action="ap.handover.closeModals" data-i18n="ap.handover.cancel">إلغاء</button>
+      <button class="btn btn-warn btn-sm" id="handover-confirm-btn" data-action="ap.handover.confirmLock" disabled data-i18n="ap.handover.lock_confirm_btn">🔒 قفل الآن</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unlock confirm (same type-to-confirm) -->
+<div class="overlay" id="ov-handover-unlock">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="ap.handover.unlock_modal_title">🔓 تأكيد فكّ القفل</h3>
+      <button class="modal-close" data-action="ap.handover.closeModals">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="ap.handover.unlock_hint">
+        سيعيد فكّ القفل النظام إلى وضعه الطبيعي ويسمح بالتعديلات مجدداً.</p>
+      <label style="font-size:.82rem;display:block;margin-bottom:.35rem">
+        <span data-i18n="ap.handover.confirm_prompt">للتأكيد، اكتب</span>
+        <code id="handover-unlock-phrase-label" style="direction:ltr;background:var(--bg-soft);padding:.1rem .4rem;border-radius:4px;border:1px solid var(--bd);font-weight:700"></code>
+      </label>
+      <input id="handover-unlock-input" dir="ltr" data-action="ap.handover.unlockInput" data-event="input" style="font-family:monospace;letter-spacing:.05em" autocomplete="off"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ol btn-sm" data-action="ap.handover.closeModals" data-i18n="ap.handover.cancel">إلغاء</button>
+      <button class="btn btn-g btn-sm" id="handover-unlock-confirm-btn" data-action="ap.handover.confirmUnlock" disabled data-i18n="ap.handover.unlock_confirm_btn">🔓 فكّ القفل</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-support-detail">
   <div class="modal" style="max-width:680px">
     <div class="modal-head">

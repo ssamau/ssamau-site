@@ -32,6 +32,7 @@ export const PAGE_TITLES = {
   interest:        'ap.title.interest',
   emails:          'ap.title.emails',
   certificates:    'ap.title.certificates',
+  handover:        'ap.title.handover',
   opportunities:   'ap.title.opportunities',
   applications:    'ap.title.applications',
   accounts:        'ap.title.accounts',
