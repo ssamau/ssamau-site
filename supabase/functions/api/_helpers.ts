@@ -355,6 +355,9 @@ export const PUBLIC_ACTIONS = new Set<string>([
   'certs.verify',
   'setup.bulkSeed',
   'applications.submit',
+  // Handover lock state — public so the login page + every client
+  // (including iOS) can show the "system locked" banner without a session.
+  'system.getLockState',
 ]);
 
 // Admin-tier actions: callable by `admin` (presidency) OR `superadmin`
@@ -375,6 +378,9 @@ export const ADMIN_ACTIONS = new Set<string>([
   // check still gates by committee — head can only blast notifications
   // for opportunities in their own committee.
   'opportunities.notify',
+  // Handover: lock/unlock/export are presidency-or-dev. (getLockState is
+  // public; the lock check itself lets these run even while locked.)
+  'system.lock', 'system.unlock', 'system.exportAll',
 ]);
 
 // Actions previously here but moved to head-scoped (per the 2026-05-16
@@ -391,6 +397,41 @@ export const ADMIN_ACTIONS = new Set<string>([
 // config-shaped tooling we build.
 export const SUPERADMIN_ACTIONS = new Set<string>([
   // (future: 'dev.transferDevAccount' etc.)
+]);
+
+// Handover lock (2026-07-27): when the system is locked, ONLY these
+// actions run — reads, login/session, support, file downloads, and the
+// handover management/export/unlock. Everything else (every write across
+// members, hours, attendance, certs, opportunities, applications, …) is
+// frozen with err.locked.handover. Fail-CLOSED by design: an action not
+// listed here is blocked while locked. Worst case of an omission is an
+// over-blocked read during the (rare, deliberate) locked state — safe and
+// easily patched — never a silent write.
+export const ACTIONS_ALLOWED_DURING_LOCK = new Set<string>([
+  'healthcheck',
+  // Login / session (people can still sign in and view).
+  'auth', 'auth.resolveIdentifier', 'auth.requestPasswordReset',
+  'auth.signOut', 'auth.exchangeSupabaseToken', 'auth.whoami',
+  // Reads.
+  'getMembers', 'getCommittees', 'getAdvisors', 'getProjects',
+  'getAttendance', 'getDashboardStats', 'getMemberHours', 'getParticipants',
+  'applications.list',
+  'assignments.list', 'assignments.listOwn',
+  'attendance.list', 'attendance.listOwn',
+  'certs.list', 'certs.listOwn', 'certs.verify',
+  'interest.list', 'interest.listAll', 'interest.listOwn',
+  'hours.listOwn',
+  'opportunities.list',
+  'participants.list',
+  'thanks.list',
+  'users.list',
+  'dashboard.projectDetail', 'head.dashboardSummary', 'head.attendance.list',
+  'members.getOwn',
+  'storage.getMemberFile',
+  // Support (not club/handover data — keep bug reporting available).
+  'support.list', 'support.submit', 'support.getAttachment', 'support.updateStatus',
+  // Handover management itself.
+  'system.getLockState', 'system.exportAll', 'system.lock', 'system.unlock',
 ]);
 
 // ─── Handler type ───────────────────────────────────────────────────────

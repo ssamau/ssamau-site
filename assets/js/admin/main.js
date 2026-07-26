@@ -262,8 +262,14 @@ const loaderMap = {
     const m = await import('./tabs/support.js');
     return m.loadSupportTickets();
   },
+  handover:         async () => {
+    const m = await import('./tabs/handover.js');
+    return m.loadHandover();
+  },
 };
 setLoaders(loaderMap);
+// Handover lock banner — shown on every portal when the system is locked.
+import('../lib/handover-banner.js').then(m => m.initHandoverBanner());
 // refreshData (in lib/ui.js) awaits the loader's promise so the
 // spinner stays on until the fetch completes. Same map.
 setRefreshLoaders(loaderMap);
@@ -515,6 +521,17 @@ setHandlers({
   },
   switchCertTab:    (el) => switchCertTab(el.dataset.tab),
   markAllAtt:       (el) => markAllAtt(el.dataset.status),
+
+  // Handover tab — lazy-imported so SheetJS (only used by export) and the
+  // tab code aren't in the initial bundle.
+  'ap.handover.export':        async () => (await import('./tabs/handover.js')).exportAllData(),
+  'ap.handover.openLock':      async () => (await import('./tabs/handover.js')).openLockModal(),
+  'ap.handover.openUnlock':    async () => (await import('./tabs/handover.js')).openUnlockModal(),
+  'ap.handover.closeModals':   async () => (await import('./tabs/handover.js')).closeHandoverModals(),
+  'ap.handover.lockInput':     async () => (await import('./tabs/handover.js')).onLockConfirmInput(),
+  'ap.handover.unlockInput':   async () => (await import('./tabs/handover.js')).onUnlockConfirmInput(),
+  'ap.handover.confirmLock':   async () => (await import('./tabs/handover.js')).confirmLock(),
+  'ap.handover.confirmUnlock': async () => (await import('./tabs/handover.js')).confirmUnlock(),
 
   // ── this.value (on inputs / selects) ────────────────────────────
   filterMembersByRole:    (el) => filterMembersByRole(el.value),

@@ -298,3 +298,5 @@ setHandlers({
   onSupportFileChange: (el) => onSupportFileChange(el),
 });
 setupDispatch();
+// Handover lock banner — shown when the system is locked for handover.
+import('../lib/handover-banner.js').then(m => m.initHandoverBanner());

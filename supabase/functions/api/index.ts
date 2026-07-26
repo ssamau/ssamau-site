@@ -16,7 +16,8 @@
 // esm.sh / deno.land — no node_modules.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { resolveUserContext, PUBLIC_ACTIONS, ADMIN_ACTIONS, SUPERADMIN_ACTIONS, httpErr, type Handler } from './_helpers.ts';
+import { resolveUserContext, PUBLIC_ACTIONS, ADMIN_ACTIONS, SUPERADMIN_ACTIONS, ACTIONS_ALLOWED_DURING_LOCK, httpErr, type Handler } from './_helpers.ts';
+import { systemActions, isHandoverLocked } from './actions/system.ts';
 
 // Action modules. Each one exports a `Record<string, Handler>` keyed by
 // the same action names the frontend uses (`getMembers`, `users.create`,
@@ -149,6 +150,7 @@ const actions: Record<string, Handler> = {
   ...storageActions,
   ...projectStorageActions,
   ...supportActions,
+  ...systemActions,
 };
 
 // ─── HTTP entry ─────────────────────────────────────────────────────────
@@ -196,6 +198,16 @@ serve(async (req) => {
     if (SUPERADMIN_ACTIONS.has(action) && user.access !== 'superadmin') {
       return fail(req, 'err.access.dev_only', 403);
     }
+  }
+
+  // Handover lock (2026-07-27): when the system is locked for committee
+  // handover, every write is frozen — only the read/session/management
+  // allowlist runs. Checked here (after auth) so ALL clients, including
+  // iOS, are blocked identically. Only non-allowlisted (i.e. write)
+  // actions pay the extra state lookup; isHandoverLocked() fails OPEN so a
+  // transient DB error can never freeze production.
+  if (!ACTIONS_ALLOWED_DURING_LOCK.has(action) && await isHandoverLocked()) {
+    return fail(req, httpErr('err.locked.handover', 423), 423);
   }
 
   // H2 (2026-05-19): collect Set-Cookie values the handler may queue

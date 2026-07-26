@@ -141,6 +141,8 @@ const loaderMap = {
   'my-profile':        loadProfile,
 };
 setLoaders(loaderMap);
+// Handover lock banner — shown when the system is locked for handover.
+import('../lib/handover-banner.js').then(m => m.initHandoverBanner());
 // Same loaderMap powers the topbar refresh button. refreshData looks up
 // the currently-active page id and awaits the matching loader so the
 // spinner animation matches the actual fetch lifetime.

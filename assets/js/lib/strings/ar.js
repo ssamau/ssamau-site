@@ -1671,6 +1671,34 @@ export default {
   // Preview popup heading (browser tab title) — kept bilingual:
   // Arabic UI shows "شهادة"; English UI shows "Certificate".
   'ap.cert.preview_window_title':'شهادة',
+  'ap.sb.handover':             'التسليم والنسخ الاحتياطي',
+  'ap.title.handover':          'التسليم والنسخ الاحتياطي',
+  'common.handover_banner':     'النظام في وضع التسليم — البيانات مقروءة فقط ولا يمكن التعديل حالياً.',
+  'ap.handover.status_title':   '🔑 حالة النظام',
+  'ap.handover.status_locked':  'النظام مقفول للتسليم — التعديلات مجمّدة',
+  'ap.handover.status_unlocked':'النظام يعمل بشكل طبيعي — التعديلات متاحة',
+  'ap.handover.export_title':   '📦 تصدير جميع البيانات',
+  'ap.handover.export_hint':    'نزّل نسخة كاملة من بيانات النادي (الأعضاء، الساعات، الحضور، المشاريع، الشهادات، وغيرها) في ملف Excel — احتفظ بها قبل التسليم.',
+  'ap.handover.export_btn':     '📦 تصدير Excel',
+  'ap.handover.export_done':    '✅ تم تجهيز ملف التصدير',
+  'ap.handover.lock_title':     '🔒 قفل البيانات للتسليم',
+  'ap.handover.lock_hint':      'قفل التسليم يجمّد كل التعديلات على مستوى النظام بالكامل (الويب والتطبيق) — تبقى البيانات للقراءة فقط ولا يمكن لأحد تعديلها حتى يُفكّ القفل.',
+  'ap.handover.lock_btn':       '🔒 تفعيل القفل',
+  'ap.handover.unlock_btn':     '🔓 فكّ القفل',
+  'ap.handover.lock_modal_title':'🔒 تأكيد قفل التسليم',
+  'ap.handover.lock_warn_title':'سيؤدي القفل إلى ما يلي:',
+  'ap.handover.lock_warn_1':    'تجميد كل الإضافات والتعديلات والحذف في النظام — بما في ذلك الأعضاء والساعات.',
+  'ap.handover.lock_warn_2':    'يشمل الويب والتطبيق (iOS) معاً — لا أحد يستطيع الكتابة.',
+  'ap.handover.lock_warn_3':    'تبقى القراءة والتصدير وتسجيل الدخول تعمل بشكل طبيعي.',
+  'ap.handover.lock_warn_4':    'لا يمكن فكّ القفل إلا من قبل الإدارة وبنفس التأكيد.',
+  'ap.handover.confirm_prompt': 'للتأكيد، اكتب',
+  'ap.handover.cancel':         'إلغاء',
+  'ap.handover.lock_confirm_btn':'🔒 قفل الآن',
+  'ap.handover.locked_toast':   '🔒 تم قفل النظام للتسليم',
+  'ap.handover.unlock_modal_title':'🔓 تأكيد فكّ القفل',
+  'ap.handover.unlock_hint':    'سيعيد فكّ القفل النظام إلى وضعه الطبيعي ويسمح بالتعديلات مجدداً.',
+  'ap.handover.unlock_confirm_btn':'🔓 فكّ القفل',
+  'ap.handover.unlocked_toast': '🔓 تم فكّ قفل النظام',
 
   // ─── Admin portal: member-profile viewer (5e) ─────────────────────
   'ap.prf.pick_member_placeholder': 'اختر عضواً',
@@ -1853,6 +1881,8 @@ export default {
   'err.business.hours_out_of_range': 'عدد الساعات يجب أن يكون بين 0 و 24.',
   'err.business.attendance_already_pending': 'لديك طلب حضور معلّق لهذه الفعالية بالفعل.',
   'err.business.attendance_not_pending':     'هذا الطلب لم يعد معلّقاً.',
+  'err.locked.handover':        'النظام مقفول للتسليم — لا يمكن إجراء تعديلات حالياً.',
+  'err.locked.bad_confirm':     'نص التأكيد غير صحيح.',
 
   // ─── Common runtime messages ──────────────────────────────────────
   'common.loading':             'جاري التحميل...',
