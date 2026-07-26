@@ -60,7 +60,7 @@ Notation:
 | `created_at` | `timestamp with time zone` | NO | `now()` |  |
 | `role_id` | `bigint` | YES | — | **FK** → `public.opportunity_roles.id` |
 
-## `public.attendance` (18 cols)
+## `public.attendance` (24 cols)
 
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
@@ -82,6 +82,12 @@ Notation:
 | `meeting_hours` | `numeric` | YES | — |  |
 | `volunteer_name` | `text` | YES | — |  |
 | `checked_by_member_id` | `text` | YES | — | **FK** → `public.members.member_id` |
+| `confirmation_status` | `text` | NO | `'Confirmed'::text` | Pending/Confirmed/Rejected (member self-attendance) |
+| `self_recorded` | `boolean` | NO | `false` | true = member self-recorded, awaits confirmation |
+| `confirmed_by` | `integer` | YES | — | **FK** → `public.users.id` |
+| `confirmed_at` | `timestamp with time zone` | YES | — |  |
+| `proposed_hours` | `numeric` | YES | — | member's claimed hours while Pending; copied to meeting_hours on confirm |
+| `rejected_reason` | `text` | YES | — |  |
 
 ## `public.certificates` (10 cols)
 

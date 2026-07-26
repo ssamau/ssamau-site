@@ -58,6 +58,9 @@
     <div class="sb-item" data-page="assignments" data-action="showPage">
       <span class="sb-ic">📋</span><span data-i18n="mp.sb.assignments">مهامي</span>
     </div>
+    <div class="sb-item" data-page="attendance" data-action="showPage">
+      <span class="sb-ic">✋</span><span data-i18n="mp.sb.attendance">تسجيل حضوري</span>
+    </div>
     <!-- Support: opens the bug-report modal directly. Available to
          every authenticated user; superadmin-only inbox lives in the
          admin portal. -->
@@ -150,6 +153,40 @@
               </tr>
             </thead>
             <tbody id="hours-tbody"><tr class="empty-row"><td colspan="5" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ MY ATTENDANCE (self-record) ══════════ -->
+    <div class="page" id="page-attendance">
+      <div class="card">
+        <div class="card-head"><h3 data-i18n="mp.att.record_card_title">✋ سجّل حضوري</h3></div>
+        <div class="card-body">
+          <p style="font-size:.78rem;color:var(--tm);margin:0 0 .8rem 0" data-i18n="mp.att.lead">
+            سجّل حضورك في فعالية شاركت فيها. سيظهر الطلب لرئيس لجنتك لاعتماده، ولن تُحتسب الساعات إلا بعد التأكيد.</p>
+          <div class="fg-row">
+            <div class="fg" style="flex:2"><label><span data-i18n="mp.att.lbl_project">الفعالية/المشروع</span> <span class="required">*</span></label>
+              <select id="mp-att-project"><option value="" data-i18n="mp.att.pick_project">— اختر —</option></select></div>
+            <div class="fg" style="flex:1"><label data-i18n="mp.att.lbl_hours">عدد الساعات</label>
+              <input id="mp-att-hours" type="number" min="0" max="24" step="0.5"/></div>
+          </div>
+          <div class="fg"><label data-i18n="mp.att.lbl_notes">ملاحظات (اختياري)</label>
+            <textarea id="mp-att-notes" rows="2"></textarea></div>
+          <div style="margin-top:.6rem"><button class="btn btn-g btn-sm" data-action="mp.att.submit" data-i18n="mp.att.submit_btn">📨 إرسال للاعتماد</button></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-head"><h3 data-i18n="mp.att.list_card_title">📋 طلبات حضوري</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="mp.att.col_project">الفعالية</th>
+              <th data-i18n="mp.att.col_hours">الساعات</th>
+              <th data-i18n="mp.att.col_status">الحالة</th>
+              <th data-i18n="mp.att.col_date">التاريخ</th>
+            </tr></thead>
+            <tbody id="mp-att-tbody"><tr class="empty-row"><td colspan="4" data-i18n="common.loading">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </div>

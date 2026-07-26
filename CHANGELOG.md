@@ -9,6 +9,46 @@ Newest first.
 
 ---
 
+## [Web] 2026-07-27 · member self-attendance (head/admin confirmation)
+
+Members can record their own attendance for an event; a head or admin
+confirms it before hours count.
+
+- **Migration `20260727120001_member_self_attendance.sql`** — additive
+  columns on `attendance`: `confirmation_status` (default `'Confirmed'`),
+  `self_recorded` (default false), `confirmed_by`, `confirmed_at`,
+  `proposed_hours`, `rejected_reason`, + a partial index + a CHECK/FK.
+  Existing rows and all existing insert paths default to `Confirmed`, so
+  staff-recorded attendance is unchanged. Verified post-migration:
+  `SUM(members.total_hours)` unchanged (221.50), 0 members' totals moved.
+- **Hours math untouched.** A Pending self-record keeps `meeting_hours`
+  NULL and stores the claim in `proposed_hours`, so the existing recompute
+  (which sums `attendance.meeting_hours WHERE NOT NULL`) never credits it.
+  On confirm, the server copies `proposed_hours → meeting_hours` and runs
+  the *same inline recompute the head handlers use* (FinalApproved hours +
+  attendance.meeting_hours). Reject leaves it uncredited.
+- **New actions** (`attendance.ts`): `attendance.recordOwn` /
+  `attendance.listOwn` (member, self-scoped in-handler), `attendance.confirm`
+  / `attendance.reject` (head/admin, `requireAdminScope` on the member's
+  committee). New error codes `err.business.attendance_already_pending`,
+  `err.business.attendance_not_pending` (AR+EN). `head.attendance.list`
+  already returned `a.*`, so it surfaces the new columns unchanged.
+- **Frontend:** new "My attendance" member tab (`member.html`,
+  `assets/js/member/tabs/self-attendance.js`, wiring in `member/main.js`
+  + `member/router.js`); confirm/reject buttons + a pending badge on
+  self-records in the head attendance tab. New `mp.att.*` + `hp.att.*`
+  strings (AR+EN). `sw.js` → `v82`.
+- **iOS impact:** **new member capability.** iOS should add self-attendance
+  to the member portal: `attendance.recordOwn { project_id, hours?, notes? }`
+  and `attendance.listOwn` (rows carry `confirmation_status` Pending/
+  Confirmed/Rejected, `proposed_hours`, `meeting_hours`, `rejected_reason`).
+  Confirmation is staff-side (web) — iOS does not implement confirm/reject.
+  A Pending row's hours are not in the member's total until confirmed
+  (mirror how Draft hours are excluded). New error codes need
+  `Localizable.strings` entries. See `SSAM_iOS_Agent_Notes_2026-07.md`.
+
+---
+
 ## [Web] 2026-07-27 · heads can add opportunities to any project
 
 Committee heads' create-opportunity project dropdown was filtered to
