@@ -5,10 +5,54 @@
 > permission revalidation, and 7 branded email templates. The last
 > sweep audited every admin function + email; everything renders.
 
-Updated: 2026-05-18 (Faisal + Claude). Branch is clean + pushed to
-origin/main at commit c19c7ce. Update this when you ship something
+Updated: 2026-07-27 (see the section right below for the latest work).
+Earlier baseline written 2026-05-18. Update this when you ship something
 material — the goal is that the next coding session can pick up the
 project's mental model without re-reading 30+ commits of context.
+
+---
+
+## 2026-07-27 — handover toolkit + attendance/certs features
+
+Five features shipped to prod this session (branch → PR → Netlify
+deploy-preview → merge; backend changes also `supabase functions deploy
+api`, now **v136**). Newest first:
+
+- **Handover lock + full-data export** (`258950c`). Admin **Handover** tab:
+  export all club data to a multi-sheet `.xlsx` (vendored SheetJS at
+  `assets/js/lib/vendor/xlsx.mjs`, lazy-loaded), and lock/unlock the whole
+  system with a GitHub-style type-to-confirm phrase `SSAM-HANDOVER<year>`.
+  New `app_settings` table (migration `20260727130001`) + `actions/system.ts`
+  (`system.getLockState` public, `system.lock`/`unlock`/`exportAll` admin).
+  **Write freeze is enforced in the dispatcher** (`index.ts`, after auth):
+  when locked, any action not on `ACTIONS_ALLOWED_DURING_LOCK` (`_helpers.ts`)
+  returns `err.locked.handover` (423) — fail-closed; `isHandoverLocked()`
+  fails open on a DB error. Enforced for ALL clients incl. iOS. Lock banner
+  on every portal (`assets/js/lib/handover-banner.js`). Currently UNLOCKED.
+- **Member self-attendance** (`436a219`). Migration `20260727120001` adds
+  additive cols to `attendance` (`confirmation_status` default 'Confirmed',
+  `self_recorded`, `confirmed_by/at`, `proposed_hours`, `rejected_reason`).
+  `attendance.recordOwn`/`listOwn` (member) + `attendance.confirm`/`reject`
+  (head/admin). Member "My attendance" tab + head confirm/reject UI.
+  **Hours math untouched:** Pending self-records keep `meeting_hours` NULL
+  (claim in `proposed_hours`), so the existing recompute never credits them
+  until a head confirms (then proposed→meeting_hours + same inline recompute).
+- **Heads add opps to any project** (`c0c0907`). Client-only: the head
+  create-opportunity dropdown now lists all projects (external ones
+  annotated); opp still owned by the head's committee. Server already allowed
+  it (gate keys on the opp's committee, not the project's).
+- **Bulk attendance for heads** (`dcb45b8`). New `head.attendance.bulkRecord`
+  (shared project/meeting header + committee-member checklist). Reuses the
+  single-record path row-for-row → identical hours crediting.
+- **Volunteer certs by name+email** (`d4aa5bb`). Client-only: admin+head cert
+  forms got a recipient-type toggle; volunteer mode omits `member_id`. Server
+  + schema already supported it (nullable `member_id` + recipient fields).
+
+Hours integrity verified unchanged throughout (Σ `members.total_hours` =
+221.50). Backup tables `backup_members_hours_20260727` /
+`backup_hours_20260727` kept as a safety net (see
+`~/Desktop/SSAM-Demo-Output/HOURS_BACKUP_2026-07-27.md`). iOS changelog:
+`~/Desktop/SSAM-Demo-Output/SSAM_iOS_Changelog_2026-07-27.md`.
 
 ---
 
