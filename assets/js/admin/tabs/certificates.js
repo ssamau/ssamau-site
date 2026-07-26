@@ -54,8 +54,40 @@ export function switchCertTab(tab) {
   if (tab === 'issue' || tab === 'verify') populateNewSelects();
 }
 
+// Toggle the issue form between "registered member" and "volunteer by
+// name+email" modes. Volunteer certs need no member row and no registry
+// entry — the certificates table already allows a NULL member_id with
+// recipient_name/recipient_email, and certs.issue accepts them as-is.
+export function onCertRcptTypeChange() {
+  const type = document.querySelector('input[name="cert-rcpt-type"]:checked')?.value || 'member';
+  const memSec = document.getElementById('cert-member-section');
+  const volSec = document.getElementById('cert-volunteer-section');
+  if (memSec) memSec.style.display = type === 'member'    ? '' : 'none';
+  if (volSec) volSec.style.display = type === 'volunteer' ? '' : 'none';
+}
+
 export async function issueCert() {
-  const pid = gv('cert-proj-sel');
+  const pid  = gv('cert-proj-sel');
+  const type = document.querySelector('input[name="cert-rcpt-type"]:checked')?.value || 'member';
+
+  // Volunteer path — no member_id. The recipient is described by a
+  // free-typed name + email + role; hours are omitted (server derives 0
+  // for a member-less cert — there's no governed hours source to draw
+  // from, and cert hours are governed-only per ticket SUP_3RT6RJRC).
+  if (type === 'volunteer') {
+    const recipient_name  = (gv('cert-vol-name')  || '').trim();
+    const recipient_email = (gv('cert-vol-email') || '').trim();
+    const role            = (gv('cert-vol-role')  || '').trim();
+    if (!pid || !recipient_name || !role) { toast(t('ap.cert.err_vol_required'), 'twarn'); return; }
+    const r = await api('certs.issue', { project_id: pid, recipient_name, recipient_email, role });
+    if (r && r.success) {
+      toast(recipient_email ? t('ap.cert.success_issue_emailed') : t('ap.cert.success_issue_no_email'));
+      loadCerts('');
+      switchCertTab('list');
+    }
+    return;
+  }
+
   const mid = gv('cert-mbr-sel');
   if (!pid || !mid) { toast(t('ap.cert.err_required'), 'twarn'); return; }
   const m = DB.members.find(mb => mb.member_id === mid);
